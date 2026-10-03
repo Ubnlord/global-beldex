@@ -1,0 +1,320 @@
+import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
+import { Award, ChevronLeft, ChevronRight, ExternalLink, Shield, Zap } from "lucide-react";
+import { GuestShell } from "@/components/layout/app-shell";
+import { Button } from "@/components/ui/button";
+import { BeldexLivePrice, LiveBadge } from "@/components/market/live-price";
+import { HomeBeldexStats } from "@/components/market/home-stats";
+import {
+  MiniChart,
+  SymbolOverview,
+  TickerTape,
+} from "@/components/market/tradingview";
+import { PlanGrid, TvCredit } from "@/components/platform/plan-card";
+import { toast } from "@/components/layout/toast";
+import { usePlatform } from "@/lib/platform/store";
+import { copy } from "@/lib/platform/i18n";
+
+export const Route = createFileRoute("/")({ component: LandingPage });
+
+function LandingPage() {
+  return (
+    <GuestShell>
+      <Landing />
+    </GuestShell>
+  );
+}
+
+function Landing() {
+  const navigate = useNavigate();
+  const lang = usePlatform((s) => s.lang);
+  const t = copy[lang];
+  const cards = t.page.companyCards;
+  const [company, setCompany] = useState(0);
+  const card = cards[company] ?? cards[0];
+  const stepCompany = (dir: number) => {
+    if (!cards.length) return;
+    setCompany((i) => (i + dir + cards.length) % cards.length);
+  };
+
+  return (
+    <div className="mx-auto max-w-[1200px] px-4 pb-20 sm:px-6">
+      <div className="mt-3">
+        <TickerTape />
+      </div>
+
+      <div className="mt-8 grid items-start gap-8 sm:mt-12 md:grid-cols-2">
+        <div className="rise">
+          <LiveBadge className="mb-4" />
+          <h1 className="text-balance text-[28px] font-extrabold leading-[1.05] tracking-tight sm:text-[52px] sm:leading-[0.95]">
+            {t.page.heroTitle}
+            <br />
+            <span className="text-subtle">{t.page.heroSub}</span>
+          </h1>
+          <p className="mt-4 max-w-[520px] text-sm text-muted">{t.page.heroLead}</p>
+          <div className="mt-6 flex flex-col gap-3 min-[420px]:flex-row">
+            <Button
+              className="w-full min-[420px]:w-auto"
+              onClick={() => {
+                toast(t.page.openingAccount);
+                void navigate({ to: "/register" });
+              }}
+            >
+              {t.page.registerNow}
+            </Button>
+            <Button
+              variant="secondary"
+              className="w-full min-[420px]:w-auto"
+              onClick={() => {
+                toast(t.page.openingLogin);
+                void navigate({ to: "/login" });
+              }}
+            >
+              {t.explore}
+            </Button>
+          </div>
+          <div className="mt-8 grid gap-2 sm:grid-cols-3 sm:gap-3">
+            {[
+              { k: t.page.statZero, v: t.page.statZeroBody },
+              { k: t.page.statLev, v: t.page.statLevBody },
+              { k: t.page.statInst, v: t.page.statInstBody },
+            ].map((item) => (
+              <div key={item.k} className="rounded-md border border-line bg-surface p-3">
+                <div className="text-[13px] font-semibold text-fg">{item.k}</div>
+                <div className="mt-1 text-[11px] text-subtle">{item.v}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-line bg-surface p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <div className="text-xs text-muted">{t.page.liveMarketTv}</div>
+            <a
+              href="https://www.tradingview.com/symbols/BDXUSD/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 rounded-full border border-line-strong bg-elevated px-2 py-1 text-[10px] text-accent"
+            >
+              {t.page.trackBdx} <ExternalLink size={10} />
+            </a>
+          </div>
+          <HomeBeldexStats />
+          <div className="mt-3">
+            <BeldexLivePrice className="mb-3" />
+          </div>
+          <MiniChart />
+          <div className="mt-3 rounded-md border border-line bg-elevated p-3">
+            <div className="mb-1 text-[11px] text-muted">{t.page.featured}</div>
+            <a
+              href="https://www.tradingview.com/symbols/BDXUSD/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[13px] font-semibold text-fg transition-colors hover:text-accent"
+            >
+              {t.page.tvChartTitle}
+            </a>
+            <div className="mt-1 text-[11px] text-subtle">
+              {t.page.liveFromTv}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-10 rounded-xl border border-line bg-surface p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <div className="text-[13px] font-semibold text-fg">{t.page.liveOverview}</div>
+          <div className="text-[10px] text-subtle">{t.page.poweredBy}</div>
+        </div>
+        <SymbolOverview />
+        <TvCredit className="mt-2" />
+      </div>
+
+      <section className="mt-16">
+        <div className="text-center">
+          <div className="text-xs font-semibold tracking-widest text-accent">{t.page.conditionsCharges}</div>
+        </div>
+        <div className="mt-6 grid gap-3 sm:grid-cols-3">
+          {[
+            { k: t.page.statZero, v: t.page.statZeroBody },
+            { k: t.page.statLev, v: t.page.statLevBody },
+            { k: t.page.statInst, v: t.page.statInstBody },
+          ].map((item) => (
+            <div key={item.k} className="rounded-lg border border-line bg-elevated p-4">
+              <div className="text-sm font-semibold">{item.k}</div>
+              <div className="mt-1 text-[12px] text-subtle">{item.v}</div>
+            </div>
+          ))}
+        </div>
+        <div className="mt-6 text-center">
+          <Button
+            onClick={() => {
+              toast(t.page.openingAccount);
+              void navigate({ to: "/register" });
+            }}
+          >
+            {t.page.registerNow}
+          </Button>
+        </div>
+      </section>
+
+      <section className="mt-16">
+        <div className="text-center">
+          <div className="text-xs font-semibold tracking-widest text-accent">
+            {t.page.conditions}
+          </div>
+          <h2 className="mt-2 text-[28px] font-bold">{t.page.trustTitle}</h2>
+          <p className="mx-auto mt-3 max-w-[680px] text-sm text-muted">{t.page.platformsLead}</p>
+        </div>
+        <div className="mt-8 grid gap-4 sm:grid-cols-3">
+          {[
+            {
+              icon: Shield,
+              title: t.page.safeTitle,
+              desc: t.page.safeBody,
+            },
+            {
+              icon: Zap,
+              title: t.page.execTitle,
+              desc: t.page.execBody,
+            },
+            {
+              icon: Award,
+              title: t.page.awardTitle,
+              desc: t.page.awardBody,
+            },
+          ].map((item) => (
+            <div key={item.title} className="rounded-lg border border-line bg-elevated p-5">
+              <item.icon className="text-accent" size={20} />
+              <div className="mt-3 font-semibold text-fg">{item.title}</div>
+              <div className="mt-1 text-[13px] text-subtle">{item.desc}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="mt-16">
+        <h2 className="text-center text-[28px] font-bold text-fg">{t.page.goodCompany}</h2>
+        <div className="relative mx-auto mt-8 max-w-[640px]">
+          <button
+            type="button"
+            aria-label="Previous"
+            onClick={() => stepCompany(-1)}
+            className="absolute left-0 top-1/2 z-10 flex size-9 -translate-y-1/2 items-center justify-center rounded-full border border-line bg-surface text-muted sm:-left-3"
+          >
+            <ChevronLeft size={16} />
+          </button>
+          <button
+            type="button"
+            aria-label="Next"
+            onClick={() => stepCompany(1)}
+            className="absolute right-0 top-1/2 z-10 flex size-9 -translate-y-1/2 items-center justify-center rounded-full border border-line bg-surface text-muted sm:-right-3"
+          >
+            <ChevronRight size={16} />
+          </button>
+          <div className="mx-10 rounded-xl border border-line bg-surface px-5 py-8 text-center sm:mx-12 sm:px-10">
+            <div className="text-xs font-semibold tracking-widest text-accent">{card?.title}</div>
+            <p className="mx-auto mt-4 max-w-[460px] text-sm leading-6 text-muted">{card?.body}</p>
+          </div>
+          <div className="mt-4 flex justify-center gap-2">
+            {cards.map((item, i) => (
+              <button
+                key={item.title}
+                type="button"
+                aria-label={item.title}
+                onClick={() => setCompany(i)}
+                className={i === company ? "size-2 rounded-full bg-accent" : "size-2 rounded-full bg-line-strong"}
+              />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="mt-16">
+        <div className="text-center">
+          <div className="text-xs font-semibold tracking-widest text-accent">{t.how}</div>
+          <h2 className="mt-2 text-[28px] font-bold">{t.howTitle}</h2>
+        </div>
+        <div className="mt-8 grid gap-4 md:grid-cols-3">
+          {[
+            { n: "01", t: t.page.step1t, d: t.page.step1d },
+            { n: "02", t: t.page.step2t, d: t.page.step2d },
+            { n: "03", t: t.page.step3t, d: t.page.step3d },
+          ].map((s) => (
+            <div key={s.n} className="rounded-lg border border-line bg-surface p-5">
+              <div className="text-xs font-bold tracking-widest text-accent">{s.n}</div>
+              <div className="mt-2 font-semibold">{s.t}</div>
+              <p className="mt-1 text-[13px] text-subtle">{s.d}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="mt-16">
+        <h2 className="text-2xl font-bold">{t.plansTitle}</h2>
+        <PlanGrid
+          cta={t.openToInvest}
+          onAction={() => {
+            toast(t.page.openingAccount);
+            void navigate({ to: "/register" });
+          }}
+        />
+      </section>
+
+      <section className="mt-16">
+        <h2 className="text-2xl font-bold">{t.questions}</h2>
+        <div className="mt-6 divide-y divide-line overflow-hidden rounded-lg border border-line bg-surface">
+          {t.page.faqs.map((item) => (
+            <details key={item.q} className="group p-4">
+              <summary className="cursor-pointer list-none text-sm font-semibold text-fg">
+                {item.q}
+              </summary>
+              <p className="mt-2 text-[13px] text-subtle">{item.a}</p>
+            </details>
+          ))}
+        </div>
+      </section>
+
+      <p className="mt-10 text-center text-sm text-muted">
+        <a href="tel:+447404603931" className="font-semibold text-accent underline underline-offset-2">
+          +44 7404 603931
+        </a>
+      </p>
+      <p className="mt-2 text-center text-[13px] leading-5 text-subtle">
+        <a
+          href="https://maps.google.com/?q=Bethanee+Dong+Tumulus+Avenue+Newcastle+upon+Tyne+NE6+4US"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hover:text-accent"
+        >
+          Bethanee Dong, Tumulus Avenue, Newcastle upon Tyne, NE6 4US, United Kingdom
+        </a>
+      </p>
+      <p className="mt-6 text-center text-[11px] text-faint">
+        {t.page.footerEdu}{" "}
+        <a
+          href="https://www.tradingview.com/symbols/BDXUSD/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-accent"
+        >
+          {t.page.tvChartTitle}
+        </a>
+      </p>
+      <p className="mt-2 text-center text-[11px] text-faint">
+        <Link to="/legal" hash="terms" className="text-muted hover:text-accent">
+          {t.termsWord}
+        </Link>
+        {" · "}
+        <Link to="/legal" hash="privacy" className="text-muted hover:text-accent">
+          {t.privacyWord}
+        </Link>
+        {" · "}
+        <Link to="/legal" hash="risk" className="text-muted hover:text-accent">
+          {t.riskWord}
+        </Link>
+      </p>
+
+    </div>
+  );
+}

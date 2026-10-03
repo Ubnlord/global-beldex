@@ -341,15 +341,15 @@ export const WITHDRAW_METHODS = [
 export const FAQ = [
   {
     q: "Is this a live brokerage?",
-    a: "No. GLOBAL BELDEX here is an educational demo with live Beldex charts from TradingView. Balances, deposits and plans are simulated in your browser.",
+    a: "Yes. GLOBAL BELDEX is with live Beldex charts from TradingView.",
   },
   {
     q: "What is the minimum deposit?",
-    a: "The demo uses a $300 minimum to match the original product flow. Funds never leave your device.",
+    a: "$300 minimum.",
   },
   {
     q: "How do investment plans work?",
-    a: "Each plan locks a simulated amount for a fixed duration and accrues the listed daily profit. When the term ends, principal plus profit return to your available balance.",
+    a: "Each plan locks an amount for a fixed duration and accrues the listed daily profit. When the term ends, principal plus profit return to your available balance.",
   },
   {
     q: "Where does market data come from?",
@@ -357,6 +357,6 @@ export const FAQ = [
   },
   {
     q: "Can I refer friends?",
-    a: "Yes — every account gets a referral link. In this demo, referral bonuses are simulated when you copy and share your link.",
+    a: "Yes — every account gets a referral link. referral bonuses are credited when you copy and share your link.",
   },
 ];

@@ -32,10 +32,10 @@ jobs:
           VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
       - name: Enable SPA fallback for dynamic referral links
-        run: cp ./.output/public/index.html ./.output/public/404.html
+        run: cp ./dist/client/index.html ./dist/client/404.html
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: ./.output/public
+          path: ./dist/client
       - id: deployment
         uses: actions/deploy-pages@v4

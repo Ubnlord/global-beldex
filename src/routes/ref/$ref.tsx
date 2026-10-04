@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { GuestShell } from "@/components/layout/app-shell";
 
@@ -13,21 +13,16 @@ function ReferralRedirectPage() {
 }
 
 function ReferralRedirect() {
-  const navigate = useNavigate();
   const { ref } = Route.useParams();
 
   useEffect(() => {
     const referral = ref.trim();
     if (!referral) {
-      void navigate({ to: "/" });
+      window.location.replace("/");
       return;
     }
-    void navigate({
-      to: "/register",
-      search: { ref: referral },
-      replace: true,
-    });
-  }, [navigate, ref]);
+    window.location.replace(`/register?ref=${encodeURIComponent(referral)}`);
+  }, [ref]);
 
   return (
     <div className="flex min-h-[calc(100vh-64px)] items-center justify-center px-4 py-10">

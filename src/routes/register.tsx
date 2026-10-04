@@ -1,5 +1,5 @@
 import { createFileRoute, Link, Navigate, useNavigate } from "@tanstack/react-router";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { GuestShell } from "@/components/layout/app-shell";
 import { toast, toastError } from "@/components/layout/toast";
 import { Button } from "@/components/ui/button";
@@ -39,6 +39,12 @@ function Register() {
   });
   const [pendingEmail, setPendingEmail] = useState("");
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    const ref = new URLSearchParams(window.location.search).get("ref")?.trim();
+    if (!ref) return;
+    setForm((current) => (current.ref ? current : { ...current, ref }));
+  }, []);
 
   const set = (k: keyof typeof form, v: string) => setForm((s) => ({ ...s, [k]: v }));
 

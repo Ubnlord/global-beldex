@@ -26,9 +26,9 @@ function WithdrawPage() {
   const [amount, setAmount] = useState("");
   const [address, setAddress] = useState("");
 
-  const submit = () => {
+  const submit = async () => {
     const n = parseFloat(amount);
-    const err = withdraw(n, method, address);
+    const err = await withdraw(n, method, address);
     if (err) {
       toastError(err);
       return;

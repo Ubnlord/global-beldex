@@ -71,10 +71,14 @@ drop policy if exists investments_update_admin on public.user_investment;
 create policy investments_update_admin on public.user_investment
 for update to authenticated using (is_admin()) with check (is_admin());
 
+drop policy if exists transactions_insert_own on public.transaction;
 drop policy if exists transactions_insert_admin_referral on public.transaction;
-create policy transactions_insert_admin_referral on public.transaction
+create policy transactions_insert on public.transaction
 for insert to authenticated
-with check (is_admin() and type='referral' and coalesce(method,'') like 'Referral deposit %');
+with check (
+  (select auth.uid())=user_id
+  or (is_admin() and type='referral' and coalesce(method,'') like 'Referral deposit %')
+);
 
 create or replace function public.ensure_user_profile(
   p_username text,p_fullname text,p_phone text default '',p_country text default '',p_ref text default null

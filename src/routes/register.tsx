@@ -110,7 +110,7 @@ function Register() {
             <Input
               value={form.username}
               onChange={(e) => set("username", e.target.value)}
-              placeholder="mrkenmk"
+              placeholder="johnbeldex"
             />
           </div>
           <div>
@@ -118,7 +118,7 @@ function Register() {
             <Input
               value={form.fullname}
               onChange={(e) => set("fullname", e.target.value)}
-              placeholder="Kenneth Munachimso"
+              placeholder="Kelvin Copeland"
             />
           </div>
           <div>
@@ -135,7 +135,7 @@ function Register() {
             <Input
               value={form.phone}
               onChange={(e) => set("phone", e.target.value)}
-              placeholder="+1 234..."
+              placeholder="+1 ..."
             />
           </div>
           <div>

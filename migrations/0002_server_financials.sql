@@ -39,6 +39,8 @@ create unique index if not exists user_profile_referral_code_uq
   on public.user_profile(referral_code) where referral_code is not null;
 create index if not exists user_investment_user_status_idx on public.user_investment(user_id,status);
 create index if not exists user_investment_due_idx on public.user_investment(status,last_accrual_at);
+create index if not exists user_investment_plan_id_idx on public.user_investment(plan_id);
+create index if not exists user_profile_referred_by_user_id_idx on public.user_profile(referred_by_user_id);
 
 insert into public.investment_plan_catalog(id,name,min_amount,max_amount,duration_days,daily_rate) values
 ('gns','GNS PLAN',4000,10000,30,0.0019/30),

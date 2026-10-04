@@ -43,9 +43,9 @@ function DepositPage() {
     setStep("pay");
   };
 
-  const confirm = () => {
+  const confirm = async () => {
     const n = parseFloat(amount);
-    const err = deposit(n, DEPOSIT_METHODS[method].title);
+    const err = await deposit(n, DEPOSIT_METHODS[method].title);
     if (err) {
       toastError(err);
       return;

@@ -32,7 +32,7 @@ export default defineConfig(({ command, isPreview }) => ({
     ...(command === "build" || isPreview
       ? [
           nitro({
-            preset: "static",
+            preset: "github_pages",
           }),
         ]
       : []),

@@ -83,4 +83,4 @@ export function scheduleCloudSave(book: Book) {
     pending = null;
     if (next) void pushCloudBook(next);
   }, 500);
-  }
+}

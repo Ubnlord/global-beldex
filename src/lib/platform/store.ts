@@ -4,6 +4,7 @@ import { copy, fill, type Lang } from "./i18n";
 import { planCeiling, type Plan } from "./catalog";
 import { formatDate, uid } from "@/lib/utils";
 import { scheduleCloudSave } from "@/lib/supabase/books";
+import { supabase } from "@/lib/supabase/client";
 
 export type { Lang };
 
@@ -510,29 +511,15 @@ export const usePlatform = create<PlatformState>()(
           return code;
         },
 
-        deposit: (amount, method) => {
+        deposit: async (amount, method) => {
           if (!amount || amount < 300) return "MIN_DEPOSIT";
-          const m = copy[get().lang].note;
-          const tx: Transaction = {
-            id: uid(),
-            type: "deposit",
-            amount,
-            status: "pending",
-            date: formatDate(),
-            method,
-            settleAt: Date.now() + 1800,
-          };
-          set({
-            txs: [tx, ...get().txs],
-            notices: [
-              notice(
-                m.depositInitTitle,
-                fill(m.depositInitBody, { method, amount: amount.toFixed(2) }),
-              ),
-              ...get().notices,
-            ],
+          const { error } = await supabase.rpc("create_financial_transaction", {
+            p_type: "deposit",
+            p_amount: amount,
+            p_method: method,
+            p_note: null,
           });
-          save();
+          if (error) return error.message;
           return null;
         },
 
@@ -577,35 +564,18 @@ export const usePlatform = create<PlatformState>()(
           save();
         },
 
-        withdraw: (amount, method, address) => {
+        withdraw: async (amount, method, address) => {
           if (!method) return "NEED_METHOD";
           if (!address.trim()) return "NEED_ADDRESS";
           if (!amount || amount <= 0) return "NEED_AMOUNT";
           if (amount > get().available) return "INSUFFICIENT";
-          const m = copy[get().lang].note;
-          const tx: Transaction = {
-            id: uid(),
-            type: "withdraw",
-            amount,
-            status: "pending",
-            date: formatDate(),
-            method,
-            note: address.trim(),
-            settleAt: Date.now() + 1600,
-          };
-          set({
-            available: get().available - amount,
-            withdrawn: get().withdrawn + amount,
-            txs: [tx, ...get().txs],
-            notices: [
-              notice(
-                m.withdrawReqTitle,
-                fill(m.withdrawReqBody, { amount: amount.toFixed(2), method }),
-              ),
-              ...get().notices,
-            ],
+          const { error } = await supabase.rpc("create_financial_transaction", {
+            p_type: "withdraw",
+            p_amount: amount,
+            p_method: method,
+            p_note: address.trim(),
           });
-          save();
+          if (error) return error.message;
           return null;
         },
 
@@ -824,19 +794,6 @@ export const usePlatform = create<PlatformState>()(
         return { ...p, accounts, tickets };
       },
       partialize: (s) => ({
-        user: s.user,
-        accounts: s.accounts,
-        available: s.available,
-        bdx: s.bdx,
-        locked: s.locked,
-        profit: s.profit,
-        bonus: s.bonus,
-        referralBonus: s.referralBonus,
-        withdrawn: s.withdrawn,
-        txs: s.txs,
-        plans: s.plans,
-        notices: s.notices,
-        tickets: s.tickets,
         lang: s.lang,
         welcomeOpen: s.welcomeOpen,
         sessionOnly: s.sessionOnly,

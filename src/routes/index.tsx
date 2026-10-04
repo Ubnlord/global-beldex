@@ -207,22 +207,22 @@ function Landing() {
           {[
             {
               image:
-                "https://www.avatrade-sea.com/wp-content/uploads/2022/07/global_business_best_mobile_platform.jpg",
+                "/awards/award-1.svg",
               title: "Best Mobile Trading Platform UAE 2022",
             },
             {
               image:
-                "https://www.avatrade-sea.com/wp-content/uploads/2022/07/most_trusted_platform.jpg",
+                "/awards/award-2.svg",
               title: "Most Trusted Trading Platform Europe 2022",
             },
             {
               image:
-                "https://www.avatrade-sea.com/wp-content/uploads/2022/07/most-innovative-cfd-broker.jpg",
+                "/awards/award-3.svg",
               title: "Most Innovative CFD Broker",
             },
             {
               image:
-                "https://www.avatrade-sea.com/wp-content/uploads/2022/07/best-fixed-spread-broker.jpg",
+                "/awards/award-4.svg",
               title: "Best Fixed Spread Broker",
             },
           ].map((award) => (

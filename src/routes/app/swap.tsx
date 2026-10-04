@@ -32,8 +32,8 @@ function SwapPage() {
     setAmount("");
   };
 
-  const submit = () => {
-    const err = swap(from, to, n, rate);
+  const submit = async () => {
+    const err = await swap(from, to, n, rate);
     if (err) {
       toastError(err);
       return;

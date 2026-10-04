@@ -31,7 +31,17 @@ function Landing() {
   const t = copy[lang];
   const cards = t.page.companyCards;
   const [company, setCompany] = useState(0);
+  const [testimonial, setTestimonial] = useState(0);
   const card = cards[company] ?? cards[0];
+
+  const testimonials = [
+    { name: "ROBERT HOPKINS", body: "I have been a client of Logan Beldex Limited for over the last year. I have found this company to be competent, capable, knowledgeable, and a vital component of building my Manufacturing business. I would highly recommend Logan Beldex Limited.", position: "0%" },
+    { name: "GARY JAMES", body: "I must say this platform is indeed amazing. it was a glimpse at first but today i can account for a real trade when it comes to Investing on Logan Beldex Limited.", position: "25%" },
+    { name: "KEVIN GAINES", body: "Logan Beldex Limited exceeds expectations time after time. Their vast experience and knowledge of the global futures markets will save you time and money when it comes to execution, rolls and research. The entire staff/Traders put a great deal of effort into their relationship with clients, and I am truly appreciative of all they have done for me.", position: "50%" },
+    { name: "STEVEN TACCONI", body: "As a satisfied client, I am just writing to tell of how much I have appreciated and enjoyed working with Logan Beldex Limited. I would personally rank Logan Beldex Limited at the top of the list when it comes to professionalism and overall knowledge of the futures business. Clearly, Logan Beldex Limited is interested in the continuing success of their clients. Their attention to personal service is outstanding. It is truly been a positive experience working with them.", position: "75%" },
+    { name: "TED & SHANNON", body: "I absolutely love your service. I don’t know how you do it, but I am very, very happy that I found you, and I can’t thank you enough for helping me to realize my dream of achieving a supplemental income to my Administrative business, which I have been able to skyrocket to another level with the extra money I make by Investing with Logan Beldex Limited.", position: "100%" },
+  ];
+  const activeTestimonial = testimonials[testimonial] ?? testimonials[0];
   const stepCompany = (dir: number) => {
     if (!cards.length) return;
     setCompany((i) => (i + dir + cards.length) % cards.length);
@@ -247,36 +257,62 @@ function Landing() {
       </section>
 
       <section className="mt-16">
-        <h2 className="text-center text-[28px] font-bold text-fg">{t.page.goodCompany}</h2>
-        <div className="relative mx-auto mt-8 max-w-[640px]">
+        <div className="text-center">
+          <div className="text-xs font-semibold tracking-widest text-accent">CLIENT STORIES</div>
+          <h2 className="mt-2 text-center text-[28px] font-bold text-fg sm:text-[34px]">
+            You&apos;re In Good Company!
+          </h2>
+          <p className="mx-auto mt-3 max-w-[720px] text-xs leading-5 text-muted">
+            Legacy testimonial content supplied for this website has been preserved as reference
+            material. Testimonials and historical claims are not independently verified by Global Beldex.
+          </p>
+        </div>
+
+        <div className="relative mx-auto mt-8 max-w-[760px]">
           <button
             type="button"
-            aria-label="Previous"
-            onClick={() => stepCompany(-1)}
-            className="absolute left-0 top-1/2 z-10 flex size-9 -translate-y-1/2 items-center justify-center rounded-full border border-line bg-surface text-muted sm:-left-3"
+            aria-label="Previous testimonial"
+            onClick={() => setTestimonial((i) => (i - 1 + testimonials.length) % testimonials.length)}
+            className="absolute left-0 top-1/2 z-10 flex size-10 -translate-y-1/2 items-center justify-center rounded-full border border-line bg-surface text-fg shadow-sm"
           >
-            <ChevronLeft size={16} />
+            <ChevronLeft size={18} />
           </button>
           <button
             type="button"
-            aria-label="Next"
-            onClick={() => stepCompany(1)}
-            className="absolute right-0 top-1/2 z-10 flex size-9 -translate-y-1/2 items-center justify-center rounded-full border border-line bg-surface text-muted sm:-right-3"
+            aria-label="Next testimonial"
+            onClick={() => setTestimonial((i) => (i + 1) % testimonials.length)}
+            className="absolute right-0 top-1/2 z-10 flex size-10 -translate-y-1/2 items-center justify-center rounded-full border border-line bg-surface text-fg shadow-sm"
           >
-            <ChevronRight size={16} />
+            <ChevronRight size={18} />
           </button>
-          <div className="mx-10 rounded-xl border border-line bg-surface px-5 py-8 text-center sm:mx-12 sm:px-10">
-            <div className="text-xs font-semibold tracking-widest text-accent">{card?.title}</div>
-            <p className="mx-auto mt-4 max-w-[460px] text-sm leading-6 text-muted">{card?.body}</p>
+
+          <div className="mx-8 overflow-hidden rounded-xl border border-line bg-surface p-6 shadow-sm sm:mx-12 sm:p-10">
+            <div
+              className="mx-auto size-[170px] rounded-xl bg-cover bg-center sm:size-[210px]"
+              style={{
+                backgroundImage: "url('/testimonials/testimonials.jpg')",
+                backgroundSize: "500% 100%",
+                backgroundPosition: activeTestimonial.position + " center",
+              }}
+              role="img"
+              aria-label={activeTestimonial.name + " testimonial"}
+            />
+            <blockquote className="mx-auto mt-7 max-w-[620px] text-center text-[15px] leading-7 text-muted sm:text-[17px] sm:leading-8">
+              “{activeTestimonial.body}”
+            </blockquote>
+            <div className="mt-7 text-center text-sm font-semibold italic tracking-wide text-subtle">
+              {activeTestimonial.name}
+            </div>
           </div>
-          <div className="mt-4 flex justify-center gap-2">
-            {cards.map((item, i) => (
+
+          <div className="mt-5 flex justify-center gap-2">
+            {testimonials.map((item, i) => (
               <button
-                key={item.title}
+                key={item.name}
                 type="button"
-                aria-label={item.title}
-                onClick={() => setCompany(i)}
-                className={i === company ? "size-2 rounded-full bg-accent" : "size-2 rounded-full bg-line-strong"}
+                aria-label={"Show testimonial from " + item.name}
+                onClick={() => setTestimonial(i)}
+                className={i === testimonial ? "size-2.5 rounded-full bg-accent" : "size-2.5 rounded-full bg-line-strong"}
               />
             ))}
           </div>

@@ -13,7 +13,7 @@ import {
   Wallet,
   X,
 } from "lucide-react";
-import { AdvancedChart, SymbolOverview, TickerTape } from "@/components/market/tradingview";
+import { AdvancedChart, SymbolOverview } from "@/components/market/tradingview";
 import { BdxConverter } from "@/components/market/live-price";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/layout/toast";

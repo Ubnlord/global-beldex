@@ -83,18 +83,6 @@ function Landing() {
               {t.explore}
             </Button>
           </div>
-          <div className="mt-8 grid gap-2 sm:grid-cols-3 sm:gap-3">
-            {[
-              { k: t.page.statZero, v: t.page.statZeroBody },
-              { k: t.page.statLev, v: t.page.statLevBody },
-              { k: t.page.statInst, v: t.page.statInstBody },
-            ].map((item) => (
-              <div key={item.k} className="rounded-md border border-line bg-surface p-3">
-                <div className="text-[13px] font-semibold text-fg">{item.k}</div>
-                <div className="mt-1 text-[11px] text-subtle">{item.v}</div>
-              </div>
-            ))}
-          </div>
         </div>
 
         <div className="rounded-xl border border-line bg-surface p-4">
@@ -143,18 +131,6 @@ function Landing() {
       <section className="mt-16">
         <div className="text-center">
           <div className="text-xs font-semibold tracking-widest text-accent">{t.page.conditionsCharges}</div>
-        </div>
-        <div className="mt-6 grid gap-3 sm:grid-cols-3">
-          {[
-            { k: t.page.statZero, v: t.page.statZeroBody },
-            { k: t.page.statLev, v: t.page.statLevBody },
-            { k: t.page.statInst, v: t.page.statInstBody },
-          ].map((item) => (
-            <div key={item.k} className="rounded-lg border border-line bg-elevated p-4">
-              <div className="text-sm font-semibold">{item.k}</div>
-              <div className="mt-1 text-[12px] text-subtle">{item.v}</div>
-            </div>
-          ))}
         </div>
         <div className="mt-6 text-center">
           <Button

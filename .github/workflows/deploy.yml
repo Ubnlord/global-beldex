@@ -26,16 +26,39 @@ jobs:
         with:
           node-version: 22
           cache: npm
+
       - run: npm ci
+
       - run: npm run build
         env:
           VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
-      - name: Enable SPA fallback for dynamic referral links
-        run: cp ./dist/client/index.html ./dist/client/404.html
+
+      - name: Prepare GitHub Pages static site
+        run: |
+          set -e
+          if [ -f "./.output/public/index.html" ]; then
+            OUTPUT_DIR="./.output/public"
+          elif [ -f "./dist/client/index.html" ]; then
+            OUTPUT_DIR="./dist/client"
+          else
+            echo "ERROR: Could not find the static build output."
+            echo "Available candidate files:"
+            find . -path "./node_modules" -prune -o -type f -name "index.html" -print
+            exit 1
+          fi
+
+          echo "Using static output: $OUTPUT_DIR"
+          rm -rf ./pages-site
+          mkdir -p ./pages-site
+          cp -R "$OUTPUT_DIR"/. ./pages-site/
+          cp ./pages-site/index.html ./pages-site/404.html
+
       - uses: actions/configure-pages@v5
+
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: ./dist/client
+          path: ./pages-site
+
       - id: deployment
         uses: actions/deploy-pages@v4

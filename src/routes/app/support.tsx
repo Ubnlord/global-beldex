@@ -29,7 +29,7 @@ function SupportPage() {
     <div className="mx-auto max-w-[480px] px-4 pb-[100px] pt-4">
       <h2 className="text-xl font-bold">{t.support}</h2>
       <p className="mt-1 text-xs text-subtle">{t.supportLead}</p>
-      <div className="mt-4 rounded-lg border border-line bg-elevated px-4 py-3">
+      <div id="contact" className="mt-4 scroll-mt-24 rounded-lg border border-line bg-elevated px-4 py-3">
         <div className="text-[11px] text-subtle">{t.supportEmail}</div>
         <a
           href="mailto:globalbeldex1@gmail.com"
@@ -99,7 +99,7 @@ function SupportPage() {
           ))}
         </div>
       )}
-      <div className="mt-6 divide-y divide-line overflow-hidden rounded-lg border border-line bg-elevated">
+      <div id="faq" className="mt-6 scroll-mt-24 divide-y divide-line overflow-hidden rounded-lg border border-line bg-elevated">
         {t.page.faqs.map((item) => (
           <details key={item.q} className="p-4">
             <summary className="cursor-pointer text-sm font-semibold">{item.q}</summary>

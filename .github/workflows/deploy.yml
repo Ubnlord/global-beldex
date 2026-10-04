@@ -37,13 +37,13 @@ jobs:
       - name: Prepare GitHub Pages static site
         run: |
           set -e
-          if [ -f "./.output/public/index.html" ]; then
-            OUTPUT_DIR="./.output/public"
-          elif [ -f "./dist/client/index.html" ]; then
+
+          if [ -d "./dist/client" ]; then
             OUTPUT_DIR="./dist/client"
+          elif [ -d "./.output/public" ]; then
+            OUTPUT_DIR="./.output/public"
           else
             echo "ERROR: Could not find the static build output."
-            echo "Available candidate files:"
             find . -path "./node_modules" -prune -o -type f -name "index.html" -print
             exit 1
           fi
@@ -52,6 +52,22 @@ jobs:
           rm -rf ./pages-site
           mkdir -p ./pages-site
           cp -R "$OUTPUT_DIR"/. ./pages-site/
+
+          # GitHub Pages needs an index.html at the site root.
+          # TanStack Start SPA mode may emit its shell as _shell.html.
+          if [ ! -f "./pages-site/index.html" ] && [ -f "./pages-site/_shell.html" ]; then
+            cp ./pages-site/_shell.html ./pages-site/index.html
+          fi
+
+          # Final safety check: never deploy an artifact without a root index.
+          if [ ! -f "./pages-site/index.html" ]; then
+            echo "ERROR: No root index.html or _shell.html was generated."
+            echo "Top-level build output:"
+            find "$OUTPUT_DIR" -maxdepth 2 -type f -print | sort | head -100
+            exit 1
+          fi
+
+          # GitHub Pages fallback for client-side routes.
           cp ./pages-site/index.html ./pages-site/404.html
 
       - uses: actions/configure-pages@v5

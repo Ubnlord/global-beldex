@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { create } from "zustand";
 import { ArrowLeftRight, TrendingDown, TrendingUp } from "lucide-react";
 import { CoinLogo } from "@/components/market/coin-logo";
-import { fetchQuotes } from "@/lib/market/quotes";
+import { fetchQuotes } from "@/lib/market/live-quotes";
 import { copy } from "@/lib/platform/i18n";
 import { usePlatform } from "@/lib/platform/store";
 import { cn } from "@/lib/utils";

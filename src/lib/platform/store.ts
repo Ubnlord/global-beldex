@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import { copy, fill, type Lang } from "./i18n";
 import { planCeiling, type Plan } from "./catalog";
 import { formatDate, uid } from "@/lib/utils";
+import { scheduleCloudSave } from "@/lib/supabase/books";
 
 export type { Lang };
 
@@ -284,6 +285,7 @@ export const usePlatform = create<PlatformState>()(
             [key]: { ...rec, user: s.user, book: snapshot(s) },
           },
         });
+        scheduleCloudSave(snapshot(s));
       };
 
       return {

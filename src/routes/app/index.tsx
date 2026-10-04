@@ -122,18 +122,6 @@ function Dashboard() {
       </div>
 
       <div className="mt-6">
-        <div className="flex items-center justify-between">
-          <div className="text-[13px] font-semibold text-fg">{t.marketOverview}</div>
-          <div className="flex items-center gap-1 text-[11px] text-accent">
-            <span className="size-1.5 rounded-full bg-accent animate-pulse" /> {t.page.liveDot}
-          </div>
-        </div>
-        <div className="mt-3">
-          <TickerTape />
-        </div>
-      </div>
-
-      <div className="mt-6">
         <BdxConverter />
       </div>
 

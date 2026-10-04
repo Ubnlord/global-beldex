@@ -51,23 +51,45 @@ async function kucoinBeldex() {
   return { usd, change: Number.isFinite(rate) ? rate * 100 : 0 };
 }
 
-export const fetchQuotes = createServerFn({ method: "GET" }).handler(async (): Promise<QuoteBook> => {
-  const [btc, eth, bdx] = await Promise.all([mexc("BTCUSDT"), mexc("ETHUSDT"), mexc("BDXUSDT")]);
+export async function fetchQuotes(): Promise<QuoteBook> {
+  const res = await fetch(
+    "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,beldex&vs_currencies=usd&include_24hr_change=true",
+    {
+      headers: { accept: "application/json" },
+      cache: "no-store",
+    },
+  );
+  if (!res.ok) {
+    throw new Error(`Market price request failed: ${res.status}`);
+  }
+
+  const data = (await res.json()) as Record<
+    string,
+    { usd?: number; usd_24h_change?: number }
+  >;
+
   const book: QuoteBook = {};
-  if (btc) book.bitcoin = btc;
-  if (eth) book.ethereum = eth;
-  if (bdx) book.beldex = bdx;
-  if (!book.bitcoin || !book.ethereum) {
-    const extra = await krakenMajors();
-    book.bitcoin ??= extra.bitcoin;
-    book.ethereum ??= extra.ethereum;
-  }
+  const add = (id: string, key: string) => {
+    const usd = Number(data[id]?.usd);
+    const change = Number(data[id]?.usd_24h_change);
+    if (Number.isFinite(usd) && usd > 0) {
+      book[key] = {
+        usd,
+        change: Number.isFinite(change) ? change : 0,
+      };
+    }
+  };
+
+  add("bitcoin", "bitcoin");
+  add("ethereum", "ethereum");
+  add("beldex", "beldex");
+
   if (!book.beldex) {
-    const extra = await kucoinBeldex();
-    if (extra) book.beldex = extra;
+    throw new Error("Beldex live price unavailable");
   }
+
   return book;
-});
+}
 
 export type BeldexDetail = {
   usd: number | null;

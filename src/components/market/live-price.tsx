@@ -41,7 +41,7 @@ function ensureLive() {
   liveStarted = true;
   const tick = () => void useQuote.getState().load();
   void tick();
-  window.setInterval(tick, 3000);
+  window.setInterval(tick, 30000);
 }
 
 export function useBeldexQuote() {

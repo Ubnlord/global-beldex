@@ -275,6 +275,119 @@ function Landing() {
         </div>
       </section>
 
+      <section id="global-beldex-difference" className="mt-20 border-t border-line pt-14">
+        <div className="mx-auto max-w-[980px]">
+          <div className="text-center">
+            <div className="text-xs font-semibold tracking-widest text-accent">GLOBAL BELDEX</div>
+            <h2 className="mt-2 text-[28px] font-bold text-fg sm:text-[34px]">
+              What Makes Global Beldex Limited Different?
+            </h2>
+            <p className="mx-auto mt-3 max-w-[700px] text-sm leading-6 text-muted">
+              Built around transparent market access, useful education, and tools designed to help
+              traders make informed decisions.
+            </p>
+          </div>
+
+          <div className="mt-10 grid gap-4 md:grid-cols-2">
+            {[
+              {
+                title: "We Want You to Succeed",
+                body:
+                  "Access educational resources, market information, and practical tools designed to help you understand the markets and make more informed decisions.",
+              },
+              {
+                title: "We Believe in Endless Opportunities",
+                body:
+                  "Explore available markets and instruments from one place, with a mobile-friendly experience built for convenient access wherever you are.",
+              },
+              {
+                title: "Great Investing Conditions",
+                body:
+                  "We focus on a clear trading experience, responsive interfaces, and reliable access to the tools and market information available on the platform.",
+              },
+              {
+                title: "We Believe You Deserve the Best",
+                body:
+                  "Use the platform's portfolio, market, investment, and risk-information features to stay organised and make decisions based on your own goals and risk tolerance.",
+              },
+              {
+                title: "We Love to Stay in Touch",
+                body:
+                  "Keep up with Global Beldex announcements, market updates, platform improvements, and other important information published through our official channels.",
+              },
+            ].map((item) => (
+              <div key={item.title} className="rounded-xl border border-line bg-surface p-5">
+                <h3 className="text-[15px] font-semibold text-fg">{item.title}</h3>
+                <p className="mt-2 text-[13px] leading-6 text-subtle">{item.body}</p>
+              </div>
+            ))}
+          </div>
+
+          <footer className="mt-12 border-t border-line pt-8">
+            <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+              <div>
+                <div className="text-xs font-semibold tracking-widest text-accent">MARKETS</div>
+                <div className="mt-3 grid gap-2 text-[13px]">
+                  <a href="/app/markets" className="text-subtle hover:text-accent">Forex</a>
+                  <a href="/app/markets" className="text-subtle hover:text-accent">Cryptos</a>
+                </div>
+              </div>
+
+              <div>
+                <div className="text-xs font-semibold tracking-widest text-accent">INVESTMENT</div>
+                <div className="mt-3 grid gap-2 text-[13px]">
+                  <a href="/app/plans" className="text-subtle hover:text-accent">Pricing</a>
+                  <a href="/legal" className="text-subtle hover:text-accent">Help Centre / FAQ</a>
+                </div>
+              </div>
+
+              <div>
+                <div className="text-xs font-semibold tracking-widest text-accent">COMPANY</div>
+                <div className="mt-3 grid gap-2 text-[13px]">
+                  <a href="#global-beldex-difference" className="text-subtle hover:text-accent">Why us</a>
+                  <a href="/legal" className="text-subtle hover:text-accent">Contact Us</a>
+                </div>
+              </div>
+
+              <div>
+                <div className="text-xs font-semibold tracking-widest text-accent">ACCOUNT</div>
+                <div className="mt-3 grid gap-2 text-[13px]">
+                  <Link to="/login" className="text-subtle hover:text-accent">Login</Link>
+                  <Link to="/register" className="text-subtle hover:text-accent">Sign Up</Link>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-8 border-t border-line pt-6">
+              <div className="text-xs font-semibold tracking-widest text-accent">LEGAL</div>
+              <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-[13px]">
+                <Link to="/legal" hash="privacy" className="text-subtle hover:text-accent">Privacy Policy</Link>
+                <Link to="/legal" hash="terms" className="text-subtle hover:text-accent">Terms of Service</Link>
+                <Link to="/legal" hash="risk" className="text-subtle hover:text-accent">Risk Disclosure</Link>
+              </div>
+            </div>
+
+            <div className="mt-8 space-y-3 text-[11px] leading-5 text-faint">
+              <p>
+                This website may be accessed worldwide. Information and services available through
+                the platform may vary by jurisdiction and eligibility. Please review the applicable
+                terms, disclosures, and legal information before using any trading or investment
+                service.
+              </p>
+              <p>
+                Forex, CFDs, and other leveraged products can result in significant losses and may
+                not be suitable for every client. Prices can move rapidly against you and you may
+                lose some or all of the funds committed. Make sure you understand the risks and
+                consider seeking independent financial advice where appropriate.
+              </p>
+              <p className="pt-2 text-center">
+                Copyright © 2025. All Rights Reserved
+              </p>
+            </div>
+          </footer>
+        </div>
+      </section>
+
       <p className="mt-10 text-center text-sm text-muted">
         <a href="tel:+447404603931" className="font-semibold text-accent underline underline-offset-2">
           +44 7404 603931

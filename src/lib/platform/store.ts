@@ -3,7 +3,7 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import { copy, fill, type Lang } from "./i18n";
 import { planCeiling, type Plan } from "./catalog";
 import { formatDate, uid } from "@/lib/utils";
-import { scheduleCloudSave } from "@/lib/supabase/books";
+import { pullCloudBook } from "@/lib/supabase/books";
 import { supabase } from "@/lib/supabase/client";
 
 export type { Lang };
@@ -138,9 +138,9 @@ type PlatformState = {
   deposit: (amount: number, method: string) => string | null;
   settlePending: () => void;
   withdraw: (amount: number, method: string, address: string) => string | null;
-  buyPlan: (plan: Plan, amount: number) => string | null;
-  settlePlans: () => void;
-  swap: (from: "USD" | "BDX", to: "USD" | "BDX", amount: number, rate: number) => string | null;
+  buyPlan: (plan: Plan, amount: number) => Promise<string | null>;
+  settlePlans: () => Promise<void>;
+  swap: (from: "USD" | "BDX", to: "USD" | "BDX", amount: number, rate: number) => Promise<string | null>;
   copyReferral: () => string;
   addNotice: (title: string, body: string) => void;
   markNoticesRead: () => void;
@@ -186,49 +186,6 @@ function lookupAccount(accounts: Record<string, AccountRecord>, token: string) {
   return null;
 }
 
-function creditReferrer(
-  get: () => PlatformState,
-  set: (partial: Partial<PlatformState>) => void,
-  depositAmount: number,
-) {
-  const s = get();
-  const user = s.user;
-  if (!user?.ref) return;
-  const found = lookupAccount(s.accounts, user.ref);
-  if (!found || found.key === user.email.toLowerCase()) return;
-  const cut = Math.round(depositAmount * 10) / 100;
-  if (cut <= 0) return;
-  const book = found.rec.book ?? emptyBook();
-  const m = copy[s.lang].note;
-  const tx: Transaction = {
-    id: uid(),
-    type: "referral",
-    amount: cut,
-    status: "completed",
-    date: formatDate(),
-    method: user.username,
-  };
-  const nextBook: Book = {
-    ...book,
-    available: book.available + cut,
-    referralBonus: book.referralBonus + cut,
-    txs: [tx, ...book.txs],
-    notices: [
-      notice(
-        m.referralTitle,
-        fill(m.referralBody, { user: user.username, amount: cut.toFixed(2) }),
-      ),
-      ...book.notices,
-    ],
-  };
-  set({
-    accounts: {
-      ...get().accounts,
-      [found.key]: { ...found.rec, book: nextBook },
-    },
-  });
-}
-
 function snapshot(s: Book): Book {
   return {
     available: s.available,
@@ -243,32 +200,6 @@ function snapshot(s: Book): Book {
     notices: s.notices,
     tickets: s.tickets ?? [],
   };
-}
-
-function settle(plans: ActivePlan[], now: number) {
-  let extraBalance = 0;
-  let extraProfit = 0;
-  const next = plans.map((p) => {
-    if (p.status !== "active") return p;
-    const credited = p.creditedDays ?? 0;
-    const elapsedDays = Math.min(
-      p.durationDays,
-      Math.max(0, Math.floor((now - p.startedAt) / 86_400_000)),
-    );
-    const newly = Math.max(0, elapsedDays - credited);
-    const dayEarn = p.amount * (p.dailyPct / 100);
-    const earned = dayEarn * newly;
-    extraBalance += earned;
-    extraProfit += earned;
-    const done = now >= p.startedAt + p.durationDays * 86_400_000;
-    if (done) {
-      extraBalance += p.amount;
-      return { ...p, status: "completed" as const, creditedDays: p.durationDays };
-    }
-    if (newly === 0) return p;
-    return { ...p, creditedDays: credited + newly };
-  });
-  return { plans: next, extraBalance, extraProfit };
 }
 
 export const usePlatform = create<PlatformState>()(
@@ -286,7 +217,6 @@ export const usePlatform = create<PlatformState>()(
             [key]: { ...rec, user: s.user, book: snapshot(s) },
           },
         });
-        scheduleCloudSave(snapshot(s));
       };
 
       return {
@@ -319,8 +249,6 @@ export const usePlatform = create<PlatformState>()(
             ...book,
             tickets: book.tickets ?? [],
           });
-          get().settlePlans();
-          get().settlePending();
           return null;
         },
 
@@ -389,8 +317,6 @@ export const usePlatform = create<PlatformState>()(
               ...book,
               tickets: book.tickets ?? [],
             });
-            get().settlePlans();
-            get().settlePending();
             return null;
           }
           let refUser: string | undefined;
@@ -439,7 +365,6 @@ export const usePlatform = create<PlatformState>()(
         },
 
         logout: () => {
-          save();
           set({ user: null, welcomeOpen: true, ...emptyBook() });
         },
 
@@ -523,47 +448,6 @@ export const usePlatform = create<PlatformState>()(
           return null;
         },
 
-        settlePending: () => {
-          const now = Date.now();
-          const s0 = get();
-          if (!s0.user) return;
-          const due = s0.txs.filter(
-            (t) =>
-              t.status === "pending" &&
-              (t.type === "deposit" || t.type === "withdraw") &&
-              (t.settleAt ?? 0) <= now,
-          );
-          if (due.length === 0) return;
-          const m = copy[s0.lang].note;
-          let available = s0.available;
-          const notices = [...s0.notices];
-          const ids = new Set(due.map((t) => t.id));
-          for (const tx of due) {
-            if (tx.type === "deposit") {
-              available += tx.amount;
-              notices.unshift(
-                notice(m.depositDoneTitle, fill(m.depositDoneBody, { amount: tx.amount.toFixed(2) })),
-              );
-            } else {
-              notices.unshift(
-                notice(
-                  m.withdrawDoneTitle,
-                  fill(m.withdrawDoneBody, { amount: tx.amount.toFixed(2), method: tx.method }),
-                ),
-              );
-            }
-          }
-          set({
-            available,
-            notices,
-            txs: s0.txs.map((t) => (ids.has(t.id) ? { ...t, status: "completed" as const } : t)),
-          });
-          for (const tx of due) {
-            if (tx.type === "deposit") creditReferrer(get, set, tx.amount);
-          }
-          save();
-        },
-
         withdraw: async (amount, method, address) => {
           if (!method) return "NEED_METHOD";
           if (!address.trim()) return "NEED_ADDRESS";
@@ -579,148 +463,34 @@ export const usePlatform = create<PlatformState>()(
           return null;
         },
 
-        buyPlan: (plan, amount) => {
-          if (amount < plan.min) return `MIN_PLAN|${plan.name}|${plan.min.toLocaleString()}`;
+        buyPlan: async (plan, amount) => {
+          if (amount < plan.min) return "MIN_PLAN|" + plan.name + "|" + plan.min.toLocaleString();
           const cap = planCeiling(plan);
-          if (cap != null && amount > cap) return `MAX_PLAN|${plan.name}|${cap.toLocaleString()}`;
-          if (amount > get().available) return "NEED_DEPOSIT";
-          const m = copy[get().lang];
-          const active: ActivePlan = {
-            id: uid(),
-            planId: plan.id,
-            name: plan.name,
-            amount,
-            dailyPct: plan.dailyPct,
-            startedAt: Date.now(),
-            durationDays: plan.durationDays,
-            status: "active",
-            color: plan.color,
-          };
-          const tx: Transaction = {
-            id: uid(),
-            type: "plan",
-            amount,
-            status: "completed",
-            date: formatDate(),
-            method: plan.name,
-          };
-          set({
-            available: get().available - amount,
-            locked: get().locked + amount,
-            plans: [active, ...get().plans],
-            txs: [tx, ...get().txs],
-            notices: [
-              notice(
-                fill(m.note.planTitle, { name: plan.name }),
-                fill(m.note.planBody, {
-                  amount: amount.toLocaleString(),
-                  duration: `${plan.durationDays} ${m.days}`,
-                }),
-              ),
-              ...get().notices,
-            ],
-          });
-          save();
+          if (cap != null && amount > cap) return "MAX_PLAN|" + plan.name + "|" + cap.toLocaleString();
+          const { error } = await supabase.rpc("buy_investment_plan", { p_plan_id: plan.id, p_amount: amount });
+          if (error) return error.message;
+          const remote = await pullCloudBook();
+          if (remote) set({ ...remote, tickets: remote.tickets ?? [] });
           return null;
         },
 
-        settlePlans: () => {
-          const prev = get().plans;
-          const { plans, extraBalance, extraProfit } = settle(prev, Date.now());
-          const released = prev
-            .filter((p) => p.status === "active")
-            .filter((p) => plans.find((n) => n.id === p.id)?.status === "completed")
-            .reduce((s, p) => s + p.amount, 0);
-          if (released === 0 && extraProfit === 0) return;
-          const m = copy[get().lang].note;
-          const matured = released > 0;
-          set({
-            plans,
-            available: get().available + extraBalance,
-            locked: Math.max(0, get().locked - released),
-            profit: get().profit + extraProfit,
-            txs:
-              extraProfit > 0
-                ? [
-                    {
-                      id: uid(),
-                      type: "bonus" as const,
-                      amount: extraProfit,
-                      status: "completed" as const,
-                      date: formatDate(),
-                      method: matured ? "Plan maturity" : "Daily interest",
-                    },
-                    ...get().txs,
-                  ]
-                : get().txs,
-            notices:
-              extraProfit > 0 || matured
-                ? [
-                    matured
-                      ? notice(
-                          m.matureTitle,
-                          fill(m.matureBody, {
-                            amount: extraProfit.toFixed(2),
-                          }),
-                        )
-                      : notice(
-                          m.dailyTitle,
-                          fill(m.dailyBody, { amount: extraProfit.toFixed(2) }),
-                        ),
-                    ...get().notices,
-                  ]
-                : get().notices,
-          });
-          save();
+        settlePlans: async () => {
+          const { error } = await supabase.rpc("accrue_user_investments", { p_user_id: null });
+          if (error) return;
+          const remote = await pullCloudBook();
+          if (remote) set({ ...remote, tickets: remote.tickets ?? [] });
         },
 
-        swap: (from, to, amount, rate) => {
+        swap: async (from, to, amount, rate) => {
           if (from === to) return "SWAP_SAME";
           if (!amount || amount <= 0) return "NEED_AMOUNT";
           if (!rate || rate <= 0) return "BAD_RATE";
-          const m = copy[get().lang].note;
-          if (from === "USD") {
-            if (amount > get().available) return "INSUFFICIENT_USD";
-            const out = amount / rate;
-            const tx: Transaction = {
-              id: uid(),
-              type: "swap",
-              amount,
-              status: "completed",
-              date: formatDate(),
-              method: "USD → BDX",
-              note: `${amount} USD → ${out.toFixed(4)} BDX`,
-            };
-            set({
-              available: get().available - amount,
-              bdx: get().bdx + out,
-              txs: [tx, ...get().txs],
-              notices: [notice(m.swapTitle, tx.note || ""), ...get().notices],
-            });
-            save();
-            return null;
-          }
-          if (amount > get().bdx) return "INSUFFICIENT_BDX";
-          const out = amount * rate;
-          const tx: Transaction = {
-            id: uid(),
-            type: "swap",
-            amount: out,
-            status: "completed",
-            date: formatDate(),
-            method: "BDX → USD",
-            note: `${amount} BDX → ${out.toFixed(2)} USD`,
-          };
-          set({
-            bdx: get().bdx - amount,
-            available: get().available + out,
-            txs: [tx, ...get().txs],
-            notices: [notice(m.swapTitle, tx.note || ""), ...get().notices],
-          });
-          save();
+          const { error } = await supabase.rpc("swap_assets", { p_from: from, p_to: to, p_amount: amount, p_rate: rate });
+          if (error) return error.message;
+          const remote = await pullCloudBook();
+          if (remote) set({ ...remote, tickets: remote.tickets ?? [] });
           return null;
         },
-
         copyReferral: () => {
           const u = get().user;
           const slug = u?.username || "guest";

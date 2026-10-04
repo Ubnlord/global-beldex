@@ -14,7 +14,7 @@ import {
   X,
 } from "lucide-react";
 import { AdvancedChart, SymbolOverview, TickerTape } from "@/components/market/tradingview";
-import { BeldexLivePrice, BdxConverter } from "@/components/market/live-price";
+import { BdxConverter } from "@/components/market/live-price";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/layout/toast";
 import { TvCredit } from "@/components/platform/plan-card";
@@ -96,10 +96,6 @@ function Dashboard() {
         <Button className="mt-5 w-full" onClick={() => navigate({ to: "/app/deposit" })}>
           <ArrowDownToLine size={16} /> {t.investNow}
         </Button>
-      </div>
-
-      <div className="mt-4">
-        <BeldexLivePrice />
       </div>
 
       <div className="mt-4">

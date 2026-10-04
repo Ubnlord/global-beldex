@@ -22,10 +22,10 @@ function PlansPage() {
   const [selected, setSelected] = useState<Plan | null>(null);
   const [amount, setAmount] = useState("");
 
-  const confirm = () => {
+  const confirm = async () => {
     if (!selected) return;
     const n = parseFloat(amount) || selected.min;
-    const err = buyPlan(selected, n);
+    const err = await buyPlan(selected, n);
     if (err) {
       toastError(err);
       return;

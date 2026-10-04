@@ -12,6 +12,7 @@ type Quote = {
   change24h: number | null;
   book: Record<string, { usd: number; change: number }>;
   updatedAt: number;
+  status: "loading" | "ready" | "error";
 };
 
 const useQuote = create<Quote & { load: () => Promise<void> }>((set, get) => ({
@@ -19,18 +20,24 @@ const useQuote = create<Quote & { load: () => Promise<void> }>((set, get) => ({
   change24h: null,
   book: {},
   updatedAt: 0,
+  status: "loading",
   load: async () => {
+    set({ status: "loading" });
     try {
       const book = await fetchQuotes();
-      if (!book.bitcoin && !book.beldex && !book.ethereum) return;
+      if (!book.bitcoin && !book.beldex && !book.ethereum) {
+        set({ status: "error" });
+        return;
+      }
       set({
         usd: book.beldex?.usd ?? get().usd,
         change24h: book.beldex?.change ?? get().change24h,
         book: { ...get().book, ...book },
         updatedAt: Date.now(),
+        status: "ready",
       });
     } catch {
-      /* keep last tick */
+      set({ status: get().usd ? "ready" : "error" });
     }
   },
 }));
@@ -255,7 +262,7 @@ function smallUsd(n: number) {
 
 export function BdxConverter() {
   const p = copy[usePlatform((s) => s.lang)].page;
-  const { usd, change24h } = useBeldexQuote();
+  const { usd, change24h, status, load } = useBeldexQuote();
   const price = usd && usd > 0 ? usd : null;
   const [bdx, setBdx] = useState("1");
   const [dollars, setDollars] = useState("");
@@ -293,8 +300,16 @@ export function BdxConverter() {
           <>
             1 BDX = <LiveFigure value={formatCoinUsd(price)} />
           </>
+        ) : status === "error" ? (
+          <button
+            type="button"
+            onClick={() => void load()}
+            className="text-accent underline underline-offset-2"
+          >
+            Live price unavailable — tap to retry
+          </button>
         ) : (
-          p.waitingPrice
+          "Loading live BDX price…"
         )}
       </div>
 

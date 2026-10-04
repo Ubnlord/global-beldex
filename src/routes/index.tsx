@@ -194,6 +194,59 @@ function Landing() {
       </section>
 
       <section className="mt-16">
+        <div className="text-center">
+          <div className="text-xs font-semibold tracking-widest text-accent">RECOGNITION</div>
+          <h2 className="mt-2 text-[28px] font-bold text-fg sm:text-[34px]">Awards &amp; Recognition</h2>
+          <p className="mx-auto mt-3 max-w-[700px] text-sm leading-6 text-muted">
+            Selected third-party award badges are shown for reference. These recognitions were
+            awarded to AvaTrade and are not awards received by or affiliated with Global Beldex.
+          </p>
+        </div>
+
+        <div className="mt-8 grid gap-8 sm:grid-cols-2">
+          {[
+            {
+              image:
+                "https://www.avatrade-sea.com/wp-content/uploads/2022/07/global_business_best_mobile_platform.jpg",
+              title: "Best Mobile Trading Platform UAE 2022",
+            },
+            {
+              image:
+                "https://www.avatrade-sea.com/wp-content/uploads/2022/07/most_trusted_platform.jpg",
+              title: "Most Trusted Trading Platform Europe 2022",
+            },
+            {
+              image:
+                "https://www.avatrade-sea.com/wp-content/uploads/2022/07/most-innovative-cfd-broker.jpg",
+              title: "Most Innovative CFD Broker",
+            },
+            {
+              image:
+                "https://www.avatrade-sea.com/wp-content/uploads/2022/07/best-fixed-spread-broker.jpg",
+              title: "Best Fixed Spread Broker",
+            },
+          ].map((award) => (
+            <div
+              key={award.title}
+              className="overflow-hidden rounded-xl border border-line bg-surface p-4 sm:p-5"
+            >
+              <div className="flex min-h-[210px] items-center justify-center rounded-lg bg-white p-2">
+                <img
+                  src={award.image}
+                  alt={award.title}
+                  loading="lazy"
+                  className="h-auto max-h-[250px] w-full object-contain"
+                />
+              </div>
+              <h3 className="mt-4 text-center text-[16px] font-semibold leading-6 text-fg">
+                {award.title}
+              </h3>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="mt-16">
         <h2 className="text-center text-[28px] font-bold text-fg">{t.page.goodCompany}</h2>
         <div className="relative mx-auto mt-8 max-w-[640px]">
           <button

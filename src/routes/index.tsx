@@ -381,24 +381,24 @@ function Landing() {
               <div>
                 <div className="text-xs font-semibold tracking-widest text-accent">MARKETS</div>
                 <div className="mt-3 grid gap-2 text-[13px]">
-                  <a href="/app/markets" className="text-subtle hover:text-accent">Forex</a>
-                  <a href="/app/markets" className="text-subtle hover:text-accent">Cryptos</a>
+                  <Link to="/app/markets" hash="forex" className="text-subtle hover:text-accent">Forex</Link>
+                  <Link to="/app/markets" hash="cryptos" className="text-subtle hover:text-accent">Cryptos</Link>
                 </div>
               </div>
 
               <div>
                 <div className="text-xs font-semibold tracking-widest text-accent">INVESTMENT</div>
                 <div className="mt-3 grid gap-2 text-[13px]">
-                  <a href="/app/plans" className="text-subtle hover:text-accent">Pricing</a>
-                  <a href="/legal" className="text-subtle hover:text-accent">Help Centre / FAQ</a>
+                  <Link to="/app/plans" className="text-subtle hover:text-accent">Pricing</Link>
+                  <Link to="/app/support" hash="faq" className="text-subtle hover:text-accent">Help Centre / FAQ</Link>
                 </div>
               </div>
 
               <div>
                 <div className="text-xs font-semibold tracking-widest text-accent">COMPANY</div>
                 <div className="mt-3 grid gap-2 text-[13px]">
-                  <a href="#global-beldex-difference" className="text-subtle hover:text-accent">Why us</a>
-                  <a href="/legal" className="text-subtle hover:text-accent">Contact Us</a>
+                  <Link to="/" hash="global-beldex-difference" className="text-subtle hover:text-accent">Why us</Link>
+                  <Link to="/app/support" hash="contact" className="text-subtle hover:text-accent">Contact Us</Link>
                 </div>
               </div>
 

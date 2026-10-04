@@ -67,8 +67,29 @@ jobs:
             exit 1
           fi
 
-          # GitHub Pages fallback for client-side routes.
+          # GitHub Pages returns 404.html for paths that were not emitted as
+          # static files. Keep the SPA shell for normal client-side routes,
+          # but make referral URLs case-insensitive: /ref/Mrkenmk,
+          # /ref/mrkenmk, etc. all become /register?ref=Mrkenmk.
           cp ./pages-site/index.html ./pages-site/404.html
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("./pages-site/404.html")
+          html = path.read_text(encoding="utf-8")
+          marker = "</head>"
+          script = """<script>
+          (function () {
+            var match = window.location.pathname.match(/^\\/ref\\/([^/]+)\\/?$/i);
+            if (match) {
+              window.location.replace("/register?ref=" + encodeURIComponent(match[1]));
+            }
+          })();
+          </script>"""
+          if marker not in html:
+              raise SystemExit("ERROR: index.html has no </head> marker; cannot create 404 referral handler.")
+          path.write_text(html.replace(marker, script + marker, 1), encoding="utf-8")
+          PY
 
       - uses: actions/configure-pages@v5
 

@@ -388,46 +388,6 @@ function Landing() {
         </div>
       </section>
 
-      <p className="mt-10 text-center text-sm text-muted">
-        <a href="tel:+447404603931" className="font-semibold text-accent underline underline-offset-2">
-          +44 7404 603931
-        </a>
-      </p>
-      <p className="mt-2 text-center text-[13px] leading-5 text-subtle">
-        <a
-          href="https://maps.google.com/?q=Bethanee+Dong+Tumulus+Avenue+Newcastle+upon+Tyne+NE6+4US"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="hover:text-accent"
-        >
-          Bethanee Dong, Tumulus Avenue, Newcastle upon Tyne, NE6 4US, United Kingdom
-        </a>
-      </p>
-      <p className="mt-6 text-center text-[11px] text-faint">
-        {t.page.footerEdu}{" "}
-        <a
-          href="https://www.tradingview.com/symbols/BDXUSD/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-accent"
-        >
-          {t.page.tvChartTitle}
-        </a>
-      </p>
-      <p className="mt-2 text-center text-[11px] text-faint">
-        <Link to="/legal" hash="terms" className="text-muted hover:text-accent">
-          {t.termsWord}
-        </Link>
-        {" · "}
-        <Link to="/legal" hash="privacy" className="text-muted hover:text-accent">
-          {t.privacyWord}
-        </Link>
-        {" · "}
-        <Link to="/legal" hash="risk" className="text-muted hover:text-accent">
-          {t.riskWord}
-        </Link>
-      </p>
-
     </div>
   );
 }

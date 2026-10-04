@@ -266,7 +266,7 @@ function Landing() {
             <div
               className="mx-auto size-[170px] rounded-xl bg-cover bg-center sm:size-[210px]"
               style={{
-                backgroundImage: "url('/testimonials/testimonials.jpg?v=2')",
+                backgroundImage: "url('/testimonials/testimonials.jpg?v=3')",
                 backgroundSize: "500% 100%",
                 backgroundPosition: activeTestimonial.position + " center",
               }}

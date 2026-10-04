@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Navigate, Outlet } from "@tanstack/react-router";
 import { usePlatform } from "@/lib/platform/store";
 import { pullCloudBook } from "@/lib/supabase/books";
-import { currentProfile } from "@/lib/supabase/auth";
+import { currentProfile, ensureCloudProfile } from "@/lib/supabase/auth";
 import { BottomNav } from "./bottom-nav";
 import { Header } from "./header";
 import { SideMenu } from "./side-menu";
@@ -20,7 +20,7 @@ export function useHydratePlatform() {
           usePlatform.setState({ user: null });
         }
         const profile = await currentProfile();
-        if (profile) usePlatform.getState().enterAccount(profile);
+        if (profile) {\n          await ensureCloudProfile(profile);\n          usePlatform.getState().enterAccount(profile);\n        }
         const remote = await pullCloudBook();
         const state = usePlatform.getState();
         if (remote && state.user) {

@@ -67,6 +67,17 @@ export async function signUpAccount(input: CloudProfile & { pass: string }) {
   return { error: null, needsConfirm: !data.session, profile };
 }
 
+export async function ensureCloudProfile(profile: CloudProfile) {
+  const { error } = await supabase.rpc("ensure_user_profile", {
+    p_username: profile.username,
+    p_fullname: profile.fullname,
+    p_phone: profile.phone,
+    p_country: profile.country,
+    p_ref: profile.ref || null,
+  });
+  return error ? friendly(error.message) : null;
+}
+
 export async function signInAccount(email: string, password: string) {
   const { data, error } = await supabase.auth.signInWithPassword({
     email: email.trim().toLowerCase(),

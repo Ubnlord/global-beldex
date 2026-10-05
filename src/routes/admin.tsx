@@ -409,9 +409,9 @@ function AdminPage() {
         </>
       )}
     </div>
+    </AdminShell>
   );
 }
-
 
 function Stat({
   icon: Icon,

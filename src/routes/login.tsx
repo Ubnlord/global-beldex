@@ -131,18 +131,6 @@ function Login() {
               </button>
             </div>
           </div>
-          {needCode && (
-            <div>
-              <FieldLabel>{t.codeLabel}</FieldLabel>
-              <Input
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-                inputMode="numeric"
-                placeholder="000000"
-                autoComplete="one-time-code"
-              />
-            </div>
-          )}
           <div className="flex items-center justify-between text-xs">
             <label className="flex items-center gap-2 text-muted">
               <input

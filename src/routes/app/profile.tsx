@@ -205,7 +205,7 @@ function ProfilePage() {
             variant="secondary"
             onClick={() => {
               void (async () => {
-                const cloud = await updateCloudPassword(next);
+                const cloud = await updateCloudPassword(next, current);
                 if (cloud === null) {
                   setCurrent("");
                   setNext("");

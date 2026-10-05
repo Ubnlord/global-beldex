@@ -102,7 +102,7 @@ export function AppShell() {
       </div>
     );
   }
-  if (!user) return <Navigate to="/login" />;
+  if (!user) return <Navigate to="/login" replace />;
 
   return (
     <div className="min-h-screen bg-bg text-fg font-sans">

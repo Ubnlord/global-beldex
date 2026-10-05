@@ -76,7 +76,7 @@ function PlansPage() {
               </Button>
             </div>
             <p className="mt-3 text-center text-[10px] text-subtle">
-              Live data from TradingView · Educational demo
+              Live market data from TradingView
             </p>
           </div>
         </div>

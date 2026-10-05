@@ -72,9 +72,45 @@ jobs:
           fi
 
           if [ ! -f "./pages-site/index.html" ]; then
-            echo "ERROR: No root index.html or _shell.html was generated."
-            find "$OUTPUT_DIR" -maxdepth 2 -type f -print | sort | head -100
-            exit 1
+            # Some TanStack Start builds can emit only hashed client assets.
+            # Build a minimal SPA shell from the generated Vite entry instead
+            # of failing the deployment when no HTML shell was emitted.
+            ENTRY="$(find ./pages-site/assets -maxdepth 1 -type f -name 'index-*.js' | sort | head -1 || true)"
+            CSS="$(find ./pages-site/assets -maxdepth 1 -type f -name '*.css' | sort | head -1 || true)"
+            if [ -z "$ENTRY" ]; then
+              echo "ERROR: No root index.html/_shell.html and no Vite index entry was generated."
+              find "$OUTPUT_DIR" -maxdepth 3 -type f -print | sort | head -150
+              exit 1
+            fi
+            ENTRY_PATH="/${ENTRY#./pages-site/}"
+            CSS_PATH=""
+            if [ -n "$CSS" ]; then
+              CSS_PATH="/${CSS#./pages-site/}"
+            fi
+            python3 - "$ENTRY_PATH" "$CSS_PATH" <<'PY'
+          from pathlib import Path
+          import html
+          import sys
+
+          entry = html.escape(sys.argv[1], quote=True)
+          css = html.escape(sys.argv[2], quote=True)
+          css_tag = f'<link rel="stylesheet" href="{css}">' if css else ""
+          shell = f"""<!doctype html>
+          <html lang="en">
+            <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1">
+              <title>Global Beldex</title>
+              {css_tag}
+            </head>
+            <body>
+              <div id="root"></div>
+              <script type="module" src="{entry}"></script>
+            </body>
+          </html>
+          """
+          Path("./pages-site/index.html").write_text(shell, encoding="utf-8")
+          PY
           fi
 
           # GitHub Pages is a static host. TanStack Router still handles

@@ -183,14 +183,6 @@ function Login() {
             {t.signUp}
           </Link>
         </p>
-        <div className="mt-4 text-center">
-          <Link
-            to="/admin/login"
-            className="inline-flex items-center gap-1.5 text-[11px] font-medium text-muted hover:text-accent"
-          >
-            Administrator Login
-          </Link>
-        </div>
         <LoginPreview />
       </div>
     </div>

@@ -39,7 +39,7 @@ function Login() {
   const [remember, setRemember] = useState(true);
   const [busy, setBusy] = useState(false);
 
-  if (hydrated && user) return <Navigate to="/app" />;
+  if (hydrated && user) return <Navigate to="/app" replace />;
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();

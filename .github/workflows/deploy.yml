@@ -22,12 +22,14 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
 
-      - run: npm ci
+      - name: Install dependencies
+        run: npm ci
 
       - name: Typecheck
         run: npm run typecheck
@@ -38,14 +40,15 @@ jobs:
       - name: Test
         run: npm test
 
-      - run: npm run build
+      - name: Build
+        run: npm run build
         env:
           VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
 
       - name: Prepare GitHub Pages static site
         run: |
-          set -e
+          set -euo pipefail
 
           if [ -d "./dist/client" ]; then
             OUTPUT_DIR="./dist/client"
@@ -62,30 +65,65 @@ jobs:
           mkdir -p ./pages-site
           cp -R "$OUTPUT_DIR"/. ./pages-site/
 
-          # GitHub Pages needs an index.html at the site root.
           # TanStack Start SPA mode may emit its shell as _shell.html.
+          # GitHub Pages requires a root index.html.
           if [ ! -f "./pages-site/index.html" ] && [ -f "./pages-site/_shell.html" ]; then
             cp ./pages-site/_shell.html ./pages-site/index.html
           fi
 
-          # Final safety check: never deploy an artifact without a root index.
           if [ ! -f "./pages-site/index.html" ]; then
             echo "ERROR: No root index.html or _shell.html was generated."
-            echo "Top-level build output:"
             find "$OUTPUT_DIR" -maxdepth 2 -type f -print | sort | head -100
             exit 1
           fi
 
-          # GitHub Pages returns 404.html for paths that were not emitted as
-          # static files. Keep the SPA shell for normal client-side routes,
-          # but make referral URLs case-insensitive: /ref/Mrkenmk,
-          # /ref/mrkenmk, etc. all become /register?ref=Mrkenmk.
-          cp ./pages-site/index.html ./pages-site/404.html
+          # GitHub Pages is a static host. TanStack Router still handles
+          # navigation in the browser, so every client-side route must receive
+          # the SPA shell when opened directly or refreshed.
+          #
+          # Creating route/index.html files gives direct URLs a normal 200
+          # response instead of relying only on the 404 fallback. This is
+          # especially important for /admin/login on mobile browsers.
           python3 - <<'PY'
           from pathlib import Path
+          import shutil
 
-          path = Path("./pages-site/404.html")
-          html = path.read_text(encoding="utf-8")
+          site = Path("./pages-site")
+          shell = site / "index.html"
+
+          routes = [
+              "/admin",
+              "/admin/login",
+              "/login",
+              "/register",
+              "/forgot",
+              "/legal",
+              "/app",
+              "/app/deposit",
+              "/app/history",
+              "/app/markets",
+              "/app/notifications",
+              "/app/plans",
+              "/app/profile",
+              "/app/referrals",
+              "/app/settings",
+              "/app/support",
+              "/app/swap",
+              "/app/withdraw",
+              "/auth/confirm",
+          ]
+
+          for route in routes:
+              target = site / route.lstrip("/") / "index.html"
+              target.parent.mkdir(parents=True, exist_ok=True)
+              shutil.copy2(shell, target)
+
+          # Keep a final SPA fallback for any other client-side route.
+          shutil.copy2(shell, site / "404.html")
+
+          # Preserve the referral redirect on the 404 fallback only.
+          fallback = site / "404.html"
+          html = fallback.read_text(encoding="utf-8")
           marker = "</head>"
           script = """<script>
           (function () {
@@ -97,8 +135,12 @@ jobs:
           </script>"""
           if marker not in html:
               raise SystemExit("ERROR: index.html has no </head> marker; cannot create 404 referral handler.")
-          path.write_text(html.replace(marker, script + marker, 1), encoding="utf-8")
-          PY
+          fallback.write_text(html.replace(marker, script + marker, 1), encoding="utf-8")
+
+          print("Prepared direct SPA entry points:")
+          for route in routes:
+              print(f"  {route}/index.html")
+          print("  404.html")
 
       - uses: actions/configure-pages@v5
 

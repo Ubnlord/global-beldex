@@ -105,7 +105,7 @@ export const pageEn = {
   legalBack: "Back to the platform",
   legalTerms: [
     "By opening an account, you can deposit funds starting from $300, execute swaps between USD and BDX, and stake assets into our GNS and Falcon plans.",
-    "Your account is secured with advanced encryption. Ensure two-factor authentication (2FA) is enabled for withdrawals and account changes.",
+    "Protect your account with a strong password and keep your sign-in credentials private. Additional authentication controls should be enabled only when configured in the account security settings.",
     "Only use the deposit addresses explicitly generated for your session after clicking “Continue to Payment”.",
   ],
   legalPrivacy: [

@@ -2,7 +2,6 @@ import type { User } from "@supabase/supabase-js";
 import { supabase } from "./client";
 
 export type CloudProfile = {
-  name: string;
   email: string;
   username: string;
   fullname: string;
@@ -22,12 +21,10 @@ export function profileFromUser(user: User | null | undefined): CloudProfile | n
   if (!email) return null;
   const meta = (user?.user_metadata ?? {}) as Record<string, unknown>;
   const username = String(meta.username || email.split("@")[0]);
-  const fullname = String(meta.full_name || meta.username || username);
   return {
-    name: fullname,
     email,
     username,
-    fullname,
+    fullname: String(meta.full_name || meta.username || username),
     phone: String(meta.phone || ""),
     country: String(meta.country || ""),
     ref: meta.ref ? String(meta.ref) : undefined,
@@ -52,7 +49,7 @@ function friendly(message: string) {
   return message;
 }
 
-export async function signUpAccount(input: Omit<CloudProfile, "name"> & { pass: string }) {
+export async function signUpAccount(input: CloudProfile & { pass: string }) {
   const { data, error } = await supabase.auth.signUp({
     email: input.email.trim().toLowerCase(),
     password: input.pass,

@@ -22,7 +22,7 @@ function LoginPage() {
 
 function Login() {
   const navigate = useNavigate();
-  const enterAccount = usePlatform((s) => s.enterAccount);
+  const setUserProfile = usePlatform((s) => s.setUserProfile);
   const setSessionOnly = usePlatform((s) => s.setSessionOnly);
   const lang = usePlatform((s) => s.lang);
   const setLang = usePlatform((s) => s.setLang);
@@ -59,7 +59,7 @@ function Login() {
       return;
     }
 
-    enterAccount(cloud.profile);
+    setUserProfile(cloud.profile);
 
     if (!remember) {
       sessionStorage.setItem("lb-session", "1");

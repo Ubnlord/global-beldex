@@ -121,6 +121,7 @@ type PlatformState = {
     country: string;
     pass: string;
     ref?: string;
+    avatar?: string;
   }) => string | null;
   enterAccount: (input: {
     email: string;

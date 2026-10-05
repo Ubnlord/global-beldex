@@ -570,8 +570,8 @@ begin
   if v_tx.status='completed' then raise exception 'Transaction already completed'; end if;
   if v_tx.approval_status<>'approved' then raise exception 'Transaction must be approved first'; end if;
 
-  perform public.assert_user_can_transact(v_tx.user_id);
-
+  -- A block prevents new financial actions, but must not strand an
+  -- already-approved transaction that was created before the block.
   if v_tx.type='deposit' then
     update public.user_profile
     set available_balance=available_balance+v_tx.amount,

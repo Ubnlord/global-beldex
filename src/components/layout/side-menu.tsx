@@ -11,19 +11,16 @@ import {
   Repeat,
   Settings,
   Shield,
-  ShieldCheck,
   Users,
   X,
 } from "lucide-react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
 import { BrandLockup } from "@/components/brand/logo";
 import { Avatar } from "@/components/layout/avatar";
 import { Button } from "@/components/ui/button";
 import { copy } from "@/lib/platform/i18n";
 import { usePlatform } from "@/lib/platform/store";
 import { signOutCloud } from "@/lib/supabase/auth";
-import { supabase } from "@/lib/supabase/client";
 import type { ComponentType } from "react";
 
 export function SideMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -32,39 +29,6 @@ export function SideMenu({ open, onClose }: { open: boolean; onClose: () => void
   const lang = usePlatform((s) => s.lang);
   const t = copy[lang];
   const navigate = useNavigate();
-  const [isAdmin, setIsAdmin] = useState(false);
-
-  useEffect(() => {
-    let active = true;
-    if (!user?.email) {
-      setIsAdmin(false);
-      return () => {
-        active = false;
-      };
-    }
-
-    void supabase.auth
-      .getUser()
-      .then(async ({ data: { user: authUser } }) => {
-        if (!active || !authUser) {
-          if (active) setIsAdmin(false);
-          return;
-        }
-
-        const { data } = await supabase
-          .from("admin_user")
-          .select("id")
-          .eq("user_id", authUser.id)
-          .maybeSingle();
-
-        if (active) setIsAdmin(Boolean(data));
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [user?.email]);
-
   if (!open) return null;
 
   return (
@@ -119,14 +83,6 @@ export function SideMenu({ open, onClose }: { open: boolean; onClose: () => void
             onClose={onClose}
             items={[{ to: "/app", icon: Home, label: t.dashboard }]}
           />
-
-          {isAdmin && (
-            <NavGroup
-              title="Administration"
-              onClose={onClose}
-              items={[{ to: "/app/admin", icon: ShieldCheck, label: "Admin Control Center" }]}
-            />
-          )}
 
           <NavGroup
             title={t.finance}

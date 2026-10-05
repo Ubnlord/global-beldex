@@ -5,6 +5,7 @@ import { planCeiling, type Plan } from "./catalog";
 import { uid } from "@/lib/utils";
 import { pullCloudBook } from "@/lib/supabase/books";
 import { supabase } from "@/lib/supabase/client";
+import type { CloudProfile } from "@/lib/supabase/auth";
 
 export type { Lang };
 
@@ -104,7 +105,7 @@ type PlatformState = {
   dismissWelcome: () => void;
   sessionOnly: boolean;
   setSessionOnly: (v: boolean) => void;
-  setUserProfile: (user: User) => void;
+  setUserProfile: (user: User | CloudProfile) => void;
   logout: () => void;
   updateProfile: (patch: Partial<User>) => void;
   deposit: (amount: number, method: string, requestId?: string) => Promise<string | null>;
@@ -169,7 +170,22 @@ export const usePlatform = create<PlatformState>()(
         sessionOnly: false,
         setSessionOnly: (v) => set({ sessionOnly: v }),
 
-        setUserProfile: (user) => set({ user, welcomeOpen: true }),
+        setUserProfile: (profile) =>
+          set({
+            user:
+              "name" in profile
+                ? profile
+                : {
+                    name: profile.fullname,
+                    username: profile.username,
+                    email: profile.email,
+                    phone: profile.phone,
+                    country: profile.country,
+                    ref: profile.ref,
+                    avatar: profile.avatar,
+                  },
+            welcomeOpen: true,
+          }),
 
         logout: () => {
           set({ user: null, welcomeOpen: true, ...emptyBook() });

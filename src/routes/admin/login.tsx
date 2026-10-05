@@ -31,7 +31,7 @@ function AdminLogin() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
-  if (hydrated && user) return <Navigate to="/app/admin" replace />;
+  if (hydrated && user) return <Navigate to="/admin" replace />;
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -71,7 +71,7 @@ function AdminLogin() {
     enterAccount(auth.profile);
     setBusy(false);
     toast("Administrator access granted.");
-    void navigate({ to: "/app/admin", replace: true });
+    void navigate({ to: "/admin", replace: true });
   };
 
   return (

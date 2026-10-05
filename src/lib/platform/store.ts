@@ -129,6 +129,7 @@ type PlatformState = {
     phone?: string;
     country?: string;
     ref?: string;
+    avatar?: string;
   }) => string | null;
   logout: () => void;
   updateProfile: (patch: Partial<User>) => void;
@@ -277,6 +278,7 @@ export const usePlatform = create<PlatformState>()(
             phone: input.phone,
             country: input.country,
             ref: refUser,
+            avatar: input.avatar,
           };
           const bonusTx: Transaction = {
             id: uid(),
@@ -338,6 +340,7 @@ export const usePlatform = create<PlatformState>()(
             phone: input.phone || "",
             country: input.country || "",
             ref: refUser,
+            avatar: input.avatar,
           };
           const bonusTx: Transaction = {
             id: uid(),

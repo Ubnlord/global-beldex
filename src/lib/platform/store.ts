@@ -279,7 +279,6 @@ export const usePlatform = create<PlatformState>()(
             phone: input.phone,
             country: input.country,
             ref: refUser,
-            avatar: input.avatar,
           };
           const bonusTx: Transaction = {
             id: uid(),

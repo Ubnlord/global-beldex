@@ -83,18 +83,10 @@ export type Book = {
   tickets: Ticket[];
 };
 
-type AccountRecord = {
-  password: string;
-  user: User;
-  twoFactor?: string | null;
-  book?: Book;
-};
-
 type PlatformState = {
   hydrated: boolean;
   setHydrated: (v: boolean) => void;
   user: User | null;
-  accounts: Record<string, AccountRecord>;
   available: number;
   bdx: number;
   locked: number;
@@ -112,31 +104,9 @@ type PlatformState = {
   dismissWelcome: () => void;
   sessionOnly: boolean;
   setSessionOnly: (v: boolean) => void;
-  login: (email: string, password: string, code?: string) => string | null;
-  register: (input: {
-    username: string;
-    fullname: string;
-    email: string;
-    phone: string;
-    country: string;
-    pass: string;
-    ref?: string;
-    avatar?: string;
-  }) => string | null;
-  enterAccount: (input: {
-    email: string;
-    username?: string;
-    fullname?: string;
-    phone?: string;
-    country?: string;
-    ref?: string;
-    avatar?: string;
-  }) => string | null;
+  setUserProfile: (user: User) => void;
   logout: () => void;
   updateProfile: (patch: Partial<User>) => void;
-  changePassword: (current: string, next: string) => string | null;
-  resetPassword: (email: string, next: string) => string | null;
-  setTwoFactor: (on: boolean) => string | null;
   deposit: (amount: number, method: string, requestId?: string) => Promise<string | null>;
   withdraw: (amount: number, method: string, address: string, requestId?: string) => Promise<string | null>;
   buyPlan: (plan: Plan, amount: number) => Promise<string | null>;
@@ -169,24 +139,6 @@ function emptyBook(): Book {
   };
 }
 
-function lookupAccount(accounts: Record<string, AccountRecord>, token: string) {
-  const raw = token.trim();
-  if (!raw) return null;
-  const matched = raw.match(/\/ref\/([^/?#]+)/i);
-  const slug = decodeURIComponent(matched?.[1] ?? raw).trim().toLowerCase();
-  if (!slug) return null;
-  if (accounts[slug]) return { key: slug, rec: accounts[slug] };
-  for (const [key, rec] of Object.entries(accounts)) {
-    if (
-      rec.user.username.toLowerCase() === slug ||
-      rec.user.email.toLowerCase() === slug
-    ) {
-      return { key, rec };
-    }
-  }
-  return null;
-}
-
 function snapshot(s: Book): Book {
   return {
     available: s.available,
@@ -206,25 +158,10 @@ function snapshot(s: Book): Book {
 export const usePlatform = create<PlatformState>()(
   persist(
     (set, get) => {
-      const save = () => {
-        const s = get();
-        if (!s.user) return;
-        const key = s.user.email.toLowerCase();
-        const rec = s.accounts[key];
-        if (!rec) return;
-        set({
-          accounts: {
-            ...s.accounts,
-            [key]: { ...rec, user: s.user, book: snapshot(s) },
-          },
-        });
-      };
-
       return {
         hydrated: false,
         setHydrated: (v) => set({ hydrated: v }),
         user: null,
-        accounts: {},
         ...emptyBook(),
         lang: "en",
         setLang: (lang) => set({ lang }),
@@ -233,138 +170,7 @@ export const usePlatform = create<PlatformState>()(
         sessionOnly: false,
         setSessionOnly: (v) => set({ sessionOnly: v }),
 
-        login: (email, password, code) => {
-          const key = email.trim().toLowerCase();
-          if (!key || !password) return "FILL";
-          const found = lookupAccount(get().accounts, key);
-          if (!found) return "NO_ACCOUNT";
-          if (found.rec.password !== password) return "BAD_PASSWORD";
-          if (found.rec.twoFactor) {
-            if (!code) return "2FA";
-            if (code.trim() !== found.rec.twoFactor) return "BAD_CODE";
-          }
-          const book = found.rec.book ?? emptyBook();
-          set({
-            user: found.rec.user,
-            welcomeOpen: true,
-            ...book,
-            tickets: book.tickets ?? [],
-          });
-          return null;
-        },
-
-        register: (input) => {
-          const email = input.email.trim().toLowerCase();
-          const username = input.username.trim();
-          if (!username || !email || !input.pass) return "FILL";
-          if (get().accounts[email]) return "EMAIL_TAKEN";
-          let refUser: string | undefined;
-          const refRaw = input.ref?.trim();
-          if (refRaw) {
-            const found = lookupAccount(get().accounts, refRaw);
-            if (!found) return "BAD_REF";
-            if (
-              found.key === email ||
-              found.rec.user.username.toLowerCase() === username.toLowerCase()
-            ) {
-              return "REF_SELF";
-            }
-            refUser = found.rec.user.username;
-          }
-          const m = copy[get().lang].note;
-          const user: User = {
-            name: input.fullname || username,
-            username,
-            email,
-            phone: input.phone,
-            country: input.country,
-            ref: refUser,
-          };
-          const bonusTx: Transaction = {
-            id: uid(),
-            type: "bonus",
-            amount: 3,
-            status: "completed",
-            date: formatDate(),
-            method: "Welcome Bonus",
-          };
-          const book: Book = {
-            ...emptyBook(),
-            available: 3,
-            bonus: 3,
-            txs: [bonusTx],
-            notices: [notice(m.welcomeTitle, m.welcomeBody)],
-          };
-          set({
-            user,
-            accounts: { ...get().accounts, [email]: { password: input.pass, user, book } },
-            ...book,
-            welcomeOpen: true,
-          });
-          return null;
-        },
-
-        enterAccount: (input) => {
-          const email = input.email.trim().toLowerCase();
-          const username = (input.username || email.split("@")[0] || "member").trim();
-          if (!email) return "FILL";
-          const found = lookupAccount(get().accounts, email);
-          if (found) {
-            if (get().user?.email.toLowerCase() === found.key) return null;
-            const book = found.rec.book ?? emptyBook();
-            set({
-              user: found.rec.user,
-              welcomeOpen: true,
-              ...book,
-              tickets: book.tickets ?? [],
-            });
-            return null;
-          }
-          let refUser: string | undefined;
-          const refRaw = input.ref?.trim();
-          if (refRaw) {
-            const refFound = lookupAccount(get().accounts, refRaw);
-            if (
-              refFound &&
-              refFound.key !== email &&
-              refFound.rec.user.username.toLowerCase() !== username.toLowerCase()
-            ) {
-              refUser = refFound.rec.user.username;
-            }
-          }
-          const m = copy[get().lang].note;
-          const user: User = {
-            name: input.fullname || username,
-            username,
-            email,
-            phone: input.phone || "",
-            country: input.country || "",
-            ref: refUser,
-            avatar: input.avatar,
-          };
-          const bonusTx: Transaction = {
-            id: uid(),
-            type: "bonus",
-            amount: 3,
-            status: "completed",
-            date: formatDate(),
-            method: "Welcome Bonus",
-          };
-          const book: Book = {
-            ...emptyBook(),
-            available: 3,
-            bonus: 3,
-            txs: [bonusTx],
-            notices: [notice(m.welcomeTitle, m.welcomeBody)],
-          };
-          set({
-            user,
-            accounts: { ...get().accounts, [email]: { password: "", user, book } },
-            ...book,
-            welcomeOpen: true,
-          });
-          return null;
-        },
+        setUserProfile: (user) => set({ user, welcomeOpen: true }),
 
         logout: () => {
           set({ user: null, welcomeOpen: true, ...emptyBook() });
@@ -373,69 +179,7 @@ export const usePlatform = create<PlatformState>()(
         updateProfile: (patch) => {
           const user = get().user;
           if (!user) return;
-          const next = { ...user, ...patch };
-          const accounts = { ...get().accounts };
-          const rec = accounts[user.email.toLowerCase()];
-          if (rec) accounts[user.email.toLowerCase()] = { ...rec, user: next };
-          set({ user: next, accounts });
-          save();
-        },
-
-        changePassword: (current, next) => {
-          const user = get().user;
-          if (!user) return "SIGN_IN";
-          if (!next || next.length < 4) return "SHORT_PASSWORD";
-          const key = user.email.toLowerCase();
-          const rec = get().accounts[key];
-          if (!rec || rec.password !== current) return "BAD_CURRENT";
-          set({
-            accounts: { ...get().accounts, [key]: { ...rec, password: next } },
-          });
-          const m = copy[get().lang].note;
-          get().addNotice(m.passwordTitle, m.passwordBody);
-          return null;
-        },
-
-        resetPassword: (email, next) => {
-          const keyIn = email.trim().toLowerCase();
-          if (!keyIn) return "NEED_EMAIL";
-          if (!next || next.length < 4) return "SHORT_PASSWORD";
-          const found = lookupAccount(get().accounts, keyIn);
-          if (!found) return null;
-          const m = copy[get().lang].note;
-          const book = found.rec.book ?? emptyBook();
-          set({
-            accounts: {
-              ...get().accounts,
-              [found.key]: {
-                ...found.rec,
-                password: next,
-                book: {
-                  ...book,
-                  notices: [notice(m.passwordTitle, m.passwordBody), ...book.notices],
-                },
-              },
-            },
-          });
-          return null;
-        },
-
-        setTwoFactor: (on) => {
-          const user = get().user;
-          if (!user) return null;
-          const key = user.email.toLowerCase();
-          const rec = get().accounts[key];
-          if (!rec) return null;
-          const code = on ? String(Math.floor(100000 + Math.random() * 900000)) : null;
-          set({
-            accounts: { ...get().accounts, [key]: { ...rec, twoFactor: code } },
-          });
-          const m = copy[get().lang].note;
-          get().addNotice(
-            on ? m.twoOnTitle : m.twoOffTitle,
-            on ? fill(m.twoOnBody, { code: code ?? "" }) : m.twoOffBody,
-          );
-          return code;
+          set({ user: { ...user, ...patch } });
         },
 
         deposit: async (amount, method, requestId) => {
@@ -488,7 +232,6 @@ export const usePlatform = create<PlatformState>()(
         swap: async (from, to, amount, rate) => {
           if (from === to) return "SWAP_SAME";
           if (!amount || amount <= 0) return "NEED_AMOUNT";
-          if (!rate || rate <= 0) return "BAD_RATE";
 
           const { error } = await supabase.functions.invoke("swap-assets", {
             body: { from, to, amount },
@@ -507,11 +250,9 @@ export const usePlatform = create<PlatformState>()(
 
         addNotice: (title, body) => {
           set({ notices: [notice(title, body), ...get().notices] });
-          save();
         },
         markNoticesRead: () => {
           set({ notices: get().notices.map((n) => ({ ...n, read: true })) });
-          save();
         },
 
         submitTicket: (subject, body) => {
@@ -531,7 +272,6 @@ export const usePlatform = create<PlatformState>()(
               ...get().notices,
             ],
           });
-          save();
           return null;
         },
 
@@ -548,8 +288,7 @@ export const usePlatform = create<PlatformState>()(
       skipHydration: true,
       migrate: (persisted) => {
         const p = (persisted ?? {}) as Partial<PlatformState> & {
-          accounts?: Record<string, AccountRecord>;
-        };
+          };
         const tickets = p.tickets ?? [];
         const book = snapshot({
           available: p.available ?? 0,
@@ -592,10 +331,3 @@ export function accruedProfit(p: ActivePlan, now = Date.now()) {
   return p.amount * (p.dailyPct / 100) * elapsed;
 }
 
-export function twoFactorCode(
-  accounts: Record<string, { twoFactor?: string | null }>,
-  user: User | null,
-) {
-  if (!user) return null;
-  return accounts[user.email.toLowerCase()]?.twoFactor ?? null;
-}

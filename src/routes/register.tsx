@@ -48,7 +48,7 @@ function Register() {
 
   const set = (k: keyof typeof form, v: string) => setForm((s) => ({ ...s, [k]: v }));
 
-  if (hydrated && user) return <Navigate to="/app" />;
+  if (hydrated && user) return <Navigate to="/app" replace />;
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();

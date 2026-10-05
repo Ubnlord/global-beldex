@@ -75,7 +75,6 @@ export const pageEn = {
   copyBtn: "Copy",
   planMeta: "{amount} locked · {pct}% ROI · {days} days",
   demoFoot: "Professional interface · Live data from TradingView",
-  liveFoot: " · Live data from TradingView · ",
   dashPreview: "GLOBAL BELDEX",
   availableTape: "Grow your wealth",
   signInSim: "Sign in to access your portfolio",

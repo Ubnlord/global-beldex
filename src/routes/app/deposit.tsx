@@ -28,6 +28,7 @@ function DepositPage() {
   const [amount, setAmount] = useState("");
   const [method, setMethod] = useState<keyof typeof DEPOSIT_METHODS>("BELDEX");
   const [step, setStep] = useState<"form" | "pay">("form");
+  const [requestId, setRequestId] = useState<string | null>(null);
 
   const quoteId = method === "BTC" ? "bitcoin" : method === "ETH" ? "ethereum" : "beldex";
   const ticker = method === "BTC" ? "BTC" : method === "ETH" ? "ETH" : "BDX";
@@ -40,12 +41,13 @@ function DepositPage() {
       toast(t.err.MIN_DEPOSIT);
       return;
     }
+    setRequestId(crypto.randomUUID());
     setStep("pay");
   };
 
   const confirm = async () => {
     const n = parseFloat(amount);
-    const err = await deposit(n, DEPOSIT_METHODS[method].title);
+    const err = await deposit(n, DEPOSIT_METHODS[method].title, requestId ?? crypto.randomUUID());
     if (err) {
       toastError(err);
       return;

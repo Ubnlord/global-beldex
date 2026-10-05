@@ -445,6 +445,7 @@ export const usePlatform = create<PlatformState>()(
             p_amount: amount,
             p_method: method,
             p_note: null,
+            p_request_id: requestId ? requestId : null,
           });
           if (error) return error.message;
           return null;
@@ -460,6 +461,7 @@ export const usePlatform = create<PlatformState>()(
             p_amount: amount,
             p_method: method,
             p_note: address.trim(),
+            p_request_id: requestId ? requestId : null,
           });
           if (error) return error.message;
           return null;

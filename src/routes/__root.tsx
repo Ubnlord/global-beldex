@@ -13,13 +13,24 @@ function DynamicImportRecovery() {
 
       const key = "__global_beldex_chunk_recovery";
       const now = Date.now();
-      const lastRecovery = Number(sessionStorage.getItem(key) || "0");
+      let lastRecovery = 0;
+
+      try {
+        lastRecovery = Number(sessionStorage.getItem(key) || "0");
+      } catch {
+        // Storage can be unavailable in private/restricted browser contexts.
+      }
 
       // A deployment can replace hashed JS chunks while an older page is still open.
       // If navigation then requests the removed chunk, load a fresh document once.
       if (now - lastRecovery < 30000) return;
 
-      sessionStorage.setItem(key, String(now));
+      try {
+        sessionStorage.setItem(key, String(now));
+      } catch {
+        // Continue with a one-time URL cache-busting reload.
+      }
+
       const url = new URL(window.location.href);
       url.searchParams.set("__gb_reload", String(now));
       window.location.replace(url.toString());

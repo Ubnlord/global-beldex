@@ -123,11 +123,15 @@ export async function sendReset(email: string) {
   return null;
 }
 
-export async function updateCloudPassword(next: string) {
+export async function updateCloudPassword(next: string, currentPassword?: string) {
   const { data } = await supabase.auth.getSession();
   if (!data.session) return "no-session";
   if (!next || next.length < 6) return "Use at least 6 characters.";
-  const { error } = await supabase.auth.updateUser({ password: next });
+  if (currentPassword !== undefined && !currentPassword) return "Enter your current password.";
+  const { error } = await supabase.auth.updateUser({
+    password: next,
+    ...(currentPassword !== undefined ? { current_password: currentPassword } : {}),
+  });
   if (error) return friendly(error.message);
   return null;
 }

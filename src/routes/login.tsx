@@ -102,7 +102,7 @@ function Login() {
         <p className="mt-1 text-[13px] text-subtle">{t.loginLead}</p>
         <form onSubmit={onSubmit} className="mt-6 space-y-4">
           <div>
-            <FieldLabel>{t.emailOrUser}</FieldLabel>
+            <FieldLabel>{t.email}</FieldLabel>
             <Input
               value={email}
               onChange={(e) => setEmail(e.target.value)}

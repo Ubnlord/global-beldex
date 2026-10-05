@@ -263,8 +263,11 @@ function Landing() {
               className="mx-auto size-[170px] rounded-xl bg-cover bg-center sm:size-[210px]"
               style={{
                 backgroundImage: "url('/testimonials/testimonials.jpg?v=3')",
-                backgroundSize: "500% 100%",
-                backgroundPosition: activeTestimonial.position + " center",
+                // The source sprite contains the portrait in its upper half.
+                // Scale the sprite to 200% height and anchor it to the top so the
+                // gray source padding below each portrait is never displayed.
+                backgroundSize: "500% 200%",
+                backgroundPosition: activeTestimonial.position + " top",
               }}
               role="img"
               aria-label={activeTestimonial.name + " testimonial"}

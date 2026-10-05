@@ -137,8 +137,8 @@ type PlatformState = {
   changePassword: (current: string, next: string) => string | null;
   resetPassword: (email: string, next: string) => string | null;
   setTwoFactor: (on: boolean) => string | null;
-  deposit: (amount: number, method: string) => Promise<string | null>;
-  withdraw: (amount: number, method: string, address: string) => Promise<string | null>;
+  deposit: (amount: number, method: string, requestId?: string) => Promise<string | null>;
+  withdraw: (amount: number, method: string, address: string, requestId?: string) => Promise<string | null>;
   buyPlan: (plan: Plan, amount: number) => Promise<string | null>;
   settlePlans: () => Promise<void>;
   swap: (from: "USD" | "BDX", to: "USD" | "BDX", amount: number, rate: number) => Promise<string | null>;
@@ -438,7 +438,7 @@ export const usePlatform = create<PlatformState>()(
           return code;
         },
 
-        deposit: async (amount, method) => {
+        deposit: async (amount, method, requestId) => {
           if (!amount || amount < 300) return "MIN_DEPOSIT";
           const { error } = await supabase.rpc("create_financial_transaction", {
             p_type: "deposit",
@@ -450,7 +450,7 @@ export const usePlatform = create<PlatformState>()(
           return null;
         },
 
-        withdraw: async (amount, method, address) => {
+        withdraw: async (amount, method, address, requestId) => {
           if (!method) return "NEED_METHOD";
           if (!address.trim()) return "NEED_ADDRESS";
           if (!amount || amount <= 0) return "NEED_AMOUNT";

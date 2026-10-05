@@ -17,6 +17,7 @@ import { Route as LegalRouteImport } from './routes/legal'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as AdminLoginRouteImport } from './routes/admin/login'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AppIndexRouteImport } from './routes/app/index'
 import { Route as AppDepositRouteImport } from './routes/app/deposit'
 import { Route as AppHistoryRouteImport } from './routes/app/history'
@@ -64,6 +65,11 @@ const RegisterRoute = RegisterRouteImport.update({
 const AdminLoginRoute = AdminLoginRouteImport.update({
   id: '/admin/login',
   path: '/admin/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppAdminRoute = AppAdminRouteImport.update({
@@ -144,6 +150,7 @@ export interface FileRoutesByFullPath {
   '/legal': typeof LegalRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/admin': typeof AdminRoute
   '/admin/login': typeof AdminLoginRoute
   '/app/admin': typeof AppAdminRoute
   '/app/deposit': typeof AppDepositRoute
@@ -216,6 +223,7 @@ export interface FileRouteTypes {
     | '/legal'
     | '/login'
     | '/register'
+    | '/admin'
     | '/admin/login'
     | '/app/admin'
     | '/app/deposit'
@@ -240,6 +248,7 @@ export interface FileRouteTypes {
     | '/legal'
     | '/login'
     | '/register'
+    | '/admin'
     | '/admin/login'
     | '/app/deposit'
     | '/app/history'
@@ -331,6 +340,13 @@ declare module '@tanstack/react-router' {
       path: '/register'
       fullPath: '/register'
       preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/login': {
@@ -442,7 +458,8 @@ declare module '@tanstack/react-router' {
 }
 
   AppAdminRoute: typeof AppAdminRoute
-interface AppRouteChildren {
+}
+export interface AppRouteChildren {
   AppAdminRoute: typeof AppAdminRoute
   AppDepositRoute: typeof AppDepositRoute
   AppHistoryRoute: typeof AppHistoryRoute

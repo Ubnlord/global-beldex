@@ -1,9 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 
 const url = process.env.SUPABASE_URL;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+const step = async (_name, fn) => fn();
 
 test("security migration exposes only the intended swap executor", async () => {
   if (!url || !serviceKey) {
@@ -15,7 +18,7 @@ test("security migration exposes only the intended swap executor", async () => {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
-  const suffix = crypto.randomUUID();
+  const suffix = randomUUID();
   const password = "SecurityRegression!9" + suffix;
   const makeUser = async (label) => {
     const email = `security-test-${label}-${suffix}@example.invalid`;
@@ -109,7 +112,7 @@ test("security migration exposes only the intended swap executor", async () => {
         p_amount: 100,
         p_method: "security-test",
         p_note: null,
-        p_request_id: crypto.randomUUID(),
+        p_request_id: randomUUID(),
       });
       assert.ok(error, "blocked user unexpectedly created a financial transaction");
     });
@@ -137,7 +140,7 @@ test("security migration exposes only the intended swap executor", async () => {
 
     await test.step("duplicate request_id is idempotent", async () => {
       const client = await clientFor(users.normal);
-      const requestId = crypto.randomUUID();
+      const requestId = randomUUID();
       const first = await client.rpc("create_financial_transaction", {
         p_type: "deposit",
         p_amount: 125,

@@ -52,7 +52,7 @@ function Confirm() {
     return () => {
       gone = true;
     };
-  }, [enterAccount, navigate, t.created]);
+  }, [setUserProfile, navigate, t.created]);
 
   const onSave = async (e: FormEvent) => {
     e.preventDefault();

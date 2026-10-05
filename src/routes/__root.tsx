@@ -1,9 +1,65 @@
 import { createRootRoute, HeadContent, Outlet, Scripts } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { AuthProvider } from "@/lib/auth/provider";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
 import appCss from "../styles.css?url";
 
 const APP_NAME = "GLOBAL BELDEX";
+
+function DynamicImportRecovery() {
+  useEffect(() => {
+    const recover = () => {
+      if (typeof window === "undefined") return;
+
+      const key = "__global_beldex_chunk_recovery";
+      const now = Date.now();
+      const lastRecovery = Number(sessionStorage.getItem(key) || "0");
+
+      // A deployment can replace hashed JS chunks while an older page is still open.
+      // If navigation then requests the removed chunk, load a fresh document once.
+      if (now - lastRecovery < 30000) return;
+
+      sessionStorage.setItem(key, String(now));
+      const url = new URL(window.location.href);
+      url.searchParams.set("__gb_reload", String(now));
+      window.location.replace(url.toString());
+    };
+
+    const onError = (event: ErrorEvent) => {
+      const message = String(event.error?.message || event.message || "");
+      if (
+        message.includes("Failed to fetch dynamically imported module") ||
+        message.includes("Importing a module script failed") ||
+        message.includes("ChunkLoadError")
+      ) {
+        recover();
+      }
+    };
+
+    const onUnhandledRejection = (event: PromiseRejectionEvent) => {
+      const message = String(
+        event.reason?.message || event.reason || "",
+      );
+      if (
+        message.includes("Failed to fetch dynamically imported module") ||
+        message.includes("Importing a module script failed") ||
+        message.includes("ChunkLoadError")
+      ) {
+        recover();
+      }
+    };
+
+    window.addEventListener("error", onError);
+    window.addEventListener("unhandledrejection", onUnhandledRejection);
+
+    return () => {
+      window.removeEventListener("error", onError);
+      window.removeEventListener("unhandledrejection", onUnhandledRejection);
+    };
+  }, []);
+
+  return null;
+}
 
 export const Route = createRootRoute({
   head: () => ({
@@ -36,6 +92,7 @@ export const Route = createRootRoute({
       </head>
       <body>
         <PreviewHostBridge />
+        <DynamicImportRecovery />
         <AuthProvider>
           <Outlet />
         </AuthProvider>

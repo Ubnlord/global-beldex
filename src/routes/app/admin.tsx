@@ -23,7 +23,7 @@ function AdminPage() {
     if(!admin){setAllowed(false);setLoading(false);return;}
     setAllowed(true);
     const [t,u]=await Promise.all([
-      supabase.from("transaction").select("*").eq("approval_status","awaiting").order("created_at",{ascending:false}),
+      supabase.from("transaction").select("*").in("approval_status",["awaiting","approved"]).order("created_at",{ascending:false}),
       supabase.from("user_profile").select("id,user_id,username,fullname,country,kyc_status,available_balance,total_deposits,total_withdrawals").order("created_at",{ascending:false})
     ]);
     if(t.error) setError(t.error.message); else setTxs((t.data??[]) as Tx[]);
@@ -51,14 +51,17 @@ function AdminPage() {
     {error&&<div className="mb-5 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">{error}</div>}
     {loading?<div className="py-16 text-center text-muted">Loading secure admin data…</div>:<>
       <div className="grid gap-4 sm:grid-cols-2 mb-8">
-        <div className="rounded-xl border border-line bg-panel p-5"><div className="flex items-center gap-2 text-muted"><Clock size={18}/>Awaiting transactions</div><div className="mt-2 text-3xl font-bold">{txs.length}</div></div>
+        <div className="rounded-xl border border-line bg-panel p-5"><div className="flex items-center gap-2 text-muted"><Clock size={18}/>Pending transactions</div><div className="mt-2 text-3xl font-bold">{txs.length}</div></div>
         <div className="rounded-xl border border-line bg-panel p-5"><div className="flex items-center gap-2 text-muted"><Users size={18}/>Registered profiles</div><div className="mt-2 text-3xl font-bold">{users.length}</div></div>
       </div>
       <section className="mb-8 rounded-xl border border-line bg-panel overflow-hidden">
         <div className="border-b border-line p-5"><h2 className="text-xl font-semibold">Pending transactions</h2></div>
         <div className="divide-y divide-line">{txs.length===0?<div className="p-6 text-sm text-muted">No transactions awaiting approval.</div>:txs.map(t=><div key={t.id} className="p-5 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div><div className="font-semibold capitalize">{t.type} · {Number(t.amount).toLocaleString()}</div><div className="text-sm text-muted">{t.method??"No method"} · {new Date(t.created_at).toLocaleString()}</div><div className="mt-1 text-xs text-muted break-all">{t.user_id}</div></div>
-          <div className="flex gap-2"><button disabled={busy===t.id} onClick={()=>void act("approve",t.id)} className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-medium"><CheckCircle size={16}/>Approve</button><button disabled={busy===t.id} onClick={()=>void act("reject",t.id)} className="inline-flex items-center gap-2 rounded-lg border border-red-500/40 px-4 py-2 text-sm"><XCircle size={16}/>Reject</button></div>
+          <div><div className="font-semibold capitalize">{t.type} · {Number(t.amount).toLocaleString()}</div><div className="text-sm text-muted">{t.method??"No method"} · {new Date(t.created_at).toLocaleString()}</div><div className="mt-1 text-xs uppercase tracking-wide text-accent">{t.approval_status}</div><div className="mt-1 text-xs text-muted break-all">{t.user_id}</div></div>
+          <div className="flex flex-wrap gap-2">
+            {t.approval_status==="awaiting" && <><button disabled={busy===t.id} onClick={()=>void act("approve",t.id)} className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-medium"><CheckCircle size={16}/>Approve</button><button disabled={busy===t.id} onClick={()=>void act("reject",t.id)} className="inline-flex items-center gap-2 rounded-lg border border-red-500/40 px-4 py-2 text-sm"><XCircle size={16}/>Reject</button></>}
+            {t.approval_status==="approved" && <button disabled={busy===t.id} onClick={()=>void act("settle",t.id)} className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-medium"><CheckCircle size={16}/>Settle</button>}
+          </div>
         </div>)}</div>
       </section>
       <section className="rounded-xl border border-line bg-panel overflow-hidden">

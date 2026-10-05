@@ -162,6 +162,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/admin/login': typeof AdminLoginRoute
   '/forgot': typeof ForgotRoute
   '/legal': typeof LegalRoute
   '/login': typeof LoginRoute
@@ -233,6 +234,8 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/admin/login'
+    | '/app/admin'
     | '/forgot'
     | '/legal'
     | '/login'

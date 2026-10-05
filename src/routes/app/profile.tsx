@@ -7,7 +7,7 @@ import { FieldLabel, Input } from "@/components/ui/input";
 import { COUNTRIES } from "@/lib/platform/catalog";
 import { copy } from "@/lib/platform/i18n";
 import { usePlatform } from "@/lib/platform/store";
-import { updateCloudPassword } from "@/lib/supabase/auth";
+import { updateCloudPassword, updateCloudProfile } from "@/lib/supabase/auth";
 
 export const Route = createFileRoute("/app/profile")({ component: ProfilePage });
 
@@ -32,6 +32,19 @@ function ProfilePage() {
     const avatar = await readProfilePhoto(file);
     if (!avatar) {
       toast(t.photoTooBig);
+      return;
+    }
+    const nextProfile = {
+      email: user?.email ?? "",
+      username: user?.username ?? "",
+      fullname: user?.name ?? "",
+      phone: user?.phone ?? "",
+      country: user?.country ?? "",
+      avatar,
+    };
+    const cloud = await updateCloudProfile(nextProfile);
+    if (cloud) {
+      toastError(cloud);
       return;
     }
     updateProfile({ avatar });
@@ -64,8 +77,22 @@ function ProfilePage() {
                   size="sm"
                   variant="ghost"
                   onClick={() => {
-                    updateProfile({ avatar: undefined });
-                    toast(t.photoUpdated);
+                    void (async () => {
+                      const cloud = await updateCloudProfile({
+                        email: user?.email ?? "",
+                        username: user?.username ?? "",
+                        fullname: user?.name ?? "",
+                        phone: user?.phone ?? "",
+                        country: user?.country ?? "",
+                        avatar: undefined,
+                      });
+                      if (cloud) {
+                        toastError(cloud);
+                        return;
+                      }
+                      updateProfile({ avatar: undefined });
+                      toast(t.photoUpdated);
+                    })();
                   }}
                 >
                   {t.removePhoto}
@@ -120,13 +147,27 @@ function ProfilePage() {
           <Button
             className="w-full"
             onClick={() => {
-              updateProfile({
-                name: form.name,
-                username: form.username,
-                phone: form.phone,
-                country: form.country,
-              });
-              toast(t.profileSaved);
+              void (async () => {
+                const cloud = await updateCloudProfile({
+                  email: user?.email ?? "",
+                  username: form.username,
+                  fullname: form.name,
+                  phone: form.phone,
+                  country: form.country,
+                  avatar: user?.avatar,
+                });
+                if (cloud) {
+                  toastError(cloud);
+                  return;
+                }
+                updateProfile({
+                  name: form.name,
+                  username: form.username,
+                  phone: form.phone,
+                  country: form.country,
+                });
+                toast(t.profileSaved);
+              })();
             }}
           >
             {t.saveChanges}

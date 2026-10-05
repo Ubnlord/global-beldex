@@ -259,24 +259,11 @@ function Landing() {
           </button>
 
           <div className="mx-8 overflow-hidden rounded-xl border border-line bg-surface p-6 shadow-sm sm:mx-12 sm:p-10">
-            {activeTestimonial.image ? (
-              <img
-                src={activeTestimonial.image}
-                alt={activeTestimonial.name + " testimonial"}
-                className="mx-auto h-[170px] w-[210px] rounded-xl object-cover sm:h-[210px] sm:w-[260px]"
-              />
-            ) : (
-              <div
-                className="mx-auto size-[170px] rounded-xl bg-cover bg-center sm:size-[210px]"
-                style={{
-                  backgroundImage: "url('/testimonials/testimonials.jpg?v=3')",
-                  backgroundSize: "500% 200%",
-                  backgroundPosition: activeTestimonial.position + " top",
-                }}
-                role="img"
-                aria-label={activeTestimonial.name + " testimonial"}
-              />
-            )}
+            <img
+              src={activeTestimonial.image}
+              alt={activeTestimonial.name + " testimonial"}
+              className="mx-auto max-h-[230px] w-auto max-w-[280px] rounded-xl object-contain"
+            />
             <blockquote className="mx-auto mt-7 max-w-[620px] text-center text-[15px] leading-7 text-muted sm:text-[17px] sm:leading-8">
               “{activeTestimonial.body}”
             </blockquote>

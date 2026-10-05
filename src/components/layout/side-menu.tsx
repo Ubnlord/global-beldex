@@ -11,16 +11,19 @@ import {
   Repeat,
   Settings,
   Shield,
+  ShieldCheck,
   Users,
   X,
 } from "lucide-react";
 import { Link, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { BrandLockup } from "@/components/brand/logo";
 import { Avatar } from "@/components/layout/avatar";
 import { Button } from "@/components/ui/button";
 import { copy } from "@/lib/platform/i18n";
 import { usePlatform } from "@/lib/platform/store";
 import { signOutCloud } from "@/lib/supabase/auth";
+import { supabase } from "@/lib/supabase/client";
 import type { ComponentType } from "react";
 
 export function SideMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -29,6 +32,30 @@ export function SideMenu({ open, onClose }: { open: boolean; onClose: () => void
   const lang = usePlatform((s) => s.lang);
   const t = copy[lang];
   const navigate = useNavigate();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    if (!user?.id) {
+      setIsAdmin(false);
+      return () => {
+        active = false;
+      };
+    }
+
+    void supabase
+      .from("admin_user")
+      .select("id")
+      .eq("user_id", user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (active) setIsAdmin(Boolean(data));
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [user?.id]);
 
   if (!open) return null;
 
@@ -75,9 +102,7 @@ export function SideMenu({ open, onClose }: { open: boolean; onClose: () => void
               >
                 {t.page.tvChartTitle}
               </a>
-              <p className="mt-1 text-[10px] text-subtle">
-                {t.page.liveFromTv}
-              </p>
+              <p className="mt-1 text-[10px] text-subtle">{t.page.liveFromTv}</p>
             </div>
           </section>
 
@@ -86,6 +111,15 @@ export function SideMenu({ open, onClose }: { open: boolean; onClose: () => void
             onClose={onClose}
             items={[{ to: "/app", icon: Home, label: t.dashboard }]}
           />
+
+          {isAdmin && (
+            <NavGroup
+              title="Administration"
+              onClose={onClose}
+              items={[{ to: "/app/admin", icon: ShieldCheck, label: "Admin Control Center" }]}
+            />
+          )}
+
           <NavGroup
             title={t.finance}
             onClose={onClose}
@@ -98,6 +132,7 @@ export function SideMenu({ open, onClose }: { open: boolean; onClose: () => void
               { to: "/app/markets", icon: LineChart, label: t.markets },
             ]}
           />
+
           <NavGroup
             title={t.account}
             onClose={onClose}
@@ -127,7 +162,7 @@ export function SideMenu({ open, onClose }: { open: boolean; onClose: () => void
                 await signOutCloud();
                 logout();
                 onClose();
-                void navigate({ to: "/login" });
+                void navigate({ to: "/login", replace: true });
               })();
             }}
             className="flex w-full items-center gap-3 px-3 py-2.5 text-[13px] text-danger"
@@ -137,9 +172,7 @@ export function SideMenu({ open, onClose }: { open: boolean; onClose: () => void
 
           <div className="border-t border-line pt-4">
             <BrandLockup to="/app" />
-            <p className="mt-3 text-[10px] text-faint">
-              {t.page.demoFoot}
-            </p>
+            <p className="mt-3 text-[10px] text-faint">{t.page.demoFoot}</p>
           </div>
         </div>
       </aside>

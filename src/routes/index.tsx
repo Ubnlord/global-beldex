@@ -194,22 +194,22 @@ function Landing() {
           {[
             {
               image:
-                "/awards/award-1.svg",
+                "/awards/award-1.jpg",
               title: "Best Mobile Trading Platform UAE 2022",
             },
             {
               image:
-                "/awards/award-2.svg",
+                "/awards/award-2.jpg",
               title: "Most Trusted Trading Platform Europe 2022",
             },
             {
               image:
-                "/awards/award-3.svg",
+                "/awards/award-3.jpg",
               title: "Most Innovative CFD Broker",
             },
             {
               image:
-                "/awards/award-4.svg",
+                "/awards/award-4.jpg",
               title: "Best Fixed Spread Broker",
             },
           ].map((award) => (

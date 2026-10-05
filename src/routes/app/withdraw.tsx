@@ -29,7 +29,9 @@ function WithdrawPage() {
 
   const submit = async () => {
     const n = parseFloat(amount);
-    const err = await withdraw(n, method, address, requestId ?? crypto.randomUUID());
+    const id = requestId ?? crypto.randomUUID();
+    setRequestId(id);
+    const err = await withdraw(n, method, address, id);
     if (err) {
       toastError(err);
       return;

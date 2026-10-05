@@ -287,8 +287,7 @@ export const usePlatform = create<PlatformState>()(
       storage: createJSONStorage(() => localStorage),
       skipHydration: true,
       migrate: (persisted) => {
-        const p = (persisted ?? {}) as Partial<PlatformState> & {
-          };
+        const p = (persisted ?? {}) as Partial<PlatformState>;
         const tickets = p.tickets ?? [];
         const book = snapshot({
           available: p.available ?? 0,
@@ -303,12 +302,7 @@ export const usePlatform = create<PlatformState>()(
           notices: p.notices ?? [],
           tickets,
         });
-        const accounts = { ...(p.accounts ?? {}) };
-        const email = p.user?.email?.toLowerCase();
-        if (email && accounts[email] && !accounts[email].book) {
-          accounts[email] = { ...accounts[email], book };
-        }
-        return { ...p, accounts, tickets };
+        return { ...p, tickets, user: null };
       },
       partialize: (s) => ({
         lang: s.lang,

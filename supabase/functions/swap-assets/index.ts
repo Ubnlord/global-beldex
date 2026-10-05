@@ -74,6 +74,7 @@ Deno.serve(async (req) => {
 
     const adminClient = createClient(supabaseUrl, serviceKey);
     const { data, error } = await adminClient.rpc("swap_assets", {
+      p_user_id: user.id,
       p_from: from,
       p_to: to,
       p_amount: amount,

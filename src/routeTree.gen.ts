@@ -145,7 +145,6 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/admin/login': typeof AdminLoginRoute
-  '/admin/login': typeof AdminLoginRoute
   '/app/admin': typeof AppAdminRoute
   '/app/deposit': typeof AppDepositRoute
   '/app/history': typeof AppHistoryRoute
@@ -191,6 +190,7 @@ export interface FileRoutesById {
   '/legal': typeof LegalRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/admin/login': typeof AdminLoginRoute
   '/app/admin': typeof AppAdminRoute
   '/app/deposit': typeof AppDepositRoute
   '/app/history': typeof AppHistoryRoute
@@ -215,6 +215,7 @@ export interface FileRouteTypes {
     | '/legal'
     | '/login'
     | '/register'
+    | '/admin/login'
     | '/app/admin'
     | '/app/deposit'
     | '/app/history'
@@ -236,6 +237,7 @@ export interface FileRouteTypes {
     | '/legal'
     | '/login'
     | '/register'
+    | '/admin/login'
     | '/app/deposit'
     | '/app/history'
     | '/app/markets'
@@ -257,6 +259,7 @@ export interface FileRouteTypes {
     | '/legal'
     | '/login'
     | '/register'
+    | '/admin/login'
     | '/app/deposit'
     | '/app/history'
     | '/app/markets'

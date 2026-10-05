@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppRouteImport } from './routes/app'
+import { Route as AppAdminRouteImport } from './routes/app/admin'
 import { Route as ForgotRouteImport } from './routes/forgot'
 import { Route as LegalRouteImport } from './routes/legal'
 import { Route as LoginRouteImport } from './routes/login'
@@ -58,6 +59,11 @@ const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
   path: '/register',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AppAdminRoute = AppAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AppRoute,
 } as any)
 const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
@@ -132,6 +138,7 @@ export interface FileRoutesByFullPath {
   '/legal': typeof LegalRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/app/admin': typeof AppAdminRoute
   '/app/deposit': typeof AppDepositRoute
   '/app/history': typeof AppHistoryRoute
   '/app/markets': typeof AppMarketsRoute
@@ -197,6 +204,7 @@ export interface FileRouteTypes {
     | '/legal'
     | '/login'
     | '/register'
+    | '/app/admin'
     | '/app/deposit'
     | '/app/history'
     | '/app/markets'
@@ -307,6 +315,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RegisterRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/app/admin': {
+      id: '/app/admin'
+      path: '/admin'
+      fullPath: '/app/admin'
+      preLoaderRoute: typeof AppAdminRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/': {
       id: '/app/'
       path: '/'
@@ -401,6 +416,7 @@ declare module '@tanstack/react-router' {
   }
 }
 
+  AppAdminRoute: typeof AppAdminRoute
 interface AppRouteChildren {
   AppDepositRoute: typeof AppDepositRoute
   AppHistoryRoute: typeof AppHistoryRoute
@@ -416,6 +432,7 @@ interface AppRouteChildren {
   AppIndexRoute: typeof AppIndexRoute
 }
 
+  AppAdminRoute: AppAdminRoute,
 const AppRouteChildren: AppRouteChildren = {
   AppDepositRoute: AppDepositRoute,
   AppHistoryRoute: AppHistoryRoute,

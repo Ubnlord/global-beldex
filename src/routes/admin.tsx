@@ -194,6 +194,7 @@ function AdminPage() {
   }
 
   return (
+    <AdminShell>
     <div className="mx-auto max-w-[1440px] px-4 py-5 pb-28 sm:px-6 sm:py-8">
       <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -411,6 +412,7 @@ function AdminPage() {
   );
 }
 
+
 function Stat({
   icon: Icon,
   label,
@@ -476,4 +478,8 @@ function Status({ value }: { value: string }) {
 
 function EmptyState({ text }: { text: string }) {
   return <div className="p-10 text-center text-sm text-muted">{text}</div>;
+}
+
+    </AdminShell>
+  );
 }

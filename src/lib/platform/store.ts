@@ -111,7 +111,7 @@ type PlatformState = {
   withdraw: (amount: number, method: string, address: string, requestId?: string) => Promise<string | null>;
   buyPlan: (plan: Plan, amount: number) => Promise<string | null>;
   settlePlans: () => Promise<void>;
-  swap: (from: "USD" | "BDX", to: "USD" | "BDX", amount: number, rate: number) => Promise<string | null>;
+  swap: (from: "USD" | "BDX", to: "USD" | "BDX", amount: number, rate?: number) => Promise<string | null>;
   copyReferral: () => string;
   addNotice: (title: string, body: string) => void;
   markNoticesRead: () => void;
@@ -229,7 +229,7 @@ export const usePlatform = create<PlatformState>()(
           if (remote) set({ ...remote, tickets: remote.tickets ?? [] });
         },
 
-        swap: async (from, to, amount, rate) => {
+        swap: async (from, to, amount) => {
           if (from === to) return "SWAP_SAME";
           if (!amount || amount <= 0) return "NEED_AMOUNT";
 

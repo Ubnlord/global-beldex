@@ -337,7 +337,7 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminLoginRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/app/admin':
+    '/app/admin': {
       id: '/app/admin'
       path: '/admin'
       fullPath: '/app/admin'

@@ -21,6 +21,15 @@ const mustContain = [
   "grant execute on function public.swap_assets(uuid,text,text,numeric,numeric) to service_role;",
   "create unique index if not exists transaction_user_request_id_uq",
   "perform public.assert_user_can_transact(v_uid);",
+  "alter table public.user_profile enable row level security;",
+  "alter table public.admin_user enable row level security;",
+  "alter table public.transaction enable row level security;",
+  "alter table public.transaction_audit enable row level security;",
+  "alter table public.investment_plan_catalog enable row level security;",
+  "alter table public.user_investment enable row level security;",
+  "create policy user_profile_select_own_or_admin",
+  "create policy transaction_select_own_or_admin",
+  "create policy transaction_audit_select_own_or_admin",
 ];
 
 test("security hardening migration keeps critical authorization controls", () => {

@@ -36,7 +36,7 @@ function Landing() {
 
   const testimonials = [
     { name: "ROBERT HOPKINS", body: "I have been a client of Global Beldex for over the last year. I have found this company to be competent, capable, knowledgeable, and a vital component of building my Manufacturing business. I would highly recommend Global Beldex.", position: "0%" },
-    { name: "GARY JAMES", body: "I must say this platform is indeed amazing. it was a glimpse at first but today i can account for a real trade when it comes to Investing on Global Beldex.", position: "25%" },
+    { name: "GARY JAMES", body: "I must say this platform is indeed amazing. it was a glimpse at first but today i can account for a real trade when it comes to Investing on Global Beldex.", position: "25%", image: "/testimonials/gary-phone.jpg" },
     { name: "KEVIN GAINES", body: "Global Beldex exceeds expectations time after time. Their vast experience and knowledge of the global futures markets will save you time and money when it comes to execution, rolls and research. The entire staff/Traders put a great deal of effort into their relationship with clients, and I am truly appreciative of all they have done for me.", position: "50%" },
     { name: "STEVEN TACCONI", body: "As a satisfied client, I am just writing to tell of how much I have appreciated and enjoyed working with Global Beldex. I would personally rank Global Beldex at the top of the list when it comes to professionalism and overall knowledge of the futures business. Clearly, Global Beldex is interested in the continuing success of their clients. Their attention to personal service is outstanding. It is truly been a positive experience working with them.", position: "75%" },
     { name: "TED & SHANNON", body: "I absolutely love your service. I don’t know how you do it, but I am very, very happy that I found you, and I can’t thank you enough for helping me to realize my dream of achieving a supplemental income to my Administrative business, which I have been able to skyrocket to another level with the extra money I make by Investing with Global Beldex.", position: "100%" },
@@ -259,19 +259,24 @@ function Landing() {
           </button>
 
           <div className="mx-8 overflow-hidden rounded-xl border border-line bg-surface p-6 shadow-sm sm:mx-12 sm:p-10">
-            <div
-              className="mx-auto size-[170px] rounded-xl bg-cover bg-center sm:size-[210px]"
-              style={{
-                backgroundImage: "url('/testimonials/testimonials.jpg?v=3')",
-                // The source sprite contains the portrait in its upper half.
-                // Scale the sprite to 200% height and anchor it to the top so the
-                // gray source padding below each portrait is never displayed.
-                backgroundSize: "500% 200%",
-                backgroundPosition: activeTestimonial.position + " top",
-              }}
-              role="img"
-              aria-label={activeTestimonial.name + " testimonial"}
-            />
+            {activeTestimonial.image ? (
+              <img
+                src={activeTestimonial.image}
+                alt={activeTestimonial.name + " testimonial"}
+                className="mx-auto h-[170px] w-[210px] rounded-xl object-cover sm:h-[210px] sm:w-[260px]"
+              />
+            ) : (
+              <div
+                className="mx-auto size-[170px] rounded-xl bg-cover bg-center sm:size-[210px]"
+                style={{
+                  backgroundImage: "url('/testimonials/testimonials.jpg?v=3')",
+                  backgroundSize: "500% 200%",
+                  backgroundPosition: activeTestimonial.position + " top",
+                }}
+                role="img"
+                aria-label={activeTestimonial.name + " testimonial"}
+              />
+            )}
             <blockquote className="mx-auto mt-7 max-w-[620px] text-center text-[15px] leading-7 text-muted sm:text-[17px] sm:leading-8">
               “{activeTestimonial.body}”
             </blockquote>

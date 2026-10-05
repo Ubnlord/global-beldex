@@ -16,6 +16,7 @@ import { Route as ForgotRouteImport } from './routes/forgot'
 import { Route as LegalRouteImport } from './routes/legal'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as RegisterRouteImport } from './routes/register'
+import { Route as AdminLoginRouteImport } from './routes/admin/login'
 import { Route as AppIndexRouteImport } from './routes/app/index'
 import { Route as AppDepositRouteImport } from './routes/app/deposit'
 import { Route as AppHistoryRouteImport } from './routes/app/history'
@@ -58,6 +59,11 @@ const LoginRoute = LoginRouteImport.update({
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
   path: '/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminLoginRoute = AdminLoginRouteImport.update({
+  id: '/admin/login',
+  path: '/admin/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppAdminRoute = AppAdminRouteImport.update({
@@ -138,6 +144,8 @@ export interface FileRoutesByFullPath {
   '/legal': typeof LegalRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/admin/login': typeof AdminLoginRoute
+  '/admin/login': typeof AdminLoginRoute
   '/app/admin': typeof AppAdminRoute
   '/app/deposit': typeof AppDepositRoute
   '/app/history': typeof AppHistoryRoute
@@ -159,6 +167,7 @@ export interface FileRoutesByTo {
   '/legal': typeof LegalRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/admin/login': typeof AdminLoginRoute
   '/app/admin': typeof AppAdminRoute
   '/app/deposit': typeof AppDepositRoute
   '/app/history': typeof AppHistoryRoute
@@ -270,6 +279,7 @@ export interface RootRouteChildren {
   LegalRoute: typeof LegalRoute
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
+  AdminLoginRoute: typeof AdminLoginRoute
   AuthConfirmRoute: typeof AuthConfirmRoute
 }
 
@@ -460,6 +470,7 @@ const rootRouteChildren: RootRouteChildren = {
   LegalRoute: LegalRoute,
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
+  AdminLoginRoute: AdminLoginRoute,
   AuthConfirmRoute: AuthConfirmRoute,
 }
 export const routeTree = rootRouteImport

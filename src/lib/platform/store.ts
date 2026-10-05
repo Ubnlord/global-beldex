@@ -487,8 +487,12 @@ export const usePlatform = create<PlatformState>()(
           if (from === to) return "SWAP_SAME";
           if (!amount || amount <= 0) return "NEED_AMOUNT";
           if (!rate || rate <= 0) return "BAD_RATE";
-          const { error } = await supabase.rpc("swap_assets", { p_from: from, p_to: to, p_amount: amount, p_rate: rate });
+
+          const { error } = await supabase.functions.invoke("swap-assets", {
+            body: { from, to, amount },
+          });
           if (error) return error.message;
+
           const remote = await pullCloudBook();
           if (remote) set({ ...remote, tickets: remote.tickets ?? [] });
           return null;

@@ -169,11 +169,13 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
   '/admin/login': typeof AdminLoginRoute
   '/forgot': typeof ForgotRoute
   '/legal': typeof LegalRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/admin': typeof AdminRoute
   '/admin/login': typeof AdminLoginRoute
   '/app/admin': typeof AppAdminRoute
   '/app/deposit': typeof AppDepositRoute
@@ -198,6 +200,7 @@ export interface FileRoutesById {
   '/legal': typeof LegalRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/admin': typeof AdminRoute
   '/admin/login': typeof AdminLoginRoute
   '/app/admin': typeof AppAdminRoute
   '/app/deposit': typeof AppDepositRoute
@@ -242,6 +245,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/admin'
     | '/admin/login'
     | '/app/admin'
     | '/forgot'
@@ -290,6 +294,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
+  AdminRoute: typeof AdminRoute
   ForgotRoute: typeof ForgotRoute
   LegalRoute: typeof LegalRoute
   LoginRoute: typeof LoginRoute
@@ -457,8 +462,6 @@ declare module '@tanstack/react-router' {
   }
 }
 
-  AppAdminRoute: typeof AppAdminRoute
-}
 export interface AppRouteChildren {
   AppAdminRoute: typeof AppAdminRoute
   AppDepositRoute: typeof AppDepositRoute
@@ -500,6 +503,7 @@ const rootRouteChildren: RootRouteChildren = {
   LegalRoute: LegalRoute,
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
+  AdminRoute: AdminRoute,
   AdminLoginRoute: AdminLoginRoute,
   AuthConfirmRoute: AuthConfirmRoute,
 }

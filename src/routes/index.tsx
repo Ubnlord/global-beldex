@@ -238,10 +238,6 @@ function Landing() {
           <h2 className="mt-2 text-center text-[28px] font-bold text-fg sm:text-[34px]">
             You&apos;re In Good Company!
           </h2>
-          <p className="mx-auto mt-3 max-w-[720px] text-xs leading-5 text-muted">
-            Legacy testimonial content supplied for this website has been preserved as reference
-            material. Testimonials and historical claims are not independently verified by Global Beldex.
-          </p>
         </div>
 
         <div className="relative mx-auto mt-8 max-w-[760px]">

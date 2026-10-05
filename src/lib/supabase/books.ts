@@ -1,4 +1,4 @@
-import type { Book, ActivePlan } from "@/lib/platform/store";
+import type { Book, ActivePlan, Transaction, TxStatus, TxType } from "@/lib/platform/store";
 import { supabase } from "./client";
 
 function num(v: unknown) {
@@ -34,11 +34,11 @@ export async function pullCloudBook(): Promise<Book | null> {
   if (profileResult.error) return null;
   const p = profileResult.data;
   const rawTxs = txResult.data ?? [];
-  const txs = rawTxs.map((t: any) => ({
+  const txs: Transaction[] = rawTxs.map((t: any) => ({
     id: t.id,
-    type: t.type,
+    type: t.type as TxType,
     amount: num(t.amount),
-    status: t.status === "completed" ? "completed" : t.status === "failed" ? "failed" : "pending",
+    status: (t.status === "completed" ? "completed" : t.status === "failed" ? "failed" : "pending") as TxStatus,
     date: new Date(t.created_at).toISOString(),
     method: t.method ?? undefined,
     note: t.note ?? undefined,

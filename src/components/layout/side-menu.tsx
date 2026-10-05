@@ -36,18 +36,29 @@ export function SideMenu({ open, onClose }: { open: boolean; onClose: () => void
 
   useEffect(() => {
     let active = true;
-    if (!user?.id) {
+    if (!user?.email) {
       setIsAdmin(false);
       return () => {
         active = false;
       };
     }
 
-    void supabase
-      .from("admin_user")
-      .select("id")
-      .eq("user_id", user.id)
-      .maybeSingle()
+    void supabase.auth
+      .getUser()
+      .then(async ({ data: { user: authUser } }) => {
+        if (!active || !authUser) {
+          if (active) setIsAdmin(false);
+          return;
+        }
+
+        const { data } = await supabase
+          .from("admin_user")
+          .select("id")
+          .eq("user_id", authUser.id)
+          .maybeSingle();
+
+        if (active) setIsAdmin(Boolean(data));
+      })
       .then(({ data }) => {
         if (active) setIsAdmin(Boolean(data));
       });
@@ -55,7 +66,7 @@ export function SideMenu({ open, onClose }: { open: boolean; onClose: () => void
     return () => {
       active = false;
     };
-  }, [user?.id]);
+  }, [user?.email]);
 
   if (!open) return null;
 

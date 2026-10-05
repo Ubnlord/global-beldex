@@ -709,4 +709,65 @@ $function$;
 revoke all on function public.swap_assets(uuid,text,text,numeric,numeric) from public, anon, authenticated;
 grant execute on function public.swap_assets(uuid,text,text,numeric,numeric) to service_role;
 
+
+-- Defense-in-depth RLS for every financial/user table exposed through the Data API.
+-- Grants alone are not sufficient: authenticated users must only see their own rows.
+alter table public.user_profile enable row level security;
+alter table public.admin_user enable row level security;
+alter table public.transaction enable row level security;
+alter table public.transaction_audit enable row level security;
+alter table public.investment_plan_catalog enable row level security;
+alter table public.user_investment enable row level security;
+
+drop policy if exists user_profile_select_own_or_admin on public.user_profile;
+create policy user_profile_select_own_or_admin
+on public.user_profile
+for select to authenticated
+using ((select auth.uid()) = user_id or (select public.is_admin()));
+
+drop policy if exists admin_user_select_own on public.admin_user;
+create policy admin_user_select_own
+on public.admin_user
+for select to authenticated
+using ((select auth.uid()) = user_id);
+
+drop policy if exists transaction_select_own_or_admin on public.transaction;
+create policy transaction_select_own_or_admin
+on public.transaction
+for select to authenticated
+using ((select auth.uid()) = user_id or (select public.is_admin()));
+
+drop policy if exists transaction_audit_select_own_or_admin on public.transaction_audit;
+create policy transaction_audit_select_own_or_admin
+on public.transaction_audit
+for select to authenticated
+using (
+  exists (
+    select 1
+    from public.transaction t
+    where t.id = transaction_audit.transaction_id
+      and (t.user_id = (select auth.uid()) or (select public.is_admin()))
+  )
+);
+
+drop policy if exists investment_catalog_select_active_or_admin on public.investment_plan_catalog;
+create policy investment_catalog_select_active_or_admin
+on public.investment_plan_catalog
+for select to authenticated
+using (active or (select public.is_admin()));
+
+drop policy if exists user_investment_select_own_or_admin on public.user_investment;
+create policy user_investment_select_own_or_admin
+on public.user_investment
+for select to authenticated
+using ((select auth.uid()) = user_id or (select public.is_admin()));
+
+-- Keep all direct Data API writes disabled after RLS is enabled.
+revoke insert, update, delete on table public.user_profile from anon, authenticated;
+revoke insert, update, delete on table public.admin_user from anon, authenticated;
+revoke insert, update, delete on table public.transaction from anon, authenticated;
+revoke insert, update, delete on table public.transaction_audit from anon, authenticated;
+revoke insert, update, delete on table public.investment_plan_catalog from anon, authenticated;
+revoke insert, update, delete on table public.user_investment from anon, authenticated;
+
 commit;

@@ -20,12 +20,15 @@ function SwapPage() {
   const lang = usePlatform((s) => s.lang);
   const t = copy[lang];
   const { usd } = useBeldexQuote();
-  const rate = usd && usd > 0 ? usd : 0.08;
+  const rate = usd && usd > 0 ? usd : null;
   const [from, setFrom] = useState<"USD" | "BDX">("USD");
   const [amount, setAmount] = useState("");
   const to = from === "USD" ? "BDX" : "USD";
   const n = parseFloat(amount) || 0;
-  const out = useMemo(() => (from === "USD" ? n / rate : n * rate), [from, n, rate]);
+  const out = useMemo(() => {
+    if (!rate) return 0;
+    return from === "USD" ? n / rate : n * rate;
+  }, [from, n, rate]);
 
   const flip = () => {
     setFrom(to);
@@ -33,6 +36,10 @@ function SwapPage() {
   };
 
   const submit = async () => {
+    if (!rate) {
+      toastError(t.err.BAD_RATE);
+      return;
+    }
     const err = await swap(from, to, n, rate);
     if (err) {
       toastError(err);
@@ -54,7 +61,7 @@ function SwapPage() {
         <div className="text-[11px] text-muted">{t.rate}</div>
         <div className="flex items-center gap-2 text-lg font-bold tabular">
           <CoinLogo coin="beldex" size={22} />
-          1 BDX = {formatUsd(rate, 5)}
+          1 BDX = {rate ? formatUsd(rate, 5) : t.err.BAD_RATE}
         </div>
         <div className="mt-5">
           <FieldLabel>
@@ -86,13 +93,13 @@ function SwapPage() {
             </span>
           </FieldLabel>
           <div className="mt-1 rounded-md border border-line-strong bg-surface px-4 py-3 text-sm tabular">
-            {out ? out.toFixed(to === "USD" ? 2 : 4) : "0.00"}
+            {rate ? (out ? out.toFixed(to === "USD" ? 2 : 4) : "0.00") : t.err.BAD_RATE}
           </div>
         </div>
         <div className="mt-2 text-[11px] text-subtle">
           {fill(t.usdAvail, { usd: formatUsd(available), bdx: bdx.toFixed(4) })}
         </div>
-        <Button className="mt-6 w-full" onClick={submit}>
+        <Button className="mt-6 w-full" onClick={submit} disabled={!rate || n <= 0}>
           {t.swapNow}
         </Button>
       </div>

@@ -1,10 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState, type ReactNode } from "react";
+import { type ReactNode } from "react";
 import { toast } from "@/components/layout/toast";
 import { Avatar } from "@/components/layout/avatar";
 import { Button } from "@/components/ui/button";
 import { copy, LANGS, type Lang } from "@/lib/platform/i18n";
-import { twoFactorCode, usePlatform } from "@/lib/platform/store";
+import { usePlatform } from "@/lib/platform/store";
 
 export const Route = createFileRoute("/app/settings")({ component: SettingsPage });
 
@@ -12,10 +12,6 @@ function SettingsPage() {
   const lang = usePlatform((s) => s.lang);
   const setLang = usePlatform((s) => s.setLang);
   const user = usePlatform((s) => s.user);
-  const accounts = usePlatform((s) => s.accounts);
-  const setTwoFactor = usePlatform((s) => s.setTwoFactor);
-  const code = twoFactorCode(accounts, user);
-  const [shown, setShown] = useState<string | null>(code);
   const t = copy[lang];
 
   return (
@@ -67,24 +63,6 @@ function SettingsPage() {
       <section className="mt-6">
         <div className="text-[11px] font-semibold tracking-widest text-subtle">{t.security}</div>
         <div className="mt-2 space-y-3">
-          <Row label={t.twoFactor}>
-            <div className="flex flex-col items-end gap-2">
-              <Button
-                size="sm"
-                variant={code ? "primary" : "secondary"}
-                onClick={() => {
-                  const next = setTwoFactor(!code);
-                  setShown(next);
-                  toast(next ? t.twoOn : t.twoOff);
-                }}
-              >
-                {code ? t.on : t.off}
-              </Button>
-              {(shown || code) && (
-                <span className="text-[11px] tabular text-accent">{t.page.codePrefix} {shown || code}</span>
-              )}
-            </div>
-          </Row>
           <Row label={t.session}>
             <span className="text-xs text-subtle">{t.sessionBody}</span>
           </Row>

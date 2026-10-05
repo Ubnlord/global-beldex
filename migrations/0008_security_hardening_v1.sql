@@ -18,8 +18,7 @@ as $function$
   );
 $function$;
 
-revoke all on function public.admin_has_permission(text) from public, anon;
-grant execute on function public.admin_has_permission(text) to authenticated;
+revoke all on function public.admin_has_permission(text) from public, anon, authenticated;
 
 -- Blocked accounts must never be able to create or execute financial activity.
 create or replace function public.assert_user_can_transact(p_user_id uuid)
@@ -51,7 +50,6 @@ end;
 $function$;
 
 revoke all on function public.assert_user_can_transact(uuid) from public, anon, authenticated;
-grant execute on function public.assert_user_can_transact(uuid) to authenticated;
 
 -- Idempotency key for client-originated deposit/withdrawal requests.
 alter table public.transaction

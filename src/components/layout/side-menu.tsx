@@ -58,9 +58,6 @@ export function SideMenu({ open, onClose }: { open: boolean; onClose: () => void
           .maybeSingle();
 
         if (active) setIsAdmin(Boolean(data));
-      })
-      .then(({ data }) => {
-        if (active) setIsAdmin(Boolean(data));
       });
 
     return () => {

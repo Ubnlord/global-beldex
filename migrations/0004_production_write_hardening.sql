@@ -1,4 +1,101 @@
--- Production hardening: keep all financial/profile mutations behind controlled RPCs.
+begin;
+
+-- These RPCs are defined here so this hardening migration is self-contained
+-- when the schema is rebuilt from the repository.
+create or replace function public.admin_approve_transaction(
+  p_transaction_id uuid,
+  p_reason text default null
+)
+returns public.transaction
+language plpgsql
+security definer
+set search_path = pg_catalog, public, pg_temp
+as $function$
+declare
+  v_admin public.admin_user;
+  v_tx public.transaction;
+begin
+  select * into v_admin from public.admin_user where user_id=auth.uid();
+  if v_admin.id is null then raise exception 'Admin access required'; end if;
+
+  select * into v_tx from public.transaction where id=p_transaction_id for update;
+  if v_tx.id is null then raise exception 'Transaction not found'; end if;
+  if v_tx.approval_status<>'awaiting' then raise exception 'Transaction is not awaiting approval'; end if;
+
+  update public.transaction
+  set approval_status='approved',
+      status=case when type in ('deposit','withdraw') then 'pending' else 'approved' end,
+      approved_by=v_admin.id,
+      approval_reason=p_reason,
+      approved_at=now(),
+      updated_at=now()
+  where id=p_transaction_id
+  returning * into v_tx;
+
+  insert into public.transaction_audit(
+    transaction_id,admin_id,action,old_values,new_values,reason
+  )
+  values(
+    v_tx.id,v_admin.id,'approved',
+    jsonb_build_object('approval_status','awaiting'),
+    jsonb_build_object('approval_status',v_tx.approval_status,'status',v_tx.status),
+    p_reason
+  );
+  return v_tx;
+end;
+$function$;
+
+create or replace function public.admin_reject_transaction(
+  p_transaction_id uuid,
+  p_reason text
+)
+returns public.transaction
+language plpgsql
+security definer
+set search_path = pg_catalog, public, pg_temp
+as $function$
+declare
+  v_admin public.admin_user;
+  v_tx public.transaction;
+begin
+  select * into v_admin from public.admin_user where user_id=auth.uid();
+  if v_admin.id is null then raise exception 'Admin access required'; end if;
+  if coalesce(trim(p_reason),'')='' then raise exception 'Rejection reason is required'; end if;
+
+  select * into v_tx from public.transaction where id=p_transaction_id for update;
+  if v_tx.id is null then raise exception 'Transaction not found'; end if;
+  if v_tx.approval_status<>'awaiting' then raise exception 'Transaction is not awaiting approval'; end if;
+
+  if v_tx.type='withdraw' then
+    update public.user_profile
+    set available_balance=available_balance+v_tx.amount,updated_at=now()
+    where user_id=v_tx.user_id;
+  end if;
+
+  update public.transaction
+  set approval_status='rejected',
+      status='failed',
+      approved_by=v_admin.id,
+      approval_reason=p_reason,
+      approved_at=now(),
+      updated_at=now()
+  where id=p_transaction_id
+  returning * into v_tx;
+
+  insert into public.transaction_audit(
+    transaction_id,admin_id,action,old_values,new_values,reason
+  )
+  values(
+    v_tx.id,v_admin.id,'rejected',
+    jsonb_build_object('approval_status','awaiting'),
+    jsonb_build_object('approval_status',v_tx.approval_status,'status',v_tx.status),
+    p_reason
+  );
+  return v_tx;
+end;
+$function$;
+
+ction hardening: keep all financial/profile mutations behind controlled RPCs.
 -- Direct Data API writes are intentionally removed from client roles.
 
 begin;

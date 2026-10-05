@@ -1,7 +1,6 @@
 import { createFileRoute, Navigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { CheckCircle, XCircle, RefreshCw, Users, Clock } from "lucide-react";
-import { AppShell } from "@/components/layout/app-shell";
 import { supabase } from "@/lib/supabase/client";
 
 export const Route = createFileRoute("/app/admin")({ component: AdminPage });
@@ -44,7 +43,7 @@ function AdminPage() {
   }
 
   if(allowed===false) return <Navigate to="/login" />;
-  return <AppShell><div className="mx-auto max-w-[1400px] px-4 py-6 sm:px-6">
+  return <div className="mx-auto max-w-[1400px] px-4 py-6 sm:px-6">
     <div className="mb-8 flex items-center justify-between gap-4">
       <div><h1 className="text-3xl font-bold text-fg">Admin Dashboard</h1><p className="mt-1 text-sm text-muted">Supabase-backed users and transaction approvals.</p></div>
       <button onClick={()=>void load()} className="inline-flex items-center gap-2 rounded-lg border border-line px-4 py-2 text-sm"><RefreshCw size={16}/>Refresh</button>
@@ -67,5 +66,5 @@ function AdminPage() {
         <div className="divide-y divide-line">{users.map(u=><div key={u.id} className="p-5 grid gap-2 sm:grid-cols-4 text-sm"><div><b>{u.fullname||u.username||"Unnamed"}</b><div className="text-muted">{u.username||"—"}</div></div><div>{u.country||"—"}</div><div>KYC: {u.kyc_status}</div><div className="sm:text-right">Balance: {Number(u.available_balance).toLocaleString()}</div></div>)}</div>
       </section>
     </>}
-  </div></AppShell>;
+  </div>;
 }

@@ -34,7 +34,7 @@ function Landing() {
   const [testimonial, setTestimonial] = useState(0);
   const card = cards[company] ?? cards[0];
 
-  const testimonials = [
+  // Testimonial photos are stored as individual assets so mobile browsers render the originals cleanly.\n  const testimonials = [
     { name: "ROBERT HOPKINS", body: "I have been a client of Global Beldex for over the last year. I have found this company to be competent, capable, knowledgeable, and a vital component of building my Manufacturing business. I would highly recommend Global Beldex.", position: "0%" },
     { name: "GARY JAMES", body: "I must say this platform is indeed amazing. it was a glimpse at first but today i can account for a real trade when it comes to Investing on Global Beldex.", position: "25%", image: "/testimonials/gary-phone.jpg" },
     { name: "KEVIN GAINES", body: "Global Beldex exceeds expectations time after time. Their vast experience and knowledge of the global futures markets will save you time and money when it comes to execution, rolls and research. The entire staff/Traders put a great deal of effort into their relationship with clients, and I am truly appreciative of all they have done for me.", position: "50%" },

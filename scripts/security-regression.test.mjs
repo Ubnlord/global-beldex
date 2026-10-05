@@ -8,11 +8,7 @@ const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 const step = async (_name, fn) => fn();
 
-test("security migration exposes only the intended swap executor", async () => {
-  if (!url || !serviceKey) {
-    test.skip("Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to run live security regression tests.");
-    return;
-  }
+test("security migration exposes only the intended swap executor", { skip: !url || !serviceKey }, async () => {
 
   const admin = createClient(url, serviceKey, {
     auth: { autoRefreshToken: false, persistSession: false },

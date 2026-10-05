@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Avatar, readProfilePhoto } from "@/components/layout/avatar";
 import { toast, toastError } from "@/components/layout/toast";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,16 @@ function ProfilePage() {
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    setForm({
+      name: user.name ?? "",
+      username: user.username ?? "",
+      phone: user.phone ?? "",
+      country: user.country ?? "",
+    });
+  }, [user]);
 
   const onPhoto = async (file: File | undefined) => {
     if (!file) return;

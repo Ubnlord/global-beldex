@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { copy, fill, type Lang } from "./i18n";
 import { planCeiling, type Plan } from "./catalog";
-import { formatDate, uid } from "@/lib/utils";
+import { uid } from "@/lib/utils";
 import { pullCloudBook } from "@/lib/supabase/books";
 import { supabase } from "@/lib/supabase/client";
 
@@ -116,7 +116,6 @@ type PlatformState = {
   addNotice: (title: string, body: string) => void;
   markNoticesRead: () => void;
   submitTicket: (subject: string, body: string) => string | null;
-  requestReset: (email: string) => string | null;
 };
 
 function notice(title: string, body: string): Notice {
@@ -275,10 +274,6 @@ export const usePlatform = create<PlatformState>()(
           return null;
         },
 
-        requestReset: (email) => {
-          if (!email.trim()) return "NEED_EMAIL";
-          return null;
-        },
       };
     },
     {

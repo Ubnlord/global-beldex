@@ -18,9 +18,6 @@ test("permanent financial safeguard suite is present and non-destructive", () =>
     "blocked user cannot receive funding",
     "insufficient available balance",
     "alter table public.transaction_audit enable row level security",
-    "Invalid Ethereum destination address",
-    "Invalid Bitcoin destination address",
-    "Invalid Beldex destination address",
   ]) {
     assert.ok(safeguards.includes(needle), "missing safeguard contract: " + needle);
   }
@@ -32,6 +29,9 @@ test("permanent financial safeguard suite is present and non-destructive", () =>
   assert.match(suite, /select plan\(64\);/);
   assert.match(suite, /withdrawal RPC enforces the \$300 minimum/i);
   assert.match(withdrawalMigration, /p_method not in \('Bitcoin', 'Ethereum', 'Beldex'\)/i);
+  assert.match(withdrawalMigration, /Invalid Ethereum destination address/);
+  assert.match(withdrawalMigration, /Invalid Bitcoin destination address/);
+  assert.match(withdrawalMigration, /Invalid Beldex destination address/);
   assert.match(withdrawalValidator, /0x\[0-9a-fA-F\]\{40\}/);
   assert.match(withdrawalValidator, /Invalid Bitcoin destination address/);
   assert.match(withdrawalValidator, /Invalid Beldex destination address/);

@@ -256,17 +256,6 @@ function Dashboard() {
         </div>
       )}
 
-      <p className="mt-6 text-center text-[10px] text-faint">
-        {t.page.demoFoot} ·{" "}
-        <a
-          href="https://www.tradingview.com/symbols/BDXUSD/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-accent"
-        >
-          {t.page.tvChartTitle}
-        </a>
-      </p>
     </div>
   );
 }

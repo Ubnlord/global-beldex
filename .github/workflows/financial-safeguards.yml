@@ -1,0 +1,48 @@
+name: Financial safeguards
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  static:
+    name: Static financial safeguard contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Run security contract tests
+        run: npm run test:security
+
+  database:
+    name: pgTAP financial safeguards
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_TEST_DB_URL: ${{ secrets.SUPABASE_TEST_DB_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Run pgTAP safeguards against the dedicated test database
+        if: ${{ env.SUPABASE_TEST_DB_URL != '' }}
+        run: |
+          set -euo pipefail
+          supabase test db --db-url "${SUPABASE_TEST_DB_URL}" supabase/tests/financial_safeguards.test.sql
+      - name: Explain skipped database test
+        if: ${{ env.SUPABASE_TEST_DB_URL == '' }}
+        run: |
+          echo "::warning::SUPABASE_TEST_DB_URL is not configured. Static safeguards ran, but pgTAP database safeguards were skipped."
+          echo "Configure SUPABASE_TEST_DB_URL with a dedicated non-production Supabase/Postgres test database."

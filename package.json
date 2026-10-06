@@ -18,7 +18,7 @@
     "test:template": "node --test 'scripts/**/*.test.mjs'",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "test:security": "node --test scripts/security-static-audit.test.mjs scripts/security-regression.test.mjs"
+    "test:security": "node --test scripts/security-static-audit.test.mjs scripts/financial-safeguards-contract.test.mjs scripts/security-regression.test.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.7.0",

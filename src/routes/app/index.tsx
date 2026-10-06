@@ -146,20 +146,6 @@ function Dashboard() {
           <TvCredit />
           <div className="text-[10px] text-subtle">{t.page.symbolLine}</div>
         </div>
-        <div className="mt-3 rounded-md border border-line bg-surface p-3">
-          <div className="text-[10px] tracking-widest text-subtle">{t.page.tvOfficial}</div>
-          <a
-            href="https://www.tradingview.com/symbols/BDXUSD/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-1 block text-[13px] font-semibold text-fg hover:text-accent"
-          >
-            {t.page.tvChartTitle}
-          </a>
-          <div className="mt-1 text-[11px] text-subtle">
-            {t.page.realtimeBlurb}
-          </div>
-        </div>
       </div>
 
       <div className="mt-6 rounded-lg border border-line bg-elevated p-4">

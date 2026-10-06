@@ -142,3 +142,4 @@ jobs:
           retention-days: 7
 
 # Security regression verification trigger.
+# Diagnostic artifact verification trigger.

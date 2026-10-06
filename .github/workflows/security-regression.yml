@@ -1,0 +1,40 @@
+name: Production API security regression
+
+on:
+  push:
+    branches: [security/hardening-v1]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify regression secrets are configured
+        run: |
+          test -n "${SUPABASE_SERVICE_ROLE_KEY}" || { echo "::error::SUPABASE_SERVICE_ROLE_KEY secret is missing"; exit 1; }
+          test -n "${SUPABASE_PUBLISHABLE_KEY}" || { echo "::error::SUPABASE_PUBLISHABLE_KEY secret is missing"; exit 1; }
+        env:
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+
+      - name: Run production API security regression
+        run: npm run test:security
+        env:
+          SUPABASE_URL: https://jarzpkwdstahbzvbevrq.supabase.co
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+          NODE_OPTIONS: --unhandled-rejections=strict

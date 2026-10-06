@@ -22,7 +22,7 @@ export function useHydratePlatform() {
         const profile = await currentProfile();
         if (profile) {
           await ensureCloudProfile(profile);
-          usePlatform.getState().enterAccount(profile);
+          usePlatform.getState().setUserProfile(profile);
         }
         const remote = await pullCloudBook();
         const state = usePlatform.getState();

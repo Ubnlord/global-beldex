@@ -22,9 +22,7 @@ function LoginPage() {
 
 function Login() {
   const navigate = useNavigate();
-  const login = usePlatform((s) => s.login);
-  const enterAccount = usePlatform((s) => s.enterAccount);
-  const accounts = usePlatform((s) => s.accounts);
+  const setUserProfile = usePlatform((s) => s.setUserProfile);
   const setSessionOnly = usePlatform((s) => s.setSessionOnly);
   const lang = usePlatform((s) => s.lang);
   const setLang = usePlatform((s) => s.setLang);
@@ -34,8 +32,6 @@ function Login() {
   const [show, setShow] = useState(false);
   const [email, setEmail] = useState("");
   const [pass, setPass] = useState("");
-  const [code, setCode] = useState("");
-  const [needCode, setNeedCode] = useState(false);
   const [remember, setRemember] = useState(true);
   const [busy, setBusy] = useState(false);
 
@@ -43,48 +39,36 @@ function Login() {
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    let identity = email.trim();
-    if (identity && !identity.includes("@")) {
-      const found = Object.values(accounts).find(
-        (a) => a.user.username.toLowerCase() === identity.toLowerCase(),
-      );
-      if (found) identity = found.user.email;
-    }
-    setBusy(true);
-    const cloud = identity.includes("@") ? await signInAccount(identity, pass) : { error: t.page.badLogin, profile: null };
-    setBusy(false);
-    if (!cloud.error && cloud.profile) {
-      enterAccount(cloud.profile);
-      if (!remember) {
-        sessionStorage.setItem("lb-session", "1");
-        setSessionOnly(true);
-      }
-      toast(t.welcomeBack);
-      void navigate({ to: "/app" });
+    const identity = email.trim().toLowerCase();
+    if (!identity.includes("@")) {
+      toastError("Enter the email address linked to your Global Beldex account.");
       return;
     }
-    if (cloud.error?.toLowerCase().includes("confirm")) {
+
+    setBusy(true);
+    const cloud = await signInAccount(identity, pass);
+    setBusy(false);
+
+    if (cloud.error) {
       toast(cloud.error);
       return;
     }
-    const err = login(email, pass, needCode ? code : undefined);
-    if (err === "2FA") {
-      setNeedCode(true);
-      toast(t.needCode);
+
+    if (!cloud.profile) {
+      toastError("Unable to load your account profile. Please try again.");
       return;
     }
-    if (err) {
-      if (identity.includes("@") && cloud.error) toast(cloud.error);
-      else toastError(err);
-      return;
-    }
-    if (remember) {
-      sessionStorage.removeItem("lb-session");
-      setSessionOnly(false);
-    } else {
+
+    setUserProfile(cloud.profile);
+
+    if (!remember) {
       sessionStorage.setItem("lb-session", "1");
       setSessionOnly(true);
+    } else {
+      sessionStorage.removeItem("lb-session");
+      setSessionOnly(false);
     }
+
     toast(t.welcomeBack);
     void navigate({ to: "/app" });
   };
@@ -118,7 +102,7 @@ function Login() {
         <p className="mt-1 text-[13px] text-subtle">{t.loginLead}</p>
         <form onSubmit={onSubmit} className="mt-6 space-y-4">
           <div>
-            <FieldLabel>{t.emailOrUser}</FieldLabel>
+            <FieldLabel>{t.email}</FieldLabel>
             <Input
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -147,18 +131,6 @@ function Login() {
               </button>
             </div>
           </div>
-          {needCode && (
-            <div>
-              <FieldLabel>{t.codeLabel}</FieldLabel>
-              <Input
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-                inputMode="numeric"
-                placeholder="000000"
-                autoComplete="one-time-code"
-              />
-            </div>
-          )}
           <div className="flex items-center justify-between text-xs">
             <label className="flex items-center gap-2 text-muted">
               <input

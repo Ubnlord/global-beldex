@@ -20,7 +20,7 @@ function ConfirmPage() {
 
 function Confirm() {
   const navigate = useNavigate();
-  const enterAccount = usePlatform((s) => s.enterAccount);
+  const setUserProfile = usePlatform((s) => s.setUserProfile);
   const lang = usePlatform((s) => s.lang);
   const t = copy[lang];
   const [error, setError] = useState("");
@@ -45,14 +45,14 @@ function Confirm() {
         setRecovery(true);
         return;
       }
-      enterAccount(result.profile);
+      setUserProfile(result.profile);
       toast(t.created);
       void navigate({ to: "/app" });
     })();
     return () => {
       gone = true;
     };
-  }, [enterAccount, navigate, t.created]);
+  }, [setUserProfile, navigate, t.created]);
 
   const onSave = async (e: FormEvent) => {
     e.preventDefault();
@@ -67,7 +67,7 @@ function Confirm() {
       toast(err === "no-session" ? t.page.linkExpired : err);
       return;
     }
-    if (profile) enterAccount(profile);
+    if (profile) setUserProfile(profile);
     toast(t.passwordUpdated);
     void navigate({ to: "/app" });
   };

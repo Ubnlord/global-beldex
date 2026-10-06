@@ -95,7 +95,7 @@ begin
 end;
 $function$;
 
-ction hardening: keep all financial/profile mutations behind controlled RPCs.
+-- Production hardening: keep all financial/profile mutations behind controlled RPCs.
 -- Direct Data API writes are intentionally removed from client roles.
 
 begin;

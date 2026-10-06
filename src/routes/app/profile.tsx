@@ -14,7 +14,6 @@ export const Route = createFileRoute("/app/profile")({ component: ProfilePage })
 function ProfilePage() {
   const user = usePlatform((s) => s.user);
   const updateProfile = usePlatform((s) => s.updateProfile);
-  const changePassword = usePlatform((s) => s.changePassword);
   const lang = usePlatform((s) => s.lang);
   const t = copy[lang];
   const [form, setForm] = useState({
@@ -212,13 +211,8 @@ function ProfilePage() {
                   toast(t.passwordUpdated);
                   return;
                 }
-                if (cloud !== "no-session") {
-                  toast(cloud);
-                  return;
-                }
-                const err = changePassword(current, next);
-                if (err) {
-                  toastError(err);
+                if (cloud) {
+                  toastError(cloud);
                   return;
                 }
                 setCurrent("");

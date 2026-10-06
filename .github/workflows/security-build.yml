@@ -1,0 +1,43 @@
+name: Security build verification
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [security/hardening-v1]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Security tests
+        run: npm run test:security
+
+      - name: Production build
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: https://build-check.example.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_build_check

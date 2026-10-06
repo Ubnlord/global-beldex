@@ -21,8 +21,7 @@ function RegisterPage() {
 
 function Register() {
   const navigate = useNavigate();
-  const register = usePlatform((s) => s.register);
-  const enterAccount = usePlatform((s) => s.enterAccount);
+  const setUserProfile = usePlatform((s) => s.setUserProfile);
   const user = usePlatform((s) => s.user);
   const hydrated = usePlatform((s) => s.hydrated);
   const lang = usePlatform((s) => s.lang);
@@ -79,11 +78,11 @@ function Register() {
       setPendingEmail(form.email.trim());
       return;
     }
-    const err = result.profile ? enterAccount(result.profile) : register(form);
-    if (err) {
-      toastError(err);
+    if (!result.profile) {
+      toastError("Account created, but the profile could not be loaded. Please sign in.");
       return;
     }
+    setUserProfile(result.profile);
     toast(t.created);
     void navigate({ to: "/app" });
   };

@@ -209,7 +209,7 @@ test("security migration exposes only the intended swap executor", { skip: !url 
         p_type: "withdraw",
         p_amount: 300,
         p_method: "Ethereum",
-        p_note: "security lifecycle approval test",
+        p_note: "0x1111111111111111111111111111111111111111",
         p_request_id: approveRequestId,
       });
       assert.ifError(created.error);
@@ -287,7 +287,7 @@ test("security migration exposes only the intended swap executor", { skip: !url 
         p_type: "withdraw",
         p_amount: 300,
         p_method: "Bitcoin",
-        p_note: "security lifecycle rejection test",
+        p_note: "bc1qaaaaaaaaaaa",
         p_request_id: rejectRequestId,
       });
       assert.ifError(rejectCreated.error);

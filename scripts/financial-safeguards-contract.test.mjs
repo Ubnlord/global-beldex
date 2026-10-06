@@ -30,7 +30,7 @@ test("permanent financial safeguard suite is present and non-destructive", () =>
     auditLock,
     /drop policy if exists transaction_audit_select_own_or_admin on public\.transaction_audit;/i,
   );
-  assert.match(suite, /select plan\(64\);/);
+  assert.match(suite, /select plan\(66\);/);
   assert.match(suite, /withdrawal RPC enforces the \$300 minimum/i);
   assert.match(withdrawalMigration, /p_method not in \('Bitcoin', 'Ethereum', 'Beldex'\)/i);
   assert.match(withdrawalMigration, /Invalid Ethereum destination address/);
@@ -44,14 +44,14 @@ test("permanent financial safeguard suite is present and non-destructive", () =>
   assert.match(operationsHardening, /global-beldex-daily-investment-accrual/);
   assert.match(operationsHardening, /0 0 \\* \\* \\*/);
   assert.match(operationsHardening, /admin_financial_reconciliation/);
-  assert.match(operationsHardening, /p\.total_deposits - coalesce\(d\.amount,0\)/);
-  assert.match(operationsHardening, /p\.total_withdrawals - coalesce\(w\.amount,0\)/);
+  assert.match(operationsHardening, /p\.total_deposits,coalesce\(d\.amount,0\),p\.total_deposits-coalesce\(d\.amount,0\)/);
+  assert.match(operationsHardening, /p\.total_withdrawals,coalesce\(w\.amount,0\),p\.total_withdrawals-coalesce\(w\.amount,0\)/);
   assert.match(operationsHardening, /p\.locked_balance-coalesce\(i\.active_principal,0\)/);
   assert.match(adminAuditIdentity, /select id\\s+into v_admin_id\\s+from public\.admin_user\\s+where user_id = auth\.uid\(\)/i);
   assert.match(adminAuditIdentity, /alter column admin_id drop not null/i);
   for (const section of ["Transactions", "Users", "Investments", "KYC", "Reconciliation", "Audit log", "Operations"]) {
     assert.match(adminRoute, new RegExp(section));
-    assert.match(adminShell, new RegExp(section));
+    assert.match(adminShell, new RegExp(section === "Audit log" ? "Audit Log" : section));
   }
   for (const rpc of ["admin_approve_transaction", "admin_reject_transaction", "admin_settle_transaction", "admin_set_user_block", "admin_update_investment", "accrue_user_investments", "admin_approve_deposit", "admin_reject_deposit", "admin_approve_withdrawal", "admin_reject_withdrawal"]) {
     assert.match(adminRoute, new RegExp(rpc));

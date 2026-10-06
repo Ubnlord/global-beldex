@@ -23,6 +23,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Verify regression secrets are configured
+        run: |
+          test -n "${SUPABASE_SERVICE_ROLE_KEY}" || { echo "::error::SUPABASE_SERVICE_ROLE_KEY secret is missing"; exit 1; }
+          test -n "${SUPABASE_PUBLISHABLE_KEY}" || { echo "::error::SUPABASE_PUBLISHABLE_KEY secret is missing"; exit 1; }
+        env:
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+
       - name: Run production API security regression
         run: npm run test:security
         env:

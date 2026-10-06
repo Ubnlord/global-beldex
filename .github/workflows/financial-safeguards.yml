@@ -54,7 +54,13 @@ jobs:
 
       - name: Start isolated Supabase
         working-directory: .security-test
-        run: supabase start
+        run: |
+          set -euxo pipefail
+          docker version
+          docker info
+          supabase --version
+          cat supabase/config.toml
+          supabase start --debug 2>&1 | tee supabase-start.log
 
       - name: Apply repository migrations
         working-directory: .security-test
@@ -84,6 +90,21 @@ jobs:
           set -euo pipefail
           eval "$(cd .security-test && supabase status -o env)"
           SUPABASE_TEST_URL="$API_URL"           SUPABASE_TEST_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY"           SUPABASE_TEST_PUBLISHABLE_KEY="$ANON_KEY"           node --test scripts/security-regression.test.mjs
+
+      - name: Capture Supabase startup diagnostics
+        if: failure()
+        working-directory: .security-test
+        run: |
+          set +e
+          {
+            echo "=== Docker ==="; docker version; docker info
+            echo "=== Supabase CLI ==="; supabase --version
+            echo "=== Config ==="; cat supabase/config.toml
+            echo "=== Startup log ==="; cat supabase-start.log 2>/dev/null || true
+            echo "=== Status ==="; supabase status 2>&1 || true
+            echo "=== Containers ==="; docker ps -a
+          } > security-startup-diagnostics.txt 2>&1
+          cat security-startup-diagnostics.txt
 
       - name: Stop isolated Supabase
         if: always()

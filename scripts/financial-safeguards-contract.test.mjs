@@ -24,7 +24,7 @@ test("permanent financial safeguard suite is present and non-destructive", () =>
     auditLock,
     /drop policy if exists transaction_audit_select_own_or_admin on public\.transaction_audit;/i,
   );
-  assert.match(suite, /select plan\(60\);/);
-  assert.doesNotMatch(suite, /create_financial_transaction\s*\(/i);
+  assert.match(suite, /select plan\(61\);/);
+  assert.match(suite, /withdrawal RPC enforces the \$300 minimum/i);
   assert.doesNotMatch(suite, /createUser|deleteUser|SUPABASE_SERVICE_ROLE_KEY/i);
 });

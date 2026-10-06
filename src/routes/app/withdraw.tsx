@@ -13,6 +13,8 @@ import { copy } from "@/lib/platform/i18n";
 import { usePlatform } from "@/lib/platform/store";
 import { formatUsd } from "@/lib/utils";
 
+const MIN_WITHDRAWAL = 300;
+
 export const Route = createFileRoute("/app/withdraw")({ component: WithdrawPage });
 
 function WithdrawPage() {
@@ -29,6 +31,26 @@ function WithdrawPage() {
 
   const submit = async () => {
     const n = parseFloat(amount);
+    if (!method) {
+      toastError("Please select a withdrawal method");
+      return;
+    }
+    if (!Number.isFinite(n) || n <= 0) {
+      toastError("Amount must be greater than zero");
+      return;
+    }
+    if (n < MIN_WITHDRAWAL) {
+      toastError(`Minimum withdrawal is ${MIN_WITHDRAWAL}`);
+      return;
+    }
+    if (n > available) {
+      toastError("Insufficient balance");
+      return;
+    }
+    if (!address.trim()) {
+      toastError("Please enter a destination address");
+      return;
+    }
     const id = requestId ?? crypto.randomUUID();
     setRequestId(id);
     const err = await withdraw(n, method, address, id);
@@ -102,12 +124,14 @@ function WithdrawPage() {
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             type="number"
-            placeholder={t.enterAmount}
+            min={MIN_WITHDRAWAL}
+            step="0.01"
+            placeholder={`Minimum ${MIN_WITHDRAWAL}`}
             className="mt-0 pl-8"
           />
         </div>
         <div className="mt-2 flex justify-between text-[11px]">
-          <span className="text-subtle">{t.available}: {formatUsd(available)}</span>
+          <span className="text-subtle">{t.available}: {formatUsd(available)} · Min: {formatUsd(MIN_WITHDRAWAL)}</span>
           <button type="button" onClick={() => setAmount(String(available))} className="text-accent">
             {t.max}
           </button>

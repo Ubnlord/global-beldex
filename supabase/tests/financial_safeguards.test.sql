@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(60);
+select plan(61);
 
 -- Schema and RLS baseline.
 select has_table('public', 'user_profile', 'user_profile exists');
@@ -121,6 +121,11 @@ select function_privs_are('public', 'admin_manage_investment', array['uuid','num
 select function_privs_are('public', 'admin_fund_user', array['uuid','numeric','text'], 'authenticated', array['EXECUTE'], 'authenticated can reach admin_fund_user; function enforces permission');
 select function_privs_are('public', 'admin_adjust_balance', array['uuid','numeric','text'], 'authenticated', array['EXECUTE'], 'authenticated can reach admin_adjust_balance; function enforces permission');
 select function_privs_are('public', 'create_financial_transaction', array['text','numeric','text','text','uuid'], 'authenticated', array['EXECUTE'], 'authenticated can create financial requests');
+
+select ok(
+  position('p_type = ''withdraw'' and p_amount < 300' in pg_get_functiondef('public.create_financial_transaction(text,numeric,text,text,uuid)'::regprocedure)) > 0,
+  'withdrawal RPC enforces the $300 minimum'
+);
 select function_privs_are('public', 'swap_assets', array['uuid','text','text','numeric','numeric'], 'authenticated', '{}', 'authenticated cannot execute swap_assets directly');
 select function_privs_are('public', 'swap_assets', array['uuid','text','text','numeric','numeric'], 'service_role', array['EXECUTE'], 'service role can execute swap_assets');
 

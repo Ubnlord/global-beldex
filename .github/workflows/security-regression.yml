@@ -1,8 +1,8 @@
 name: Production API security regression
 
 on:
-  push:
-    branches: [security/hardening-v1]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -23,10 +23,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Verify regression secrets are configured
+      - name: Verify dedicated test-database secrets are configured
         run: |
-          test -n "${SUPABASE_SERVICE_ROLE_KEY}" || { echo "::error::SUPABASE_SERVICE_ROLE_KEY secret is missing"; exit 1; }
-          test -n "${SUPABASE_PUBLISHABLE_KEY}" || { echo "::error::SUPABASE_PUBLISHABLE_KEY secret is missing"; exit 1; }
+          test -n "${SUPABASE_TEST_SERVICE_ROLE_KEY}" || { echo "::error::SUPABASE_SERVICE_ROLE_KEY secret is missing"; exit 1; }
+          test -n "${SUPABASE_TEST_PUBLISHABLE_KEY}" || { echo "::error::SUPABASE_PUBLISHABLE_KEY secret is missing"; exit 1; }
         env:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
@@ -34,7 +34,7 @@ jobs:
       - name: Run production API security regression
         run: npm run test:security
         env:
-          SUPABASE_URL: https://jarzpkwdstahbzvbevrq.supabase.co
+          SUPABASE_URL: ${{ secrets.SUPABASE_TEST_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
           NODE_OPTIONS: --unhandled-rejections=strict

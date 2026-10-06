@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { Mail } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { toastError } from "@/components/layout/toast";
 import { Button } from "@/components/ui/button";
@@ -33,9 +34,10 @@ function SupportPage() {
         <div className="text-[11px] text-subtle">{t.supportEmail}</div>
         <a
           href="mailto:globalbeldex1@gmail.com"
-          className="mt-0.5 inline-block text-sm font-semibold text-accent underline underline-offset-2"
+          className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-md bg-accent px-4 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
         >
-          globalbeldex1@gmail.com
+          <Mail size={16} />
+          Email Support
         </a>
       </div>
       <div className="mt-3 rounded-lg border border-line bg-elevated px-4 py-3">

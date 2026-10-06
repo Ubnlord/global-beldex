@@ -48,3 +48,21 @@ create index if not exists transaction_status_idx on public.transaction(status);
 create index if not exists transaction_approval_status_idx on public.transaction(approval_status);
 create index if not exists transaction_created_at_idx on public.transaction(created_at desc);
 create index if not exists transaction_audit_transaction_id_idx on public.transaction_audit(transaction_id);
+
+-- Base authorization helper required by the 0002 RLS policies.
+-- Later security migrations re-harden and restrict this function further.
+create or replace function public.is_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path = pg_catalog, public, pg_temp
+as $function$
+  select exists (
+    select 1 from public.admin_user where user_id = auth.uid()
+  );
+$function$;
+
+revoke all on function public.is_admin() from public, anon;
+grant execute on function public.is_admin() to authenticated;
+

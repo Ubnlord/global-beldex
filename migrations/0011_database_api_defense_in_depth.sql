@@ -3,7 +3,14 @@ begin;
 -- Legacy client-ledger data is no longer part of the application write path.
 -- Remove all Data API access for ordinary clients rather than relying on its
 -- legacy row policies.
-revoke all on table public.books from anon, authenticated;
+do $function$
+begin
+  if to_regclass('public.books') is not null then
+    -- Keep the exact legacy revoke contract for repositories that still carry books.
+    revoke all on table public.books from anon, authenticated;
+  end if;
+end;
+$function$;
 
 -- Admin action audit records are written by SECURITY DEFINER admin functions
 -- and should never be directly mutable by browser clients. Keep authenticated

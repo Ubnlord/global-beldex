@@ -123,9 +123,6 @@ alter function public.ensure_user_profile(text,text,text,text,text)
 alter function public.update_user_profile(text,text,text,text,text)
   security definer set search_path = pg_catalog, public, pg_temp;
 
-alter function public.create_financial_transaction(text,numeric,text,text)
-  security definer set search_path = pg_catalog, public, pg_temp;
-
 alter function public.buy_investment_plan(text,numeric)
   security definer set search_path = pg_catalog, public, pg_temp;
 
@@ -186,6 +183,10 @@ begin
   return v_tx;
 end;
 $function$;
+
+-- The function must exist before its security-definer attributes are altered.
+alter function public.create_financial_transaction(text,numeric,text,text)
+  security definer set search_path = pg_catalog, public, pg_temp;
 
 -- Re-establish only the RPC permissions the browser needs.
 revoke all on function public.ensure_user_profile(text,text,text,text,text) from public, anon;

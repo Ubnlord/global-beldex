@@ -12,6 +12,7 @@ import { WITHDRAW_METHODS } from "@/lib/platform/catalog";
 import { copy } from "@/lib/platform/i18n";
 import { usePlatform } from "@/lib/platform/store";
 import { formatUsd } from "@/lib/utils";
+import { validateWithdrawalDestination } from "@/lib/financial/withdrawal-address";
 
 const MIN_WITHDRAWAL = 300;
 
@@ -43,12 +44,13 @@ function WithdrawPage() {
       toastError(`Minimum withdrawal is $${MIN_WITHDRAWAL}`);
       return;
     }
-    if (n > available) {
-      toastError("Insufficient balance");
+    const addressError = validateWithdrawalDestination(method, address);
+    if (addressError) {
+      toastError(addressError);
       return;
     }
-    if (!address.trim()) {
-      toastError("Please enter a destination address");
+    if (n > available) {
+      toastError("Insufficient balance");
       return;
     }
     const id = requestId ?? crypto.randomUUID();

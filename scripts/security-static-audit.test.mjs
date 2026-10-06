@@ -9,6 +9,7 @@ const directWriteLockdown = fs.readFileSync(path.join(root, "migrations/0009_loc
 const databaseDefense = fs.readFileSync(path.join(root, "migrations/0011_database_api_defense_in_depth.sql"), "utf8");
 const authorizationTightening = fs.readFileSync(path.join(root, "migrations/0012_tighten_authorization_helpers.sql"), "utf8");
 const anonymousAuditLockdown = fs.readFileSync(path.join(root, "migrations/0013_remove_anon_audit_access.sql"), "utf8");
+const adminFinancialControls = fs.readFileSync(path.join(root, "migrations/0014_admin_financial_controls.sql"), "utf8");
 
 const mustContain = [
   "revoke all on function public.admin_has_permission(text) from public, anon, authenticated;",

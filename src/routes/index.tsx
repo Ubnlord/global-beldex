@@ -184,10 +184,6 @@ function Landing() {
         <div className="text-center">
           <div className="text-xs font-semibold tracking-widest text-accent">RECOGNITION</div>
           <h2 className="mt-2 text-[28px] font-bold text-fg sm:text-[34px]">Awards &amp; Recognition</h2>
-          <p className="mx-auto mt-3 max-w-[700px] text-sm leading-6 text-muted">
-            Selected third-party award badges are shown for reference. These recognitions were
-            awarded to AvaTrade and are not awards received by or affiliated with Global Beldex.
-          </p>
         </div>
 
         <div className="mt-8 grid gap-8 sm:grid-cols-2">

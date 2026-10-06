@@ -398,7 +398,7 @@ function Landing() {
                 <div className="text-xs font-semibold tracking-widest text-accent">COMPANY</div>
                 <div className="mt-3 grid gap-2 text-[13px]">
                   <Link to="/" hash="global-beldex-difference" className="text-subtle hover:text-accent">Why us</Link>
-                  <Link to="/app/support" hash="contact" className="text-subtle hover:text-accent">Contact Us</Link>
+                  <Link to="/app/support" className="text-subtle hover:text-accent">Support</Link>
                 </div>
               </div>
 

@@ -54,7 +54,13 @@ jobs:
 
       - name: Start isolated Supabase
         working-directory: .security-test
-        run: supabase start
+        run: |
+          set -euxo pipefail
+          docker version
+          docker info
+          supabase --version
+          sed -n '1,220p' supabase/config.toml
+          supabase start --debug 2>&1 | tee supabase-start.log
 
       - name: Apply repository migrations
         working-directory: .security-test

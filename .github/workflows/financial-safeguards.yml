@@ -91,6 +91,23 @@ jobs:
           eval "$(cd .security-test && supabase status -o env)"
           SUPABASE_TEST_URL="$API_URL"           SUPABASE_TEST_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY"           SUPABASE_TEST_PUBLISHABLE_KEY="$ANON_KEY"           node --test scripts/security-regression.test.mjs
 
+      - name: Capture Supabase startup diagnostics
+        if: failure()
+        working-directory: .security-test
+        run: |
+          set +e
+          echo "=== Docker ==="
+          docker version
+          docker info
+          echo "=== Supabase CLI ==="
+          supabase --version
+          echo "=== Config ==="
+          cat supabase/config.toml
+          echo "=== Startup log ==="
+          cat supabase-start.log 2>/dev/null || true
+          echo "=== Supabase status ==="
+          supabase status 2>&1 || true
+
       - name: Stop isolated Supabase
         if: always()
         working-directory: .security-test
@@ -103,6 +120,7 @@ jobs:
           name: security-test-logs
           path: |
             .security-test/functions.log
+            .security-test/supabase-start.log
             .security-test/supabase/.temp/*.log
           if-no-files-found: ignore
 

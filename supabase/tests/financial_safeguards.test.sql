@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(64);
+select plan(66);
 
 -- Schema and RLS baseline.
 select has_table('public', 'user_profile', 'user_profile exists');
@@ -10,6 +10,7 @@ select has_table('public', 'transaction', 'transaction exists');
 select has_table('public', 'user_investment', 'user_investment exists');
 select has_table('public', 'investment_plan_catalog', 'investment_plan_catalog exists');
 select has_table('public', 'admin_action_audit', 'admin_action_audit exists');
+select ok((select not attnotnull from pg_attribute where attrelid='public.admin_action_audit'::regclass and attname='admin_id'), 'admin audit actor can be null for deleted admins');
 select has_table('public', 'transaction_audit', 'transaction_audit exists');
 
 select ok((select relrowsecurity from pg_class where oid = 'public.user_profile'::regclass), 'user_profile has RLS enabled');
@@ -160,6 +161,12 @@ select policies_are('public', 'admin_action_audit', array['admin_action_audit_se
 select policies_are('public', 'transaction_audit', array['transaction_audit_select'], 'transaction audit has only its admin-read policy');
 
 -- Source-level invariants for the two most sensitive admin balance RPCs.
+select ok(
+  position('from public.admin_user' in pg_get_functiondef('public.admin_fund_user(uuid,numeric,text)'::regprocedure)) > 0
+  and position('v_admin_id' in pg_get_functiondef('public.admin_fund_user(uuid,numeric,text)'::regprocedure)) > 0,
+  'admin_fund_user resolves the audit actor through admin_user.id'
+);
+
 select ok(
   position('p_amount <= 0' in pg_get_functiondef('public.admin_fund_user(uuid,numeric,text)'::regprocedure)) > 0
   and position('reason is required' in pg_get_functiondef('public.admin_fund_user(uuid,numeric,text)'::regprocedure)) > 0

@@ -40,10 +40,21 @@ jobs:
       - name: Test
         run: npm test
 
+      - name: Validate public frontend configuration
+        env:
+          VITE_SUPABASE_URL: https://jarzpkwdstahbzvbevrq.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "${VITE_SUPABASE_URL}" || { echo "ERROR: VITE_SUPABASE_URL is empty"; exit 1; }
+          test -n "${VITE_SUPABASE_PUBLISHABLE_KEY}" || { echo "ERROR: VITE_SUPABASE_PUBLISHABLE_KEY secret is missing or empty"; exit 1; }
+          echo "Supabase URL configured: ${VITE_SUPABASE_URL}"
+          echo "Supabase publishable key configured: yes"
+
       - name: Build
         run: npm run build
         env:
-          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_URL: https://jarzpkwdstahbzvbevrq.supabase.co
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
 
       - name: Prepare GitHub Pages static site
@@ -64,6 +75,11 @@ jobs:
           rm -rf ./pages-site
           mkdir -p ./pages-site
           cp -R "$OUTPUT_DIR"/. ./pages-site/
+
+          # Preserve the custom domain in the published artifact.
+          if [ -f "./CNAME" ]; then
+            cp ./CNAME ./pages-site/CNAME
+          fi
 
           # TanStack Start SPA mode may emit its shell as _shell.html.
           # GitHub Pages requires a root index.html.
@@ -112,6 +128,15 @@ jobs:
           Path("./pages-site/index.html").write_text(shell, encoding="utf-8")
           PY
           fi
+
+          # Fail deployment if the generated shell cannot start the client.
+          test -s "./pages-site/index.html" || { echo "ERROR: root index.html is empty"; exit 1; }
+          grep -q "<script" "./pages-site/index.html" || { echo "ERROR: root index.html has no client script"; exit 1; }
+          if ! grep -R -q "jarzpkwdstahbzvbevrq" ./pages-site/assets 2>/dev/null; then
+            echo "ERROR: Supabase project URL was not embedded into the client bundle."
+            exit 1
+          fi
+          echo "Static shell and Supabase client bundle checks passed."
 
           # GitHub Pages is a static host. TanStack Router still handles
           # navigation in the browser, so every client-side route must receive

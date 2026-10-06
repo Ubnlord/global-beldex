@@ -28,6 +28,8 @@ begin
     raise exception 'Minimum withdrawal is 300';
   end if;
 
+  perform public.assert_user_can_transact(v_uid);
+
   if p_request_id is not null then
     select * into v_tx
       from public.transaction

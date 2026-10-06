@@ -134,10 +134,23 @@ function AdminPage() {
   const hasPermission = (permission: string) =>
     permissions.length === 0 || permissions.includes("*") || permissions.includes(permission);
 
-  const canTransactions = hasPermission("manage_transactions");
+  // Keep the UI permission model aligned with the backend's actual admin
+  // permission names. Approval/rejection permissions are authoritative for
+  // transaction actions; legacy administrators may not have manage_transactions.
+  const canTransactions =
+    hasPermission("manage_transactions") ||
+    hasPermission("approve_transactions") ||
+    hasPermission("reject_transactions") ||
+    hasPermission("view_transactions");
+  const canApproveTransactions =
+    hasPermission("manage_transactions") || hasPermission("approve_transactions");
+  const canRejectTransactions =
+    hasPermission("manage_transactions") || hasPermission("reject_transactions");
   const canUsers = hasPermission("manage_users");
-  const canInvestments = hasPermission("manage_investments");
-  const canAudit = hasPermission("view_audit");
+  const canInvestments =
+    hasPermission("manage_investments") || hasPermission("manage_users");
+  const canAudit =
+    hasPermission("view_audit") || hasPermission("view_audit_log");
 
   async function verifyAdmin() {
     const { data: { user } } = await supabase.auth.getUser();
@@ -244,14 +257,35 @@ function AdminPage() {
   }, []);
 
   async function act(kind: "approve" | "settle" | "reject", id: string, reason?: string) {
-    if (!canTransactions) return;
+    if (
+      (kind === "approve" && !canApproveTransactions) ||
+      (kind === "reject" && !canRejectTransactions) ||
+      (kind === "settle" && !canApproveTransactions)
+    ) return;
+
     setBusy(id);
     setError("");
+
+    const transaction = txs.find((item) => item.id === id);
+    if (!transaction) {
+      setError("Transaction not found. Refresh the transaction list and try again.");
+      setBusy(null);
+      return;
+    }
+
     const rpc =
       kind === "approve"
-        ? "admin_approve_transaction"
+        ? transaction.type === "deposit"
+          ? "admin_approve_deposit"
+          : transaction.type === "withdraw"
+            ? "admin_approve_withdrawal"
+            : "admin_approve_transaction"
         : kind === "reject"
-          ? "admin_reject_transaction"
+          ? transaction.type === "deposit"
+            ? "admin_reject_deposit"
+            : transaction.type === "withdraw"
+              ? "admin_reject_withdrawal"
+              : "admin_reject_transaction"
           : "admin_settle_transaction";
 
     const { error: actionError } = await supabase.rpc(rpc, {
@@ -458,13 +492,13 @@ function AdminPage() {
                           {tx.note && <p className="mt-2 text-xs text-muted">{tx.note}</p>}
                         </div>
                         <div className="flex shrink-0 flex-wrap gap-2">
-                          {canTransactions && tx.approval_status === "awaiting" && (
+                          {canApproveTransactions && tx.approval_status === "awaiting" && (
                             <>
                               <button type="button" disabled={busy === tx.id} onClick={() => void act("approve", tx.id)} className="inline-flex items-center gap-2 rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"><CheckCircle size={16} /> Approve</button>
-                              <button type="button" disabled={busy === tx.id} onClick={() => { setRejectId(tx.id); setRejectReason(""); }} className="inline-flex items-center gap-2 rounded-xl border border-red-500/40 px-4 py-2.5 text-sm font-medium text-red-300 disabled:opacity-60"><XCircle size={16} /> Reject</button>
+                              <button type="button" disabled={!canRejectTransactions || busy === tx.id} onClick={() => { setRejectId(tx.id); setRejectReason(""); }} className="inline-flex items-center gap-2 rounded-xl border border-red-500/40 px-4 py-2.5 text-sm font-medium text-red-300 disabled:opacity-60"><XCircle size={16} /> Reject</button>
                             </>
                           )}
-                          {canTransactions && tx.approval_status === "approved" && tx.status !== "completed" && (
+                          {canApproveTransactions && tx.approval_status === "approved" && tx.status !== "completed" && (
                             <button type="button" disabled={busy === tx.id} onClick={() => void act("settle", tx.id)} className="inline-flex items-center gap-2 rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"><CheckCircle size={16} /> Settle</button>
                           )}
                         </div>

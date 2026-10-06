@@ -32,12 +32,12 @@ begin
   select * into v_old from public.user_profile where user_id=p_user_id for update;
   if v_old.user_id is null then raise exception 'User profile not found'; end if;
   if coalesce(v_old.blocked,false) then raise exception 'User account is blocked'; end if;
-  update public.user_profile set available_balance=available_balance+p_amount,total_deposits=total_deposits+p_amount,updated_at=now() where user_id=p_user_id returning * into v_new;
+  update public.user_profile set available_balance=available_balance+p_amount,updated_at=now() where user_id=p_user_id returning * into v_new;
   insert into public.transaction(user_id,type,amount,status,approval_status,method,note,approved_by,approval_reason,approved_at,settled_at)
-  values(p_user_id,'deposit',p_amount,'completed','approved','Admin funding','Admin funding: '||v_reason||case when v_reference is not null then ' | Ref: '||v_reference else '' end,v_admin.id,v_reason,now(),now())
+  values(p_user_id,'bonus',p_amount,'completed','approved','Admin funding','Admin funding: '||v_reason||case when v_reference is not null then ' | Ref: '||v_reference else '' end,v_admin.id,v_reason,now(),now())
   returning * into v_tx;
   insert into public.admin_action_audit(admin_id,user_id,action,target_id,old_values,new_values,reason)
-  values(v_admin.id,p_user_id,'user_funded',v_tx.id,jsonb_build_object('available_balance',v_old.available_balance,'total_deposits',v_old.total_deposits),jsonb_build_object('available_balance',v_new.available_balance,'total_deposits',v_new.total_deposits,'amount',p_amount),v_reason);
+  values(v_admin.id,p_user_id,'user_funded',v_tx.id,jsonb_build_object('available_balance',v_old.available_balance),jsonb_build_object('available_balance',v_new.available_balance,'amount',p_amount),v_reason);
   return v_tx;
 end;
 $function$;

@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { ClipboardCheck, FileCheck2, LayoutDashboard, LogOut, Menu, ReceiptText, RefreshCw, Search, Settings2, ShieldCheck, TrendingUp, Users, Wallet, X } from "lucide-react";
+import { ClipboardCheck, FileCheck2, LayoutDashboard, LogOut, Menu, ReceiptText, Settings2, ShieldCheck, TrendingUp, Users, Wallet, X } from "lucide-react";
 import { useState } from "react";
 import { Mark } from "@/components/brand/logo";
 import { signOutCloud } from "@/lib/supabase/auth";

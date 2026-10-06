@@ -194,6 +194,135 @@ test("security migration exposes only the intended swap executor", { skip: !url 
       assert.ok(error, "authenticated client unexpectedly executed the service-only swap RPC");
     });
 
+    await step("withdrawal lifecycle is atomic and one-way", async () => {
+      const client = await clientFor(users.normal);
+      const initial = await admin.from("user_profile")
+        .select("available_balance,total_withdrawals")
+        .eq("user_id", users.normal.id)
+        .single();
+      assert.ifError(initial.error);
+      const initialBalance = Number(initial.data.available_balance);
+      const initialWithdrawals = Number(initial.data.total_withdrawals || 0);
+
+      const approveRequestId = randomUUID();
+      const created = await client.rpc("create_financial_transaction", {
+        p_type: "withdraw",
+        p_amount: 300,
+        p_method: "Ethereum",
+        p_note: "0x1111111111111111111111111111111111111111",
+        p_request_id: approveRequestId,
+      });
+      assert.ifError(created.error);
+      assert.ok(created.data?.id);
+      assert.equal(created.data?.status, "pending");
+      assert.equal(created.data?.approval_status, "awaiting");
+
+      const afterCreate = await admin.from("user_profile")
+        .select("available_balance")
+        .eq("user_id", users.normal.id)
+        .single();
+      assert.ifError(afterCreate.error);
+      assert.equal(Number(afterCreate.data.available_balance), initialBalance - 300);
+
+      const normalApprove = await client.rpc("admin_approve_transaction", {
+        p_transaction_id: created.data.id,
+        p_reason: "security lifecycle approval test",
+      });
+      assert.ok(normalApprove.error, "ordinary user unexpectedly approved a withdrawal");
+
+      const noPermissionAdmin = await clientFor(users.adminNoPermission);
+      const deniedApprove = await noPermissionAdmin.rpc("admin_approve_transaction", {
+        p_transaction_id: created.data.id,
+        p_reason: "security lifecycle permission test",
+      });
+      assert.ok(deniedApprove.error, "admin without approval permission unexpectedly approved a withdrawal");
+
+      const approved = await admin.from("transaction")
+        .select("approval_status,status")
+        .eq("id", created.data.id)
+        .single();
+      assert.ifError(approved.error);
+      assert.equal(approved.data.approval_status, "awaiting");
+      assert.equal(approved.data.status, "pending");
+
+      const adminClient = await clientFor(users.admin);
+      const approvedByAdmin = await adminClient.rpc("admin_approve_transaction", {
+        p_transaction_id: created.data.id,
+        p_reason: "security lifecycle approval test",
+      });
+      assert.ifError(approvedByAdmin.error);
+      assert.equal(approvedByAdmin.data?.approval_status, "approved");
+      assert.equal(approvedByAdmin.data?.status, "pending");
+
+      const doubleApprove = await adminClient.rpc("admin_approve_transaction", {
+        p_transaction_id: created.data.id,
+        p_reason: "duplicate approval must fail",
+      });
+      assert.ok(doubleApprove.error, "withdrawal was approved twice");
+
+      const settled = await adminClient.rpc("admin_settle_transaction", {
+        p_transaction_id: created.data.id,
+        p_reason: "security lifecycle settlement test",
+      });
+      assert.ifError(settled.error);
+      assert.equal(settled.data?.status, "completed");
+      assert.equal(settled.data?.approval_status, "approved");
+
+      const doubleSettle = await adminClient.rpc("admin_settle_transaction", {
+        p_transaction_id: created.data.id,
+        p_reason: "duplicate settlement must fail",
+      });
+      assert.ok(doubleSettle.error, "withdrawal was settled twice");
+
+      const afterSettlement = await admin.from("user_profile")
+        .select("available_balance,total_withdrawals")
+        .eq("user_id", users.normal.id)
+        .single();
+      assert.ifError(afterSettlement.error);
+      assert.equal(Number(afterSettlement.data.available_balance), initialBalance - 300);
+      assert.equal(Number(afterSettlement.data.total_withdrawals), initialWithdrawals + 300);
+
+      const rejectRequestId = randomUUID();
+      const rejectCreated = await client.rpc("create_financial_transaction", {
+        p_type: "withdraw",
+        p_amount: 300,
+        p_method: "Bitcoin",
+        p_note: "bc1qaaaaaaaaaaa",
+        p_request_id: rejectRequestId,
+      });
+      assert.ifError(rejectCreated.error);
+      assert.ok(rejectCreated.data?.id);
+
+      const afterSecondCreate = await admin.from("user_profile")
+        .select("available_balance")
+        .eq("user_id", users.normal.id)
+        .single();
+      assert.ifError(afterSecondCreate.error);
+      assert.equal(Number(afterSecondCreate.data.available_balance), initialBalance - 600);
+
+      const rejected = await adminClient.rpc("admin_reject_transaction", {
+        p_transaction_id: rejectCreated.data.id,
+        p_reason: "security lifecycle rejection test",
+      });
+      assert.ifError(rejected.error);
+      assert.equal(rejected.data?.approval_status, "rejected");
+      assert.equal(rejected.data?.status, "failed");
+
+      const doubleReject = await adminClient.rpc("admin_reject_transaction", {
+        p_transaction_id: rejectCreated.data.id,
+        p_reason: "duplicate rejection must fail",
+      });
+      assert.ok(doubleReject.error, "withdrawal was rejected twice");
+
+      const afterRejection = await admin.from("user_profile")
+        .select("available_balance,total_withdrawals")
+        .eq("user_id", users.normal.id)
+        .single();
+      assert.ifError(afterRejection.error);
+      assert.equal(Number(afterRejection.data.available_balance), initialBalance - 300);
+      assert.equal(Number(afterRejection.data.total_withdrawals), initialWithdrawals + 300);
+    });
+
     await step("duplicate request_id is idempotent", async () => {
       const client = await clientFor(users.normal);
       const requestId = randomUUID();

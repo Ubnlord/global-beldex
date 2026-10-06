@@ -18,6 +18,9 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as AdminLoginRouteImport } from './routes/admin.login'
 import { Route as AdminRouteImport } from './routes/admin'
+import { Route as AdminTransactionsRouteImport } from './routes/admin.transactions'
+import { Route as AdminDepositsRouteImport } from './routes/admin.deposits'
+import { Route as AdminWithdrawalsRouteImport } from './routes/admin.withdrawals'
 import { Route as AppIndexRouteImport } from './routes/app/index'
 import { Route as AppDepositRouteImport } from './routes/app/deposit'
 import { Route as AppHistoryRouteImport } from './routes/app/history'
@@ -70,6 +73,21 @@ const AdminLoginRoute = AdminLoginRouteImport.update({
 const AdminRoute = AdminRouteImport.update({
   id: '/admin',
   path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminTransactionsRoute = AdminTransactionsRouteImport.update({
+  id: '/admin/transactions',
+  path: '/admin/transactions',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminDepositsRoute = AdminDepositsRouteImport.update({
+  id: '/admin/deposits',
+  path: '/admin/deposits',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminWithdrawalsRoute = AdminWithdrawalsRouteImport.update({
+  id: '/admin/withdrawals',
+  path: '/admin/withdrawals',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppAdminRoute = AppAdminRouteImport.update({
@@ -152,6 +170,9 @@ export interface FileRoutesByFullPath {
   '/register': typeof RegisterRoute
   '/admin': typeof AdminRoute
   '/admin/login': typeof AdminLoginRoute
+  '/admin/transactions': typeof AdminTransactionsRoute
+  '/admin/deposits': typeof AdminDepositsRoute
+  '/admin/withdrawals': typeof AdminWithdrawalsRoute
   '/app/admin': typeof AppAdminRoute
   '/app/deposit': typeof AppDepositRoute
   '/app/history': typeof AppHistoryRoute
@@ -171,12 +192,18 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/admin/login': typeof AdminLoginRoute
+  '/admin/transactions': typeof AdminTransactionsRoute
+  '/admin/deposits': typeof AdminDepositsRoute
+  '/admin/withdrawals': typeof AdminWithdrawalsRoute
   '/forgot': typeof ForgotRoute
   '/legal': typeof LegalRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/admin': typeof AdminRoute
   '/admin/login': typeof AdminLoginRoute
+  '/admin/transactions': typeof AdminTransactionsRoute
+  '/admin/deposits': typeof AdminDepositsRoute
+  '/admin/withdrawals': typeof AdminWithdrawalsRoute
   '/app/admin': typeof AppAdminRoute
   '/app/deposit': typeof AppDepositRoute
   '/app/history': typeof AppHistoryRoute
@@ -228,6 +255,9 @@ export interface FileRouteTypes {
     | '/register'
     | '/admin'
     | '/admin/login'
+    | '/admin/transactions'
+    | '/admin/deposits'
+    | '/admin/withdrawals'
     | '/app/admin'
     | '/app/deposit'
     | '/app/history'
@@ -254,6 +284,9 @@ export interface FileRouteTypes {
     | '/register'
     | '/admin'
     | '/admin/login'
+    | '/admin/transactions'
+    | '/admin/deposits'
+    | '/admin/withdrawals'
     | '/app/deposit'
     | '/app/history'
     | '/app/markets'
@@ -276,6 +309,9 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/admin/login'
+    | '/admin/transactions'
+    | '/admin/deposits'
+    | '/admin/withdrawals'
     | '/app/deposit'
     | '/app/history'
     | '/app/markets'
@@ -295,6 +331,9 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
   AdminRoute: typeof AdminRoute
+  AdminTransactionsRoute: typeof AdminTransactionsRoute
+  AdminDepositsRoute: typeof AdminDepositsRoute
+  AdminWithdrawalsRoute: typeof AdminWithdrawalsRoute
   ForgotRoute: typeof ForgotRoute
   LegalRoute: typeof LegalRoute
   LoginRoute: typeof LoginRoute
@@ -359,6 +398,27 @@ declare module '@tanstack/react-router' {
       path: '/admin/login'
       fullPath: '/admin/login'
       preLoaderRoute: typeof AdminLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/transactions': {
+      id: '/admin/transactions'
+      path: '/admin/transactions'
+      fullPath: '/admin/transactions'
+      preLoaderRoute: typeof AdminTransactionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/deposits': {
+      id: '/admin/deposits'
+      path: '/admin/deposits'
+      fullPath: '/admin/deposits'
+      preLoaderRoute: typeof AdminDepositsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/withdrawals': {
+      id: '/admin/withdrawals'
+      path: '/admin/withdrawals'
+      fullPath: '/admin/withdrawals'
+      preLoaderRoute: typeof AdminWithdrawalsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/app/admin': {
@@ -504,6 +564,9 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
   AdminRoute: AdminRoute,
+  AdminTransactionsRoute: AdminTransactionsRoute,
+  AdminDepositsRoute: AdminDepositsRoute,
+  AdminWithdrawalsRoute: AdminWithdrawalsRoute,
   AdminLoginRoute: AdminLoginRoute,
   AuthConfirmRoute: AuthConfirmRoute,
 }

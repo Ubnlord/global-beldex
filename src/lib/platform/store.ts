@@ -6,6 +6,7 @@ import { uid } from "@/lib/utils";
 import { pullCloudBook } from "@/lib/supabase/books";
 import { supabase } from "@/lib/supabase/client";
 import type { CloudProfile } from "@/lib/supabase/auth";
+import { validateWithdrawalDestination } from "@/lib/financial/withdrawal-address";
 
 export type { Lang };
 
@@ -243,7 +244,8 @@ export const usePlatform = create<PlatformState>()(
 
         withdraw: async (amount, method, address, requestId) => {
           if (!method) return "NEED_METHOD";
-          if (!address.trim()) return "NEED_ADDRESS";
+          const addressError = validateWithdrawalDestination(method, address);
+          if (addressError) return addressError;
           if (!amount || amount <= 0) return "NEED_AMOUNT";
           if (amount > get().available) return "INSUFFICIENT";
           const { error } = await supabase.rpc("create_financial_transaction", {

@@ -109,7 +109,7 @@ begin
    values(v_uid,'bonus',3,'completed','approved','Welcome Bonus','Server-side welcome bonus');
  end if;
  return v_profile;
-end; $$$;
+end; $$;
 
 create or replace function public.buy_investment_plan(p_plan_id text,p_amount numeric)
 returns public.user_investment language plpgsql security invoker set search_path=public as $$
@@ -131,7 +131,7 @@ begin
  insert into public.transaction(user_id,type,amount,status,approval_status,method,note)
  values(v_uid,'plan',p_amount,'completed','approved',v_plan.name,'Investment plan purchase');
  return v_inv;
-end; $$$;
+end; $$;
 
 create or replace function public.accrue_user_investments(p_user_id uuid default auth.uid())
 returns numeric language plpgsql security invoker set search_path=public as $$
@@ -158,7 +158,7 @@ begin
    end if;
  end loop;
  return v_total;
-end; $$$;
+end; $$;
 
 create or replace function public.swap_assets(p_from text,p_to text,p_amount numeric,p_rate numeric)
 returns public.transaction language plpgsql security invoker set search_path=public as $$
@@ -185,7 +185,7 @@ begin
    values(v_uid,'swap',v_out,'completed','approved','BDX → USD',p_amount::text||' BDX → '||round(v_out,2)::text||' USD') returning * into v_tx;
  end if;
  return v_tx;
-end; $$$;
+end; $$;
 
 create or replace function public.credit_referral_for_deposit(p_transaction_id uuid)
 returns numeric language plpgsql security invoker set search_path=public as $$
@@ -202,10 +202,10 @@ begin
  insert into public.transaction(user_id,type,amount,status,approval_status,method,note)
  values(v_ref,'referral',v_cut,'completed','approved','Referral deposit '||v_tx.id::text,'10% referral commission');
  return v_cut;
-end; $$$;
+end; $$;
 
 create or replace function public.admin_settle_transaction(p_transaction_id uuid,p_reason text default null)
-returns public.transaction language plpgsql security invoker set search_path=public as $
+returns public.transaction language plpgsql security invoker set search_path=public as $$
 declare v_admin public.admin_user; v_tx public.transaction;
 begin
  select * into v_admin from public.admin_user where user_id=auth.uid();

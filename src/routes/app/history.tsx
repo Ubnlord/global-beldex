@@ -20,7 +20,9 @@ function HistoryPage() {
 
   useEffect(() => {
     let active = true;
-    let timer: number | undefined;
+    const timer = window.setInterval(() => {
+      void refresh();
+    }, 2500);
 
     const refresh = async () => {
       if (!active || document.visibilityState !== "visible") return;
@@ -28,9 +30,6 @@ function HistoryPage() {
     };
 
     void refresh();
-    timer = window.setInterval(() => {
-      void refresh();
-    }, 2500);
 
     const onVisible = () => {
       if (document.visibilityState === "visible") void refresh();

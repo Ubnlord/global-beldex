@@ -9,6 +9,7 @@ const directWriteLockdown = fs.readFileSync(path.join(root, "migrations/0009_loc
 
 const mustContain = [
   "revoke all on function public.admin_has_permission(text) from public, anon, authenticated;",
+  "and p_permission = any(coalesce(a.permissions, '{}'::text[]))",
   "revoke all on function public.assert_user_can_transact(uuid) from public, anon, authenticated;",
   "grant execute on function public.create_financial_transaction(text,numeric,text,text,uuid) to authenticated;",
   "grant execute on function public.buy_investment_plan(text,numeric) to authenticated;",

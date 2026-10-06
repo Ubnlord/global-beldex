@@ -1,11 +1,24 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { LayoutDashboard, LogOut, Menu, ShieldCheck, Users, Wallet, X } from "lucide-react";
+import { ClipboardCheck, FileCheck2, LayoutDashboard, LogOut, Menu, ReceiptText, Settings2, ShieldCheck, TrendingUp, Users, Wallet, X } from "lucide-react";
 import { useState } from "react";
 import { Mark } from "@/components/brand/logo";
 import { signOutCloud } from "@/lib/supabase/auth";
 import { usePlatform } from "@/lib/platform/store";
 
-export function AdminShell({ children }: { children: React.ReactNode }) {
+type AdminSection = "dashboard" | "transactions" | "users" | "investments" | "kyc" | "reconciliation" | "audit" | "settings";
+
+const navItems: { to: "/admin"; section: AdminSection; label: string; icon: typeof LayoutDashboard }[] = [
+  { to: "/admin", section: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/admin", section: "transactions", label: "Transactions", icon: Wallet },
+  { to: "/admin", section: "users", label: "Users", icon: Users },
+  { to: "/admin", section: "investments", label: "Investments", icon: TrendingUp },
+  { to: "/admin", section: "kyc", label: "KYC Review", icon: FileCheck2 },
+  { to: "/admin", section: "reconciliation", label: "Reconciliation", icon: ClipboardCheck },
+  { to: "/admin", section: "audit", label: "Audit Log", icon: ReceiptText },
+  { to: "/admin", section: "settings", label: "Operations", icon: Settings2 },
+];
+
+export function AdminShell({ children, activeSection = "dashboard", onSectionChange }: { children: React.ReactNode; activeSection?: AdminSection; onSectionChange?: (section: AdminSection) => void }) {
   const navigate = useNavigate();
   const user = usePlatform((s) => s.user);
   const [open, setOpen] = useState(false);
@@ -17,12 +30,17 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     void navigate({ to: "/admin/login", replace: true });
   }
 
+  function go(section: AdminSection) {
+    onSectionChange?.(section);
+    setOpen(false);
+  }
+
   return (
     <div className="min-h-screen bg-[#070812] text-slate-100">
       <div className="flex min-h-screen">
         <aside className="hidden w-[250px] shrink-0 border-r border-white/10 bg-[#0b0d1b] lg:flex lg:flex-col">
           <AdminBrand />
-          <AdminNav />
+          <AdminNav activeSection={activeSection} onNavigate={go} />
           <div className="mt-auto border-t border-white/10 p-4">
             <AdminUser email={user?.email} />
             <SignOutButton onClick={() => void logout()} />
@@ -39,7 +57,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                   <X size={20} />
                 </button>
               </div>
-              <AdminNav onNavigate={() => setOpen(false)} />
+              <AdminNav activeSection={activeSection} onNavigate={go} />
               <div className="mt-auto border-t border-white/10 p-4">
                 <AdminUser email={user?.email} />
                 <SignOutButton onClick={() => void logout()} />
@@ -91,27 +109,23 @@ function AdminBrand({ compact = false }: { compact?: boolean }) {
   );
 }
 
-function AdminNav({ onNavigate }: { onNavigate?: () => void }) {
+function AdminNav({ activeSection, onNavigate }: { activeSection: AdminSection; onNavigate: (section: AdminSection) => void }) {
   return (
-    <nav className="space-y-1 p-4">
-      <AdminLink to="/admin" icon={LayoutDashboard} onNavigate={onNavigate}>Dashboard</AdminLink>
-      <AdminLink to="/admin" icon={Wallet} onNavigate={onNavigate}>Transactions</AdminLink>
-      <AdminLink to="/admin" icon={Users} onNavigate={onNavigate}>Users & KYC</AdminLink>
+    <nav className="space-y-1 overflow-y-auto p-4">
+      {navItems.map(({ to, section, label, icon: Icon }) => (
+        <Link
+          key={section}
+          to={to}
+          onClick={(event) => {
+            event.preventDefault();
+            onNavigate(section);
+          }}
+          className={activeSection === section ? "flex items-center gap-3 rounded-xl bg-[#28e6d0]/10 px-3 py-3 text-sm font-semibold text-[#28e6d0]" : "flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-slate-400 transition hover:bg-white/5 hover:text-white"}
+        >
+          <Icon size={18} /> {label}
+        </Link>
+      ))}
     </nav>
-  );
-}
-
-function AdminLink({ to, icon: Icon, children, onNavigate }: { to: "/admin"; icon: typeof LayoutDashboard; children: React.ReactNode; onNavigate?: () => void }) {
-  return (
-    <Link
-      to={to}
-      onClick={onNavigate}
-      activeOptions={{ exact: true }}
-      activeProps={{ className: "flex items-center gap-3 rounded-xl bg-[#28e6d0]/10 px-3 py-3 text-sm font-semibold text-[#28e6d0]" }}
-      className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-slate-400 transition hover:bg-white/5 hover:text-white"
-    >
-      <Icon size={18} /> {children}
-    </Link>
   );
 }
 

@@ -207,7 +207,8 @@ $function$;
 revoke all on function public.buy_investment_plan(text,numeric) from public, anon;
 grant execute on function public.buy_investment_plan(text,numeric) to authenticated;
 
--- Only an admin with manage_users may manually accrue a user's investment.
+-- Scheduled accrual must remain available to the trusted PostgreSQL scheduler.
+-- User/admin calls are still authorization-checked and blocked accounts are rejected.
 create or replace function public.accrue_user_investments(p_user_id uuid default auth.uid())
 returns numeric
 language plpgsql
@@ -225,11 +226,12 @@ declare
   v_total numeric := 0;
   v_done boolean;
   v_admin boolean := public.is_admin();
+  v_scheduled boolean := auth.uid() is null;
 begin
   if v_uid is null then raise exception 'Unauthorized'; end if;
 
   if v_uid <> auth.uid() then
-    if not v_admin or not public.admin_has_permission('manage_users') then
+    if not v_scheduled and (not v_admin or not public.admin_has_permission('manage_users')) then
       raise exception 'Permission denied';
     end if;
   end if;
@@ -247,17 +249,11 @@ begin
   loop
     v_elapsed_days := least(
       v_inv.duration_days,
-      greatest(
-        0,
-        floor(extract(epoch from(v_now-v_inv.started_at))/86400)::integer
-      )
+      greatest(0,floor(extract(epoch from(v_now-v_inv.started_at))/86400)::integer)
     );
     v_previous_days := least(
       v_inv.duration_days,
-      greatest(
-        0,
-        floor(extract(epoch from(v_inv.last_accrual_at-v_inv.started_at))/86400)::integer
-      )
+      greatest(0,floor(extract(epoch from(v_inv.last_accrual_at-v_inv.started_at))/86400)::integer)
     );
     v_days := greatest(0,v_elapsed_days-v_previous_days);
 
@@ -267,33 +263,23 @@ begin
       v_done := v_elapsed_days >= v_inv.duration_days;
 
       update public.user_profile
-      set available_balance = available_balance + v_profit,
-          locked_balance = case
-            when v_done then greatest(0,locked_balance-v_inv.principal)
-            else locked_balance
-          end,
-          updated_at = now()
-      where user_id = v_uid;
+      set available_balance=available_balance+v_profit,
+          locked_balance=case when v_done then greatest(0,locked_balance-v_inv.principal) else locked_balance end,
+          updated_at=now()
+      where user_id=v_uid;
 
       update public.user_investment
-      set credited_profit = credited_profit + v_profit,
-          last_accrual_at = least(
-            v_inv.started_at+make_interval(days=>v_inv.duration_days),
-            v_now
-          ),
-          status = case when v_done then 'completed' else 'active' end,
-          completed_at = case when v_done then v_now else completed_at end,
-          updated_at = now()
-      where id = v_inv.id;
+      set credited_profit=credited_profit+v_profit,
+          last_accrual_at=least(v_inv.started_at+make_interval(days=>v_inv.duration_days),v_now),
+          status=case when v_done then 'completed' else 'active' end,
+          completed_at=case when v_done then v_now else completed_at end,
+          updated_at=now()
+      where id=v_inv.id;
 
-      insert into public.transaction(
-        user_id,type,amount,status,approval_status,method,note
-      )
-      values(
-        v_uid,'bonus',v_profit,'completed','approved',
+      insert into public.transaction(user_id,type,amount,status,approval_status,method,note)
+      values(v_uid,'bonus',v_profit,'completed','approved',
         case when v_done then 'Plan maturity' else 'Daily interest' end,
-        'Server-side investment profit'
-      );
+        'Server-side investment profit');
     end if;
   end loop;
 

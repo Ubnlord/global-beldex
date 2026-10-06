@@ -122,6 +122,66 @@ test("security migration exposes only the intended swap executor", { skip: !url 
       assert.ok(error, "blocked user unexpectedly purchased an investment");
     });
 
+    await step("blocked user cannot create a withdrawal", async () => {
+      const client = await clientFor(users.blocked);
+      const { error } = await client.rpc("create_financial_transaction", {
+        p_type: "withdraw",
+        p_amount: 100,
+        p_method: "security-test",
+        p_note: null,
+        p_request_id: randomUUID(),
+      });
+      assert.ok(error, "blocked user unexpectedly created a withdrawal");
+    });
+
+    await step("blocked user cannot swap through the Edge Function", async () => {
+      const client = await clientFor(users.blocked);
+      const { data: sessionData, error: sessionError } = await client.auth.getSession();
+      assert.ifError(sessionError);
+      assert.ok(sessionData.session?.access_token);
+
+      const response = await fetch(`${url}/functions/v1/swap-assets`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${sessionData.session.access_token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ from: "USD", to: "BDX", amount: 1, rate: 0.000001 }),
+      });
+      assert.notEqual(response.status, 200, "blocked user unexpectedly swapped through Edge Function");
+    });
+
+    await step("ordinary user cannot read another user's profile or transaction", async () => {
+      const client = await clientFor(users.normal);
+      const { data: profileRows, error: profileError } = await client
+        .from("user_profile").select("user_id").eq("user_id", users.blocked.id);
+      assert.ifError(profileError);
+      assert.equal(profileRows?.length ?? 0, 0);
+
+      const { data: txRows, error: txError } = await client
+        .from("transaction").select("id").eq("user_id", users.blocked.id);
+      assert.ifError(txError);
+      assert.equal(txRows?.length ?? 0, 0);
+    });
+
+    await step("ordinary client cannot write protected financial/profile tables", async () => {
+      const client = await clientFor(users.normal);
+
+      const { error: txInsertError } = await client.from("transaction").insert({
+        user_id: users.normal.id,
+        type: "deposit",
+        amount: 1,
+        status: "pending",
+        approval_status: "awaiting",
+      });
+      assert.ok(txInsertError, "ordinary client unexpectedly inserted a transaction");
+
+      const { error: profileUpdateError } = await client.from("user_profile")
+        .update({ available_balance: 999999999 })
+        .eq("user_id", users.normal.id);
+      assert.ok(profileUpdateError, "ordinary client unexpectedly updated a balance");
+    });
+
     await step("authenticated client cannot call the swap RPC directly", async () => {
       const client = await clientFor(users.normal);
       const { error } = await client.rpc("swap_assets", {

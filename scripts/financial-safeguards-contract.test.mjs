@@ -53,9 +53,13 @@ test("permanent financial safeguard suite is present and non-destructive", () =>
     assert.match(adminRoute, new RegExp(section));
     assert.match(adminShell, new RegExp(section));
   }
-  for (const rpc of ["admin_approve_transaction", "admin_reject_transaction", "admin_settle_transaction", "admin_set_user_block", "admin_update_investment", "accrue_user_investments"]) {
+  for (const rpc of ["admin_approve_transaction", "admin_reject_transaction", "admin_settle_transaction", "admin_set_user_block", "admin_update_investment", "accrue_user_investments", "admin_approve_deposit", "admin_reject_deposit", "admin_approve_withdrawal", "admin_reject_withdrawal"]) {
     assert.match(adminRoute, new RegExp(rpc));
   }
+  assert.match(adminRoute, /approve_transactions/);
+  assert.match(adminRoute, /reject_transactions/);
+  assert.match(adminRoute, /view_transactions/);
+  assert.match(adminRoute, /view_audit_log/);
   assert.match(adminRoute, /admin_financial_reconciliation/);
   assert.match(adminRoute, /never writes balances, investments or transaction states directly/);
 });

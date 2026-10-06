@@ -71,13 +71,13 @@ test("security migration exposes only the intended swap executor", { skip: !url 
       return client;
     };
 
-    await test.step("ordinary user cannot execute admin search", async () => {
+    await step("ordinary user cannot execute admin search", async () => {
       const client = await clientFor(users.normal);
       const { error } = await client.rpc("admin_search_users", { p_query: "", p_limit: 10 });
       assert.ok(error, "ordinary user unexpectedly executed admin_search_users");
     });
 
-    await test.step("admin without manage_users cannot block another user", async () => {
+    await step("admin without manage_users cannot block another user", async () => {
       const client = await clientFor(users.adminNoPermission);
       const { error } = await client.rpc("admin_set_user_block", {
         p_user_id: users.normal.id,
@@ -87,7 +87,7 @@ test("security migration exposes only the intended swap executor", { skip: !url 
       assert.ok(error, "admin without manage_users unexpectedly blocked a user");
     });
 
-    await test.step("authorized admin can execute protected user management", async () => {
+    await step("authorized admin can execute protected user management", async () => {
       const client = await clientFor(users.admin);
       const { error } = await client.rpc("admin_set_user_block", {
         p_user_id: users.normal.id,
@@ -101,7 +101,7 @@ test("security migration exposes only the intended swap executor", { skip: !url 
       assert.ifError(restoreError);
     });
 
-    await test.step("blocked user cannot create a deposit", async () => {
+    await step("blocked user cannot create a deposit", async () => {
       const client = await clientFor(users.blocked);
       const { error } = await client.rpc("create_financial_transaction", {
         p_type: "deposit",
@@ -113,7 +113,7 @@ test("security migration exposes only the intended swap executor", { skip: !url 
       assert.ok(error, "blocked user unexpectedly created a financial transaction");
     });
 
-    await test.step("blocked user cannot buy an investment plan", async () => {
+    await step("blocked user cannot buy an investment plan", async () => {
       const client = await clientFor(users.blocked);
       const { error } = await client.rpc("buy_investment_plan", {
         p_plan_id: "gns",
@@ -122,7 +122,7 @@ test("security migration exposes only the intended swap executor", { skip: !url 
       assert.ok(error, "blocked user unexpectedly purchased an investment");
     });
 
-    await test.step("authenticated client cannot call the swap RPC directly", async () => {
+    await step("authenticated client cannot call the swap RPC directly", async () => {
       const client = await clientFor(users.normal);
       const { error } = await client.rpc("swap_assets", {
         p_user_id: users.normal.id,
@@ -134,7 +134,7 @@ test("security migration exposes only the intended swap executor", { skip: !url 
       assert.ok(error, "authenticated client unexpectedly executed the service-only swap RPC");
     });
 
-    await test.step("duplicate request_id is idempotent", async () => {
+    await step("duplicate request_id is idempotent", async () => {
       const client = await clientFor(users.normal);
       const requestId = randomUUID();
       const first = await client.rpc("create_financial_transaction", {

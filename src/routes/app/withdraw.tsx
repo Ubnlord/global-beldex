@@ -40,7 +40,7 @@ function WithdrawPage() {
       return;
     }
     if (n < MIN_WITHDRAWAL) {
-      toastError(`Minimum withdrawal is ${MIN_WITHDRAWAL}`);
+      toastError(`Minimum withdrawal is $${MIN_WITHDRAWAL}`);
       return;
     }
     if (n > available) {

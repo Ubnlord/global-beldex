@@ -23,7 +23,7 @@ import { supabase } from "@/lib/supabase/client";
 
 export const Route = createFileRoute("/admin")({ component: AdminPage });
 
-type Tab = "dashboard" | "transactions" | "users" | "investments" | "kyc" | "reconciliation" | "audit" | "settings";
+export type Tab = "dashboard" | "transactions" | "users" | "investments" | "kyc" | "reconciliation" | "audit" | "settings";
 
 type Tx = {
   id: string;
@@ -109,7 +109,7 @@ const money = (value: string | number) =>
 const percent = (value: string | number) => `${(Number(value || 0) * 100).toFixed(2)}%`;
 const deltaOk = (value: string | number) => Math.abs(Number(value || 0)) < 0.00000001;
 
-function AdminPage() {
+export function AdminPage({ initialTab = "dashboard", transactionType }: { initialTab?: Tab; transactionType?: "deposit" | "withdraw" } = {}) {
   const [allowed, setAllowed] = useState<boolean | null>(null);
   const [adminRole, setAdminRole] = useState("admin");
   const [permissions, setPermissions] = useState<string[]>([]);
@@ -123,7 +123,7 @@ function AdminPage() {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
-  const [tab, setTab] = useState<Tab>("dashboard");
+  const [tab, setTab] = useState<Tab>(initialTab);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [rejectId, setRejectId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
@@ -371,13 +371,14 @@ function AdminPage() {
 
   const filteredTransactions = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return txs;
-    return txs.filter((tx) =>
-      [tx.id, tx.user_id, tx.type, tx.method, tx.status, tx.approval_status, tx.note]
+    return txs.filter((tx) => {
+      if (transactionType && tx.type !== transactionType) return false;
+      if (!q) return true;
+      return [tx.id, tx.user_id, tx.type, tx.method, tx.status, tx.approval_status, tx.note]
         .filter(Boolean)
-        .some((value) => String(value).toLowerCase().includes(q)),
-    );
-  }, [txs, query]);
+        .some((value) => String(value).toLowerCase().includes(q));
+    });
+  }, [txs, query, transactionType]);
 
   const filteredUsers = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -407,8 +408,14 @@ function AdminPage() {
             <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-accent">
               <ShieldCheck size={14} /> {adminRole}
             </div>
-            <h1 className="text-2xl font-bold text-fg sm:text-3xl">Admin Operations Console</h1>
-            <p className="mt-1 text-sm text-muted">Monitor operations, review exceptions, and execute protected administrator workflows.</p>
+            <h1 className="text-2xl font-bold text-fg sm:text-3xl">
+              {transactionType === "deposit" ? "Deposits" : transactionType === "withdraw" ? "Withdrawals" : "Admin Operations Console"}
+            </h1>
+            <p className="mt-1 text-sm text-muted">
+              {transactionType
+                ? "Review transaction approval state and use only the server-protected action available for that state."
+                : "Monitor operations, review exceptions, and execute protected administrator workflows."}
+            </p>
           </div>
           <button type="button" onClick={() => void load()} disabled={loading} className="inline-flex items-center justify-center gap-2 rounded-xl border border-line bg-panel px-4 py-2.5 text-sm font-medium text-fg hover:bg-elevated disabled:opacity-60">
             <RefreshCw size={16} className={loading ? "animate-spin" : ""} /> Refresh

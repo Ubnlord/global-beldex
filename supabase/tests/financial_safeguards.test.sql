@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(61);
+select plan(64);
 
 -- Schema and RLS baseline.
 select has_table('public', 'user_profile', 'user_profile exists');
@@ -125,6 +125,21 @@ select function_privs_are('public', 'create_financial_transaction', array['text'
 select ok(
   position('p_type = ''withdraw'' and p_amount < 300' in pg_get_functiondef('public.create_financial_transaction(text,numeric,text,text,uuid)'::regprocedure)) > 0,
   'withdrawal RPC enforces the $300 minimum'
+);
+
+select ok(
+  position('Invalid Ethereum destination address' in pg_get_functiondef('public.create_financial_transaction(text,numeric,text,text,uuid)'::regprocedure)) > 0,
+  'withdrawal RPC validates Ethereum destinations'
+);
+
+select ok(
+  position('Invalid Bitcoin destination address' in pg_get_functiondef('public.create_financial_transaction(text,numeric,text,text,uuid)'::regprocedure)) > 0,
+  'withdrawal RPC validates Bitcoin destinations'
+);
+
+select ok(
+  position('Invalid Beldex destination address' in pg_get_functiondef('public.create_financial_transaction(text,numeric,text,text,uuid)'::regprocedure)) > 0,
+  'withdrawal RPC validates Beldex destinations'
 );
 select function_privs_are('public', 'swap_assets', array['uuid','text','text','numeric','numeric'], 'authenticated', '{}', 'authenticated cannot execute swap_assets directly');
 select function_privs_are('public', 'swap_assets', array['uuid','text','text','numeric','numeric'], 'service_role', array['EXECUTE'], 'service role can execute swap_assets');

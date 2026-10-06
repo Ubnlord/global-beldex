@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { History } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { TickerTape } from "@/components/market/tradingview";
 import { TxRow } from "@/components/platform/tx-row";
 import { copy, fill } from "@/lib/platform/i18n";
@@ -16,6 +16,35 @@ function HistoryPage() {
   const lang = usePlatform((s) => s.lang);
   const t = copy[lang];
   const [tab, setTab] = useState<(typeof TABS)[number]>("deposit");
+  const refreshTransactions = usePlatform((s) => s.refreshTransactions);
+
+  useEffect(() => {
+    let active = true;
+    let timer: number | undefined;
+
+    const refresh = async () => {
+      if (!active || document.visibilityState !== "visible") return;
+      await refreshTransactions();
+    };
+
+    void refresh();
+    timer = window.setInterval(() => {
+      void refresh();
+    }, 2500);
+
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void refresh();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
+
+    return () => {
+      active = false;
+      if (timer) window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onVisible);
+    };
+  }, [refreshTransactions]);
   const filtered =
     tab === "others"
       ? txs.filter((z) => z.type !== "deposit" && z.type !== "withdraw")

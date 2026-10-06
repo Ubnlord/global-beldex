@@ -117,6 +117,7 @@ type PlatformState = {
   addNotice: (title: string, body: string) => void;
   markNoticesRead: () => void;
   submitTicket: (subject: string, body: string) => string | null;
+  refreshTransactions: () => Promise<void>;
 };
 
 function notice(title: string, body: string): Notice {
@@ -197,6 +198,35 @@ export const usePlatform = create<PlatformState>()(
           set({ user: { ...user, ...patch } });
         },
 
+        refreshTransactions: async () => {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (!user) return;
+
+          const { data, error } = await supabase
+            .from("transaction")
+            .select("id,type,amount,status,method,note,created_at")
+            .eq("user_id", user.id)
+            .order("created_at", { ascending: false });
+
+          if (error) return;
+
+          const txs: Transaction[] = (data ?? []).map((t: any) => ({
+            id: t.id,
+            type: t.type as TxType,
+            amount: Number.isFinite(Number(t.amount)) ? Number(t.amount) : 0,
+            status: (t.status === "completed"
+              ? "completed"
+              : t.status === "failed"
+                ? "failed"
+                : "pending") as TxStatus,
+            date: new Date(t.created_at).toISOString(),
+            method: t.method ?? undefined,
+            note: t.note ?? undefined,
+          }));
+
+          set({ txs });
+        },
+
         deposit: async (amount, method, requestId) => {
           if (!amount || amount < 300) return "MIN_DEPOSIT";
           const { error } = await supabase.rpc("create_financial_transaction", {
@@ -207,6 +237,7 @@ export const usePlatform = create<PlatformState>()(
             p_request_id: requestId ? requestId : null,
           });
           if (error) return error.message;
+          await get().refreshTransactions();
           return null;
         },
 
@@ -223,6 +254,7 @@ export const usePlatform = create<PlatformState>()(
             p_request_id: requestId ? requestId : null,
           });
           if (error) return error.message;
+          await get().refreshTransactions();
           return null;
         },
 

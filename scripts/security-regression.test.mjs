@@ -3,8 +3,8 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 
-const url = process.env.SUPABASE_URL;
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const url = process.env.SUPABASE_TEST_URL || process.env.SUPABASE_URL;
+const serviceKey = process.env.SUPABASE_TEST_SERVICE_ROLE_KEY;
 
 const step = async (_name, fn) => fn();
 
@@ -60,7 +60,7 @@ test("security migration exposes only the intended swap executor", { skip: !url 
     }
 
     const clientFor = async (user) => {
-      const client = createClient(url, process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY, {
+      const client = createClient(url, process.env.SUPABASE_TEST_PUBLISHABLE_KEY || process.env.SUPABASE_TEST_ANON_KEY, {
         auth: { autoRefreshToken: false, persistSession: false },
       });
       const { error } = await client.auth.signInWithPassword({

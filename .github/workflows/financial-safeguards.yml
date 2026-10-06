@@ -22,27 +22,80 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Run security contract tests
+      - name: Run static security contracts
         run: npm run test:security
 
-  database:
-    name: pgTAP financial safeguards
+  local-database:
+    name: Reproducible local Supabase security regression
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-    env:
-      SUPABASE_TEST_DB_URL: ${{ secrets.SUPABASE_TEST_DB_URL }}
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
       - uses: supabase/setup-cli@v1
         with:
           version: latest
-      - name: Run pgTAP safeguards against the dedicated test database
-        if: ${{ env.SUPABASE_TEST_DB_URL != '' }}
+
+      - run: npm ci
+
+      - name: Prepare database from repository migrations
         run: |
           set -euo pipefail
-          supabase test db --db-url "${SUPABASE_TEST_DB_URL}" supabase/tests/financial_safeguards.test.sql
-      - name: Explain skipped database test
-        if: ${{ env.SUPABASE_TEST_DB_URL == '' }}
+          mkdir -p .security-test
+          cd .security-test
+          supabase init --force
+          cd ..
+          node scripts/prepare-local-security-db.mjs
+
+      - name: Start isolated Supabase
+        working-directory: .security-test
+        run: supabase start
+
+      - name: Apply repository migrations
+        working-directory: .security-test
+        run: supabase db reset
+
+      - name: Run pgTAP safeguards
+        working-directory: .security-test
+        run: supabase test db
+
+      - name: Start swap Edge Function locally
+        working-directory: .security-test
         run: |
-          echo "::warning::SUPABASE_TEST_DB_URL is not configured. Static safeguards ran, but pgTAP database safeguards were skipped."
-          echo "Configure SUPABASE_TEST_DB_URL with a dedicated non-production Supabase/Postgres test database."
+          set -euo pipefail
+          eval "$(supabase status -o env)"
+          cat > functions.env <<EOF
+          SUPABASE_URL=$API_URL
+          SUPABASE_ANON_KEY=$ANON_KEY
+          SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY
+          EOF
+          nohup supabase functions serve swap-assets --env-file functions.env > functions.log 2>&1 &
+          echo $! > functions.pid
+          sleep 8
+          cat functions.log || true
+
+      - name: Run full JavaScript security regression
+        run: |
+          set -euo pipefail
+          eval "$(cd .security-test && supabase status -o env)"
+          SUPABASE_TEST_URL="$API_URL"           SUPABASE_TEST_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY"           SUPABASE_TEST_PUBLISHABLE_KEY="$ANON_KEY"           node --test scripts/security-regression.test.mjs
+
+      - name: Stop isolated Supabase
+        if: always()
+        working-directory: .security-test
+        run: supabase stop
+
+      - name: Upload local Supabase logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-test-logs
+          path: |
+            .security-test/functions.log
+            .security-test/supabase/.temp/*.log
+          if-no-files-found: ignore

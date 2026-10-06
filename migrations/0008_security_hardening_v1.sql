@@ -14,7 +14,7 @@ as $function$
     select 1
     from public.admin_user a
     where a.user_id = auth.uid()
-      and (a.role = 'admin' or p_permission = any(a.permissions))
+      and p_permission = any(coalesce(a.permissions, '{}'::text[]))
   );
 $function$;
 

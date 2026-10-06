@@ -39,15 +39,6 @@ function SupportPage() {
         </a>
       </div>
       <div className="mt-3 rounded-lg border border-line bg-elevated px-4 py-3">
-        <div className="text-[11px] text-subtle">{t.supportPhone}</div>
-        <a
-          href="tel:+447404603931"
-          className="mt-0.5 inline-block text-sm font-semibold text-accent underline underline-offset-2"
-        >
-          +44 7404 603931
-        </a>
-      </div>
-      <div className="mt-3 rounded-lg border border-line bg-elevated px-4 py-3">
         <div className="text-[11px] text-subtle">{t.supportAddress}</div>
         <a
           href="https://maps.google.com/?q=Bethanee+Dong+Tumulus+Avenue+Newcastle+upon+Tyne+NE6+4US"

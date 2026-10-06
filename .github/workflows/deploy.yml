@@ -43,7 +43,7 @@ jobs:
       - name: Validate public frontend configuration
         env:
           VITE_SUPABASE_URL: https://jarzpkwdstahbzvbevrq.supabase.co
-          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
         run: |
           set -euo pipefail
           test -n "${VITE_SUPABASE_URL}" || { echo "ERROR: VITE_SUPABASE_URL is empty"; exit 1; }
@@ -55,7 +55,7 @@ jobs:
         run: npm run build
         env:
           VITE_SUPABASE_URL: https://jarzpkwdstahbzvbevrq.supabase.co
-          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
 
       - name: Prepare GitHub Pages static site
         run: |

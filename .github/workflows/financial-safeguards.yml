@@ -99,3 +99,5 @@ jobs:
             .security-test/functions.log
             .security-test/supabase/.temp/*.log
           if-no-files-found: ignore
+
+# Security regression verification trigger.

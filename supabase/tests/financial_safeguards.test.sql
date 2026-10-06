@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(46);
+select plan(60);
 
 -- Schema and RLS baseline.
 select has_table('public', 'user_profile', 'user_profile exists');

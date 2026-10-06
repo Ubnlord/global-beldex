@@ -96,32 +96,49 @@ jobs:
         working-directory: .security-test
         run: |
           set +e
-          echo "=== Docker ==="
-          docker version
-          docker info
-          echo "=== Supabase CLI ==="
-          supabase --version
-          echo "=== Config ==="
-          cat supabase/config.toml
-          echo "=== Startup log ==="
-          cat supabase-start.log 2>/dev/null || true
-          echo "=== Supabase status ==="
-          supabase status 2>&1 || true
+          {
+            echo "=== Global Beldex Supabase startup diagnostics ==="
+            echo "UTC: $(date -u)"
+            echo
+            echo "=== Docker version ==="
+            docker version
+            echo
+            echo "=== Docker info ==="
+            docker info
+            echo
+            echo "=== Supabase CLI ==="
+            supabase --version
+            echo
+            echo "=== Supabase config ==="
+            cat supabase/config.toml
+            echo
+            echo "=== supabase start log ==="
+            cat supabase-start.log 2>/dev/null || true
+            echo
+            echo "=== Supabase status ==="
+            supabase status 2>&1 || true
+            echo
+            echo "=== Docker containers ==="
+            docker ps -a
+          } > security-startup-diagnostics.txt 2>&1
+          cat security-startup-diagnostics.txt
 
       - name: Stop isolated Supabase
         if: always()
         working-directory: .security-test
         run: supabase stop
 
-      - name: Upload local Supabase logs on failure
-        if: failure()
+      - name: Upload local Supabase diagnostics
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: security-test-logs
+          name: security-test-diagnostics
           path: |
-            .security-test/functions.log
+            .security-test/security-startup-diagnostics.txt
             .security-test/supabase-start.log
+            .security-test/functions.log
             .security-test/supabase/.temp/*.log
-          if-no-files-found: ignore
+          if-no-files-found: warn
+          retention-days: 7
 
 # Security regression verification trigger.

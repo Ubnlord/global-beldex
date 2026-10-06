@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Check, Copy } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { TickerTape, SymbolOverview } from "@/components/market/tradingview";
 import { BeldexLivePrice, CoinPrice, MarketBoard, coinQty, formatCoinUsd, useBeldexQuote } from "@/components/market/live-price";
 import { toast, toastError } from "@/components/layout/toast";
@@ -27,8 +27,21 @@ function DepositPage() {
   const { book } = useBeldexQuote();
   const [amount, setAmount] = useState("");
   const [method, setMethod] = useState<keyof typeof DEPOSIT_METHODS>("BELDEX");
-  const [step, setStep] = useState<"form" | "pay">("form");
+  const [step, setStep] = useState<"form" | "pay">(() => {
+    if (typeof window === "undefined") return "form";
+    return new URLSearchParams(window.location.search).get("step") === "pay" ? "pay" : "form";
+  });
   const [requestId, setRequestId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const isPayStep = new URLSearchParams(window.location.search).get("step") === "pay";
+      setStep(isPayStep ? "pay" : "form");
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
 
   const quoteId = method === "BTC" ? "bitcoin" : method === "ETH" ? "ethereum" : "beldex";
   const ticker = method === "BTC" ? "BTC" : method === "ETH" ? "ETH" : "BDX";
@@ -42,6 +55,9 @@ function DepositPage() {
       return;
     }
     setRequestId(crypto.randomUUID());
+    const url = new URL(window.location.href);
+    url.searchParams.set("step", "pay");
+    window.history.pushState({ depositStep: "pay" }, "", url);
     setStep("pay");
   };
 
@@ -201,7 +217,17 @@ function DepositPage() {
             {t.simAddress}
           </p>
           <div className="mt-6 flex gap-2">
-            <Button variant="secondary" className="flex-1" onClick={() => setStep("form")}>
+            <Button
+              variant="secondary"
+              className="flex-1"
+              onClick={() => {
+                if (window.history.state?.depositStep === "pay") {
+                  window.history.back();
+                } else {
+                  setStep("form");
+                }
+              }}
+            >
               {t.back}
             </Button>
             <Button className="flex-1" onClick={confirm}>

@@ -9,6 +9,7 @@ const auditLock = fs.readFileSync(path.join(root, "migrations/0016_lock_transact
 const suite = fs.readFileSync(path.join(root, "supabase/tests/financial_safeguards.test.sql"), "utf8");
 const withdrawalMigration = fs.readFileSync(path.join(root, "migrations/0019_withdrawal_address_validation.sql"), "utf8");
 const withdrawalValidator = fs.readFileSync(path.join(root, "src/lib/financial/withdrawal-address.ts"), "utf8");
+const operationsHardening = fs.readFileSync(path.join(root, "migrations/0020_post_release_operations_hardening.sql"), "utf8");
 
 test("permanent financial safeguard suite is present and non-destructive", () => {
   for (const needle of [
@@ -35,5 +36,5 @@ test("permanent financial safeguard suite is present and non-destructive", () =>
   assert.match(withdrawalValidator, /0x\[0-9a-fA-F\]\{40\}/);
   assert.match(withdrawalValidator, /Invalid Bitcoin destination address/);
   assert.match(withdrawalValidator, /Invalid Beldex destination address/);
-  assert.doesNotMatch(suite, /createUser|deleteUser|SUPABASE_SERVICE_ROLE_KEY/i);
+  assert.doesNotMatch(suite, /createUser|deleteUser|SUPABASE_SERVICE_ROLE_KEY/i);\n  assert.match(operationsHardening, /Investment principal returned/);\n  assert.match(operationsHardening, /global-beldex-daily-investment-accrual/);\n  assert.match(operationsHardening, /0 0 \\* \\* \\*/);\n  assert.match(operationsHardening, /admin_financial_reconciliation/);\n  assert.match(operationsHardening, /p\.total_deposits - coalesce\(d\.amount,0\)/);\n  assert.match(operationsHardening, /p\.total_withdrawals - coalesce\(w\.amount,0\)/);\n  assert.match(operationsHardening, /p\.locked_balance-coalesce\(i\.active_principal,0\)/);
 });

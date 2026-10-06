@@ -5,11 +5,13 @@ import {
   CheckCircle,
   Clock,
   Eye,
+  FileCheck2,
   PauseCircle,
   PlayCircle,
   RefreshCw,
   Search,
   ShieldCheck,
+  SlidersHorizontal,
   TrendingUp,
   Users,
   Wallet,
@@ -20,6 +22,8 @@ import { AdminShell } from "@/components/admin/admin-shell";
 import { supabase } from "@/lib/supabase/client";
 
 export const Route = createFileRoute("/admin")({ component: AdminPage });
+
+type Tab = "dashboard" | "transactions" | "users" | "investments" | "kyc" | "reconciliation" | "audit" | "settings";
 
 type Tx = {
   id: string;
@@ -78,32 +82,62 @@ type AuditRow = {
   created_at: string;
 };
 
+type ReconciliationRow = {
+  user_id: string;
+  available_balance: string | number;
+  locked_balance: string | number;
+  expected_locked_balance: string | number;
+  locked_delta: string | number;
+  total_deposits: string | number;
+  recorded_deposits: string | number;
+  deposits_delta: string | number;
+  total_withdrawals: string | number;
+  recorded_withdrawals: string | number;
+  withdrawals_delta: string | number;
+  referral_earnings: string | number;
+  recorded_referrals: string | number;
+  referral_delta: string | number;
+  credited_investment_profit: string | number;
+  recorded_investment_profit: string | number;
+  investment_profit_delta: string | number;
+  negative_balance: boolean;
+};
+
 const money = (value: string | number) =>
-  Number(value || 0).toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
+  Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 const percent = (value: string | number) => `${(Number(value || 0) * 100).toFixed(2)}%`;
+const deltaOk = (value: string | number) => Math.abs(Number(value || 0)) < 0.00000001;
 
 function AdminPage() {
   const [allowed, setAllowed] = useState<boolean | null>(null);
   const [adminRole, setAdminRole] = useState("admin");
+  const [permissions, setPermissions] = useState<string[]>([]);
   const [txs, setTxs] = useState<Tx[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [investments, setInvestments] = useState<Investment[]>([]);
   const [audit, setAudit] = useState<AuditRow[]>([]);
+  const [reconciliation, setReconciliation] = useState<ReconciliationRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [reconLoading, setReconLoading] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
-  const [tab, setTab] = useState<"dashboard" | "transactions" | "users" | "audit">("dashboard");
+  const [tab, setTab] = useState<Tab>("dashboard");
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [rejectId, setRejectId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [blockReason, setBlockReason] = useState("");
-  const [rateDraft, setRateDraft] = useState("");
+  const [rateDrafts, setRateDrafts] = useState<Record<string, string>>({});
   const [showUserPanel, setShowUserPanel] = useState(false);
+
+  const hasPermission = (permission: string) =>
+    permissions.length === 0 || permissions.includes("*") || permissions.includes(permission);
+
+  const canTransactions = hasPermission("manage_transactions");
+  const canUsers = hasPermission("manage_users");
+  const canInvestments = hasPermission("manage_investments");
+  const canAudit = hasPermission("view_audit");
 
   async function verifyAdmin() {
     const { data: { user } } = await supabase.auth.getUser();
@@ -125,6 +159,7 @@ function AdminPage() {
 
     setAllowed(true);
     setAdminRole(admin.role || "admin");
+    setPermissions(Array.isArray(admin.permissions) ? admin.permissions : []);
     return user.id;
   }
 
@@ -157,6 +192,14 @@ function AdminPage() {
     else setAudit((data ?? []) as AuditRow[]);
   }
 
+  async function loadReconciliation() {
+    setReconLoading(true);
+    const { data, error: reconError } = await supabase.rpc("admin_financial_reconciliation");
+    if (reconError) setError(reconError.message);
+    else setReconciliation((data ?? []) as ReconciliationRow[]);
+    setReconLoading(false);
+  }
+
   async function load() {
     setLoading(true);
     setError("");
@@ -165,7 +208,6 @@ function AdminPage() {
       setLoading(false);
       return;
     }
-
     await Promise.all([loadTransactions(), loadUsers(), loadAudit()]);
     setLoading(false);
   }
@@ -179,25 +221,30 @@ function AdminPage() {
       .select("id,user_id,plan_id,principal,daily_rate,duration_days,started_at,last_accrual_at,credited_profit,status,completed_at,daily_accrual_enabled")
       .eq("user_id", userId)
       .order("created_at", { ascending: false });
+
     if (investmentError) setError(investmentError.message);
-    else setInvestments((data ?? []) as Investment[]);
+    else {
+      const freshInvestments = (data ?? []) as Investment[];
+      setInvestments(freshInvestments);
+      setRateDrafts((current) => {
+        const next = { ...current };
+        for (const investment of freshInvestments) {
+          next[investment.id] = String(Number(investment.daily_rate) * 100);
+        }
+        return next;
+      });
+    }
+
     const user = users.find((item) => item.user_id === userId);
     setBlockReason(user?.blocked_reason || "");
-    setRateDraft(user && investments[0] ? String(Number(investments[0].daily_rate) * 100) : "");
   }
 
   useEffect(() => {
     void load();
   }, []);
 
-  useEffect(() => {
-    if (!selectedUserId) return;
-    const user = users.find((item) => item.user_id === selectedUserId);
-    if (user) setBlockReason(user.blocked_reason || "");
-    if (investments[0]) setRateDraft(String(Number(investments[0].daily_rate) * 100));
-  }, [selectedUserId, users, investments]);
-
   async function act(kind: "approve" | "settle" | "reject", id: string, reason?: string) {
+    if (!canTransactions) return;
     setBusy(id);
     setError("");
     const rpc =
@@ -216,13 +263,13 @@ function AdminPage() {
     else {
       setRejectId(null);
       setRejectReason("");
-      await loadTransactions();
-      await loadAudit();
+      await Promise.all([loadTransactions(), loadAudit()]);
     }
     setBusy(null);
   }
 
   async function toggleBlock(user: UserProfile) {
+    if (!canUsers) return;
     setBusy(`block:${user.user_id}`);
     setError("");
     const nextBlocked = !user.blocked;
@@ -232,14 +279,12 @@ function AdminPage() {
       p_reason: nextBlocked ? blockReason.trim() || "Blocked by administrator" : null,
     });
     if (actionError) setError(actionError.message);
-    else {
-      await loadUsers(query);
-      await loadAudit();
-    }
+    else await Promise.all([loadUsers(query), loadAudit()]);
     setBusy(null);
   }
 
   async function updateInvestment(investmentId: string, dailyRatePercent?: number, enabled?: boolean) {
+    if (!canInvestments) return;
     setBusy(`investment:${investmentId}`);
     setError("");
     const payload: { p_investment_id: string; p_daily_rate?: number; p_daily_accrual_enabled?: boolean } = {
@@ -258,6 +303,7 @@ function AdminPage() {
   }
 
   async function accrueNow(userId: string) {
+    if (!canInvestments) return;
     setBusy(`accrue:${userId}`);
     setError("");
     const { error: actionError } = await supabase.rpc("accrue_user_investments", { p_user_id: userId });
@@ -271,35 +317,64 @@ function AdminPage() {
 
   const pending = useMemo(() => txs.filter((tx) => tx.approval_status === "awaiting"), [txs]);
   const approved = useMemo(() => txs.filter((tx) => tx.approval_status === "approved"), [txs]);
-  const pendingKyc = useMemo(() => users.filter((user) => user.kyc_status === "pending").length, [users]);
+  const pendingKyc = useMemo(() => users.filter((user) => user.kyc_status === "pending"), [users]);
   const blockedUsers = useMemo(() => users.filter((user) => user.blocked).length, [users]);
   const totalBalance = useMemo(() => users.reduce((sum, user) => sum + Number(user.available_balance || 0), 0), [users]);
   const activeInvestments = useMemo(() => investments.filter((item) => item.status === "active").length, [investments]);
+  const reconciliationProblems = useMemo(
+    () =>
+      reconciliation.filter(
+        (row) =>
+          row.negative_balance ||
+          !deltaOk(row.locked_delta) ||
+          !deltaOk(row.deposits_delta) ||
+          !deltaOk(row.withdrawals_delta) ||
+          !deltaOk(row.referral_delta) ||
+          !deltaOk(row.investment_profit_delta),
+      ),
+    [reconciliation],
+  );
 
   const filteredTransactions = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return txs;
     return txs.filter((tx) =>
-      [tx.id, tx.user_id, tx.type, tx.method, tx.status, tx.approval_status]
+      [tx.id, tx.user_id, tx.type, tx.method, tx.status, tx.approval_status, tx.note]
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(q)),
     );
   }, [txs, query]);
 
+  const filteredUsers = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return users;
+    return users.filter((user) =>
+      [user.user_id, user.email, user.username, user.fullname, user.country, user.kyc_status]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(q)),
+    );
+  }, [users, query]);
+
   const selectedUser = users.find((user) => user.user_id === selectedUserId) || null;
+
+  const setSection = (next: Tab) => {
+    setTab(next);
+    setQuery("");
+    if (next === "reconciliation") void loadReconciliation();
+  };
 
   if (allowed === false) return <Navigate to="/admin/login" replace />;
 
   return (
-    <AdminShell>
+    <AdminShell activeSection={tab} onSectionChange={setSection}>
       <div className="mx-auto max-w-[1500px] px-1 py-1 pb-16">
         <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-accent">
               <ShieldCheck size={14} /> {adminRole}
             </div>
-            <h1 className="text-2xl font-bold text-fg sm:text-3xl">Admin Control Center</h1>
-            <p className="mt-1 text-sm text-muted">Manage users, transactions, investments and audit activity.</p>
+            <h1 className="text-2xl font-bold text-fg sm:text-3xl">Admin Operations Console</h1>
+            <p className="mt-1 text-sm text-muted">Monitor operations, review exceptions, and execute protected administrator workflows.</p>
           </div>
           <button type="button" onClick={() => void load()} disabled={loading} className="inline-flex items-center justify-center gap-2 rounded-xl border border-line bg-panel px-4 py-2.5 text-sm font-medium text-fg hover:bg-elevated disabled:opacity-60">
             <RefreshCw size={16} className={loading ? "animate-spin" : ""} /> Refresh
@@ -313,47 +388,56 @@ function AdminPage() {
         )}
 
         {loading ? (
-          <div className="rounded-2xl border border-line bg-panel py-20 text-center text-muted">Loading secure admin data…</div>
+          <div className="rounded-2xl border border-line bg-panel py-20 text-center text-muted">Loading secure operations data…</div>
         ) : (
           <>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
               <Stat icon={Clock} label="Awaiting approval" value={pending.length} />
               <Stat icon={CheckCircle} label="Approved / ready" value={approved.length} />
               <Stat icon={Users} label="Registered users" value={users.length} />
               <Stat icon={Ban} label="Blocked users" value={blockedUsers} />
               <Stat icon={Wallet} label="User balances" value={money(totalBalance)} />
+              <Stat icon={FileCheck2} label="KYC queue" value={pendingKyc.length} />
             </div>
 
-            <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              <InfoCard label="KYC awaiting review" value={pendingKyc} />
+            <div className="mt-3 grid gap-3 sm:grid-cols-3">
               <InfoCard label="Automatic accrual" value="Daily at 01:00 Nigeria time" />
+              <InfoCard label="Reconciliation" value={reconciliation.length ? (reconciliationProblems.length ? `${reconciliationProblems.length} exception(s)` : "No exceptions") : "Run a check"} />
+              <InfoCard label="Financial writes" value="Protected server-side RPCs only" />
             </div>
 
             <section className="mt-6 overflow-hidden rounded-2xl border border-line bg-panel">
-              <div className="flex flex-col gap-3 border-b border-line p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
-                <div className="flex flex-wrap rounded-xl bg-elevated p-1">
-                  {(["dashboard", "transactions", "users", "audit"] as const).map((item) => (
-                    <TabButton key={item} active={tab === item} onClick={() => setTab(item)}>
-                      {item === "dashboard" ? "Dashboard" : item === "audit" ? "Audit log" : item[0].toUpperCase() + item.slice(1)}
-                    </TabButton>
+              <div className="flex flex-col gap-3 border-b border-line p-4 sm:p-5">
+                <div className="flex flex-wrap gap-1 rounded-xl bg-elevated p-1">
+                  {([
+                    ["dashboard", "Dashboard"],
+                    ["transactions", "Transactions"],
+                    ["users", "Users"],
+                    ["investments", "Investments"],
+                    ["kyc", "KYC"],
+                    ["reconciliation", "Reconciliation"],
+                    ["audit", "Audit log"],
+                    ["settings", "Operations"],
+                  ] as [Tab, string][]).map(([item, label]) => (
+                    <TabButton key={item} active={tab === item} onClick={() => setSection(item)}>{label}</TabButton>
                   ))}
                 </div>
-                {(tab === "transactions" || tab === "users") && (
-                  <label className="flex items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2 sm:min-w-[300px]">
+                {(tab === "transactions" || tab === "users" || tab === "kyc" || tab === "investments") && (
+                  <label className="flex items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2 sm:max-w-xl">
                     <Search size={16} className="text-muted" />
-                    <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={tab === "users" ? "Search email, name, username, country or ID…" : "Search transactions…"} className="min-w-0 flex-1 bg-transparent text-sm text-fg outline-none placeholder:text-muted" />
+                    <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={tab === "transactions" ? "Search transaction ID, user, type, method or status…" : "Search email, name, username, country, KYC status or ID…"} className="min-w-0 flex-1 bg-transparent text-sm text-fg outline-none placeholder:text-muted" />
                   </label>
                 )}
               </div>
 
               {tab === "dashboard" && (
                 <div className="grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3">
-                  <ControlCard icon={Users} title="User management" text="Search accounts, inspect balances and KYC state, and block or unblock accounts." onClick={() => setTab("users")} />
-                  <ControlCard icon={Wallet} title="Transaction control" text="Approve, reject and settle transactions with administrator audit records." onClick={() => setTab("transactions")} />
-                  <ControlCard icon={TrendingUp} title="Investment regulation" text="Open an investor profile and regulate daily accrual settings per investment." onClick={() => setTab("users")} />
-                  <ControlCard icon={ShieldCheck} title="Audit history" text="Review administrator actions and the values changed by each action." onClick={() => setTab("audit")} />
-                  <ControlCard icon={RefreshCw} title="Daily accrual" text="Automatic server-side accrual runs once per day. Manual accrual is available from an investor profile." onClick={() => setTab("users")} />
-                  <ControlCard icon={CheckCircle} title="KYC queue" text={`${pendingKyc} account${pendingKyc === 1 ? "" : "s"} currently awaiting KYC review.`} onClick={() => setTab("users")} />
+                  <ControlCard icon={Users} title="Users & access" text="Search accounts, inspect balances and manage blocks through protected RPCs." onClick={() => setSection("users")} />
+                  <ControlCard icon={Wallet} title="Transaction operations" text="Approve, reject and settle transactions with server-side authorization and audit trails." onClick={() => setSection("transactions")} />
+                  <ControlCard icon={TrendingUp} title="Investment operations" text="Review active plans, regulate accrual settings and run due accrual through protected RPCs." onClick={() => setSection("investments")} />
+                  <ControlCard icon={FileCheck2} title="KYC review queue" text={`${pendingKyc.length} account${pendingKyc.length === 1 ? "" : "s"} currently awaiting review. KYC mutation controls are intentionally disabled until a dedicated protected RPC exists.`} onClick={() => setSection("kyc")} />
+                  <ControlCard icon={ShieldCheck} title="Financial reconciliation" text="Run a read-only server-side reconciliation across balances, investments and transaction totals." onClick={() => setSection("reconciliation")} />
+                  <ControlCard icon={SlidersHorizontal} title="Operations & safeguards" text="Review scheduler state, permissions and the boundaries of the administrator console." onClick={() => setSection("settings")} />
                 </div>
               )}
 
@@ -366,20 +450,21 @@ function AdminPage() {
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="font-semibold capitalize text-fg">{tx.type}</span>
                             <Status value={tx.approval_status} />
+                            <Status value={tx.status} />
                             <span className="text-lg font-semibold text-fg">{money(tx.amount)}</span>
                           </div>
                           <p className="mt-1 text-sm text-muted">{tx.method || "No method"} · {new Date(tx.created_at).toLocaleString()}</p>
-                          <p className="mt-1 break-all text-xs text-subtle">User: {tx.user_id}</p>
+                          <p className="mt-1 break-all text-xs text-subtle">User: {tx.user_id} · Transaction: {tx.id}</p>
                           {tx.note && <p className="mt-2 text-xs text-muted">{tx.note}</p>}
                         </div>
                         <div className="flex shrink-0 flex-wrap gap-2">
-                          {tx.approval_status === "awaiting" && (
+                          {canTransactions && tx.approval_status === "awaiting" && (
                             <>
                               <button type="button" disabled={busy === tx.id} onClick={() => void act("approve", tx.id)} className="inline-flex items-center gap-2 rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"><CheckCircle size={16} /> Approve</button>
                               <button type="button" disabled={busy === tx.id} onClick={() => { setRejectId(tx.id); setRejectReason(""); }} className="inline-flex items-center gap-2 rounded-xl border border-red-500/40 px-4 py-2.5 text-sm font-medium text-red-300 disabled:opacity-60"><XCircle size={16} /> Reject</button>
                             </>
                           )}
-                          {tx.approval_status === "approved" && tx.status !== "completed" && (
+                          {canTransactions && tx.approval_status === "approved" && tx.status !== "completed" && (
                             <button type="button" disabled={busy === tx.id} onClick={() => void act("settle", tx.id)} className="inline-flex items-center gap-2 rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"><CheckCircle size={16} /> Settle</button>
                           )}
                         </div>
@@ -400,32 +485,32 @@ function AdminPage() {
               )}
 
               {tab === "users" && (
-                <div className="divide-y divide-line">
-                  {users.length === 0 ? <EmptyState text="No users found." /> : users.map((user) => (
-                    <div key={user.user_id} className="p-4 sm:p-5">
-                      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                        <button type="button" onClick={() => void openUser(user.user_id)} className="min-w-0 text-left">
-                          <div className="font-semibold text-fg">{user.fullname || user.username || "Unnamed user"}</div>
-                          <div className="mt-1 break-all text-xs text-muted">{user.email || "No email"} · @{user.username || "—"} · {user.country || "Country not set"}</div>
-                          <div className="mt-1 break-all text-[11px] text-subtle">{user.user_id}</div>
-                        </button>
-                        <div className="flex flex-wrap items-center gap-3">
-                          <div><div className="text-[10px] uppercase tracking-wide text-muted">Balance</div><div className="font-semibold text-fg">{money(user.available_balance)}</div></div>
-                          <Status value={user.blocked ? "blocked" : user.kyc_status || "pending"} />
-                          <button type="button" onClick={() => void openUser(user.user_id)} className="inline-flex items-center gap-2 rounded-xl border border-line px-3 py-2 text-sm text-fg hover:bg-elevated"><Eye size={15} /> Manage</button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <UserList users={filteredUsers} onOpen={(id) => void openUser(id)} />
+              )}
+
+              {tab === "investments" && (
+                <InvestmentQueue users={filteredUsers} onOpen={(id) => void openUser(id)} />
+              )}
+
+              {tab === "kyc" && (
+                <KycQueue users={pendingKyc.filter((user) => {
+                  const q = query.trim().toLowerCase();
+                  return !q || [user.user_id, user.email, user.username, user.fullname, user.country].filter(Boolean).some((value) => String(value).toLowerCase().includes(q));
+                })} onOpen={(id) => void openUser(id)} />
+              )}
+
+              {tab === "reconciliation" && (
+                <ReconciliationPanel rows={reconciliation} loading={reconLoading} problems={reconciliationProblems.length} onRun={() => void loadReconciliation()} />
               )}
 
               {tab === "audit" && (
                 <div className="divide-y divide-line">
-                  {audit.length === 0 ? <EmptyState text="No administrator actions recorded yet." /> : audit.map((row) => (
+                  {!canAudit ? (
+                    <EmptyState text="Your administrator role does not include audit-log access." />
+                  ) : audit.length === 0 ? <EmptyState text="No administrator actions recorded yet." /> : audit.map((row) => (
                     <div key={row.id} className="p-4 sm:p-5">
                       <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                        <div className="font-semibold text-fg">{row.action.replaceAll("_", " ")}</div>
+                        <div className="font-semibold capitalize text-fg">{row.action.replaceAll("_", " ")}</div>
                         <div className="text-xs text-muted">{new Date(row.created_at).toLocaleString()}</div>
                       </div>
                       <div className="mt-1 break-all text-xs text-subtle">User: {row.user_id || "—"} · Target: {row.target_id || "—"}</div>
@@ -434,94 +519,213 @@ function AdminPage() {
                   ))}
                 </div>
               )}
+
+              {tab === "settings" && (
+                <OperationsPanel adminRole={adminRole} permissions={permissions} canTransactions={canTransactions} canUsers={canUsers} canInvestments={canInvestments} canAudit={canAudit} />
+              )}
             </section>
           </>
         )}
 
         {showUserPanel && selectedUser && (
-          <div className="fixed inset-0 z-[120] flex items-end justify-center bg-black/70 p-0 sm:items-center sm:p-6" onMouseDown={(event) => { if (event.target === event.currentTarget) setShowUserPanel(false); }}>
-            <div className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-t-3xl border border-line bg-panel p-5 shadow-2xl sm:rounded-3xl sm:p-6">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="text-xl font-bold text-fg">{selectedUser.fullname || selectedUser.username || "Unnamed user"}</h2>
-                    <Status value={selectedUser.blocked ? "blocked" : selectedUser.kyc_status || "pending"} />
-                  </div>
-                  <p className="mt-1 break-all text-sm text-muted">{selectedUser.email || "No email"} · {selectedUser.country || "Country not set"}</p>
-                  <p className="mt-1 break-all text-xs text-subtle">{selectedUser.user_id}</p>
-                </div>
-                <button type="button" onClick={() => setShowUserPanel(false)} className="self-end rounded-xl border border-line px-3 py-2 text-sm text-muted hover:text-fg sm:self-auto">Close</button>
-              </div>
-
-              <div className="mt-5 grid gap-3 sm:grid-cols-4">
-                <MiniStat label="Available" value={money(selectedUser.available_balance)} />
-                <MiniStat label="Locked" value={money(selectedUser.locked_balance)} />
-                <MiniStat label="Deposits" value={money(selectedUser.total_deposits)} />
-                <MiniStat label="Withdrawals" value={money(selectedUser.total_withdrawals)} />
-              </div>
-
-              <div className="mt-5 rounded-2xl border border-line bg-surface p-4">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-                  <div className="min-w-0 flex-1">
-                    <label className="text-xs font-semibold uppercase tracking-wide text-muted">Block reason</label>
-                    <input value={blockReason} onChange={(event) => setBlockReason(event.target.value)} maxLength={300} className="mt-2 w-full rounded-xl border border-line bg-panel px-3 py-2.5 text-sm text-fg outline-none focus:border-accent" placeholder="Reason shown in admin records" />
-                  </div>
-                  <button type="button" disabled={busy === `block:${selectedUser.user_id}`} onClick={() => void toggleBlock(selectedUser)} className={selectedUser.blocked ? "inline-flex items-center justify-center gap-2 rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60" : "inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"}>
-                    <Ban size={16} /> {selectedUser.blocked ? "Unblock user" : "Block user"}
-                  </button>
-                </div>
-              </div>
-
-              <div className="mt-5 flex items-center justify-between">
-                <div><h3 className="font-semibold text-fg">Investments</h3><p className="text-xs text-muted">{activeInvestments} active investment(s) for this user</p></div>
-                <button type="button" disabled={busy === `accrue:${selectedUser.user_id}`} onClick={() => void accrueNow(selectedUser.user_id)} className="inline-flex items-center gap-2 rounded-xl border border-accent/30 bg-accent/10 px-3 py-2 text-xs font-semibold text-accent disabled:opacity-60"><TrendingUp size={15} /> Accrue due now</button>
-              </div>
-
-              <div className="mt-3 space-y-3">
-                {investments.length === 0 ? <EmptyState text="No investments found for this user." /> : investments.map((investment) => (
-                  <div key={investment.id} className="rounded-2xl border border-line bg-surface p-4">
-                    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                      <div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-semibold text-fg">{investment.plan_id || "Investment plan"}</span>
-                          <Status value={investment.status} />
-                          <Status value={investment.daily_accrual_enabled ? "accrual on" : "accrual off"} />
-                        </div>
-                        <div className="mt-2 grid gap-2 text-sm text-muted sm:grid-cols-3">
-                          <span>Principal: <b className="text-fg">{money(investment.principal)}</b></span>
-                          <span>Daily rate: <b className="text-fg">{percent(investment.daily_rate)}</b></span>
-                          <span>Profit credited: <b className="text-fg">{money(investment.credited_profit)}</b></span>
-                        </div>
-                        <div className="mt-1 text-xs text-subtle">{investment.duration_days} days · Started {new Date(investment.started_at).toLocaleDateString()} · Last accrual {new Date(investment.last_accrual_at).toLocaleString()}</div>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        <input aria-label="Daily rate percent" type="number" min="0" step="0.01" value={rateDraft} onChange={(event) => setRateDraft(event.target.value)} className="w-28 rounded-xl border border-line bg-panel px-3 py-2 text-sm text-fg outline-none" />
-                        <button type="button" disabled={busy === `investment:${investment.id}`} onClick={() => { const value = Number(rateDraft); if (!Number.isFinite(value) || value < 0) { setError("Enter a valid non-negative daily rate."); return; } void updateInvestment(investment.id, value); }} className="rounded-xl border border-line px-3 py-2 text-sm font-medium text-fg hover:bg-elevated disabled:opacity-60">Save rate %</button>
-                        <button type="button" disabled={busy === `investment:${investment.id}`} onClick={() => void updateInvestment(investment.id, undefined, !investment.daily_accrual_enabled)} className="inline-flex items-center gap-2 rounded-xl border border-line px-3 py-2 text-sm font-medium text-fg hover:bg-elevated disabled:opacity-60">
-                          {investment.daily_accrual_enabled ? <><PauseCircle size={15} /> Pause</> : <><PlayCircle size={15} /> Enable</>}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-5 rounded-2xl border border-line bg-surface p-4">
-                <h3 className="font-semibold text-fg">Recent transactions</h3>
-                <div className="mt-3 space-y-2">
-                  {txs.filter((tx) => tx.user_id === selectedUser.user_id).slice(0, 20).map((tx) => (
-                    <div key={tx.id} className="flex flex-col gap-1 border-b border-line pb-2 text-sm last:border-0">
-                      <div className="flex justify-between gap-3"><span className="capitalize text-fg">{tx.type}</span><span className="text-fg">{money(tx.amount)}</span></div>
-                      <div className="text-xs text-muted">{tx.status} · {new Date(tx.created_at).toLocaleString()}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
+          <UserModal
+            user={selectedUser}
+            investments={investments}
+            txs={txs.filter((tx) => tx.user_id === selectedUser.user_id).slice(0, 20)}
+            canUsers={canUsers}
+            canInvestments={canInvestments}
+            busy={busy}
+            blockReason={blockReason}
+            setBlockReason={setBlockReason}
+            rateDrafts={rateDrafts}
+            setRateDrafts={setRateDrafts}
+            onClose={() => setShowUserPanel(false)}
+            onBlock={() => void toggleBlock(selectedUser)}
+            onAccrue={() => void accrueNow(selectedUser.user_id)}
+            onUpdateInvestment={updateInvestment}
+          />
         )}
       </div>
     </AdminShell>
+  );
+}
+
+function UserList({ users, onOpen }: { users: UserProfile[]; onOpen: (id: string) => void }) {
+  return (
+    <div className="divide-y divide-line">
+      {users.length === 0 ? <EmptyState text="No users found." /> : users.map((user) => (
+        <div key={user.user_id} className="p-4 sm:p-5">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <button type="button" onClick={() => onOpen(user.user_id)} className="min-w-0 text-left">
+              <div className="font-semibold text-fg">{user.fullname || user.username || "Unnamed user"}</div>
+              <div className="mt-1 break-all text-xs text-muted">{user.email || "No email"} · @{user.username || "—"} · {user.country || "Country not set"}</div>
+              <div className="mt-1 break-all text-[11px] text-subtle">{user.user_id}</div>
+            </button>
+            <div className="flex flex-wrap items-center gap-3">
+              <div><div className="text-[10px] uppercase tracking-wide text-muted">Balance</div><div className="font-semibold text-fg">{money(user.available_balance)}</div></div>
+              <Status value={user.blocked ? "blocked" : user.kyc_status || "pending"} />
+              <button type="button" onClick={() => onOpen(user.user_id)} className="inline-flex items-center gap-2 rounded-xl border border-line px-3 py-2 text-sm text-fg hover:bg-elevated"><Eye size={15} /> Manage</button>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function InvestmentQueue({ users, onOpen }: { users: UserProfile[]; onOpen: (id: string) => void }) {
+  return (
+    <div className="divide-y divide-line">
+      {users.length === 0 ? <EmptyState text="No users found. Open a user to inspect investment operations." /> : users.map((user) => (
+        <div key={user.user_id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+          <div>
+            <div className="font-semibold text-fg">{user.fullname || user.username || "Unnamed user"}</div>
+            <div className="mt-1 text-xs text-muted">{user.email || "No email"} · Locked {money(user.locked_balance)} · Available {money(user.available_balance)}</div>
+          </div>
+          <button type="button" onClick={() => onOpen(user.user_id)} className="inline-flex items-center justify-center gap-2 rounded-xl border border-line px-3 py-2 text-sm text-fg hover:bg-elevated"><TrendingUp size={15} /> Open investments</button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function KycQueue({ users, onOpen }: { users: UserProfile[]; onOpen: (id: string) => void }) {
+  return (
+    <div className="divide-y divide-line">
+      {users.length === 0 ? <EmptyState text="No pending KYC profiles in the loaded queue." /> : users.map((user) => (
+        <div key={user.user_id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+          <div>
+            <div className="flex flex-wrap items-center gap-2"><span className="font-semibold text-fg">{user.fullname || user.username || "Unnamed user"}</span><Status value={user.kyc_status || "pending"} /></div>
+            <div className="mt-1 text-xs text-muted">{user.email || "No email"} · {user.country || "Country not set"}</div>
+            <div className="mt-1 text-xs text-subtle">Created {new Date(user.created_at).toLocaleDateString()}</div>
+          </div>
+          <button type="button" onClick={() => onOpen(user.user_id)} className="inline-flex items-center justify-center gap-2 rounded-xl border border-line px-3 py-2 text-sm text-fg hover:bg-elevated"><Eye size={15} /> Review profile</button>
+        </div>
+      ))}
+      <div className="m-4 rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 text-xs leading-5 text-amber-200">KYC approval/rejection is intentionally read-only here. No dedicated protected KYC mutation RPC was found in the current backend, so the console will not write KYC state directly.</div>
+    </div>
+  );
+}
+
+function ReconciliationPanel({ rows, loading, problems, onRun }: { rows: ReconciliationRow[]; loading: boolean; problems: number; onRun: () => void }) {
+  return (
+    <div className="p-4 sm:p-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div><h2 className="font-semibold text-fg">Read-only financial reconciliation</h2><p className="mt-1 text-xs text-muted">Server-side comparison of profile balances, active investment principal and completed transaction totals.</p></div>
+        <button type="button" onClick={onRun} disabled={loading} className="inline-flex items-center justify-center gap-2 rounded-xl border border-line px-3 py-2 text-sm text-fg hover:bg-elevated disabled:opacity-60"><RefreshCw size={15} className={loading ? "animate-spin" : ""} /> Run check</button>
+      </div>
+      {rows.length === 0 ? <EmptyState text="Run reconciliation to load the current server-side checks." /> : (
+        <>
+          <div className={`mt-4 rounded-xl border p-4 ${problems ? "border-red-500/30 bg-red-500/5 text-red-200" : "border-emerald-500/30 bg-emerald-500/5 text-emerald-200"}`}>
+            <div className="font-semibold">{problems ? `${problems} account(s) need review` : "All loaded accounts reconcile"}</div>
+            <div className="mt-1 text-xs opacity-80">{problems ? "No automatic repair was attempted." : "All tested deltas are zero and no negative balances were reported."}</div>
+          </div>
+          <div className="mt-4 overflow-x-auto rounded-xl border border-line">
+            <table className="min-w-[980px] w-full text-left text-xs">
+              <thead className="bg-elevated text-muted"><tr><th className="p-3">User</th><th className="p-3">Available</th><th className="p-3">Locked Δ</th><th className="p-3">Deposits Δ</th><th className="p-3">Withdrawals Δ</th><th className="p-3">Referrals Δ</th><th className="p-3">Profit Δ</th><th className="p-3">Status</th></tr></thead>
+              <tbody className="divide-y divide-line">{rows.map((row) => {
+                const bad = row.negative_balance || !deltaOk(row.locked_delta) || !deltaOk(row.deposits_delta) || !deltaOk(row.withdrawals_delta) || !deltaOk(row.referral_delta) || !deltaOk(row.investment_profit_delta);
+                return <tr key={row.user_id}><td className="p-3 font-mono text-[10px]">{row.user_id}</td><td className="p-3">{money(row.available_balance)}</td><td className="p-3">{money(row.locked_delta)}</td><td className="p-3">{money(row.deposits_delta)}</td><td className="p-3">{money(row.withdrawals_delta)}</td><td className="p-3">{money(row.referral_delta)}</td><td className="p-3">{money(row.investment_profit_delta)}</td><td className="p-3"><Status value={bad ? "review" : "ok"} /></td></tr>;
+              })}</tbody>
+            </table>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function OperationsPanel({ adminRole, permissions, canTransactions, canUsers, canInvestments, canAudit }: { adminRole: string; permissions: string[]; canTransactions: boolean; canUsers: boolean; canInvestments: boolean; canAudit: boolean }) {
+  return (
+    <div className="grid gap-4 p-4 sm:grid-cols-2 sm:p-5">
+      <InfoCard label="Administrator role" value={adminRole} />
+      <InfoCard label="Permission mode" value={permissions.length ? permissions.join(", ") : "Legacy/full administrator"} />
+      <InfoCard label="Transaction mutations" value={canTransactions ? "Enabled through protected RPCs" : "UI disabled"} />
+      <InfoCard label="User mutations" value={canUsers ? "Enabled through protected RPCs" : "UI disabled"} />
+      <InfoCard label="Investment mutations" value={canInvestments ? "Enabled through protected RPCs" : "UI disabled"} />
+      <InfoCard label="Audit access" value={canAudit ? "Enabled" : "UI disabled"} />
+      <div className="sm:col-span-2 rounded-2xl border border-line bg-surface p-5">
+        <div className="flex items-center gap-2 font-semibold text-fg"><ShieldCheck size={18} className="text-accent" /> Financial safety boundary</div>
+        <p className="mt-2 text-sm leading-6 text-muted">This console never writes balances, investments or transaction states directly. Approvals, rejections, settlements, blocks, investment regulation and accrual all remain behind server-side authorization and database RPCs.</p>
+      </div>
+      <div className="sm:col-span-2 rounded-2xl border border-amber-500/20 bg-amber-500/5 p-5">
+        <div className="font-semibold text-amber-200">Emergency financial pause</div>
+        <p className="mt-2 text-sm leading-6 text-amber-100/80">No client-side emergency switch has been added because a safe circuit breaker must be enforced by the backend RPC layer itself. The UI will not pretend a local toggle can stop financial writes.</p>
+      </div>
+      <div className="sm:col-span-2 rounded-2xl border border-line bg-surface p-5">
+        <div className="flex items-center gap-2 font-semibold text-fg"><Clock size={18} className="text-accent" /> Automated accrual</div>
+        <p className="mt-2 text-sm leading-6 text-muted">Production daily accrual is scheduled server-side at 00:00 UTC (01:00 Nigeria time during WAT). Manual accrual from a user profile also remains protected by the investment authorization path.</p>
+      </div>
+    </div>
+  );
+}
+
+function UserModal({ user, investments, txs, canUsers, canInvestments, busy, blockReason, setBlockReason, rateDrafts, setRateDrafts, onClose, onBlock, onAccrue, onUpdateInvestment }: {
+  user: UserProfile;
+  investments: Investment[];
+  txs: Tx[];
+  canUsers: boolean;
+  canInvestments: boolean;
+  busy: string | null;
+  blockReason: string;
+  setBlockReason: (value: string) => void;
+  rateDrafts: Record<string, string>;
+  setRateDrafts: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+  onClose: () => void;
+  onBlock: () => void;
+  onAccrue: () => void;
+  onUpdateInvestment: (investmentId: string, dailyRatePercent?: number, enabled?: boolean) => Promise<void>;
+}) {
+  const activeInvestments = investments.filter((item) => item.status === "active").length;
+
+  return (
+    <div className="fixed inset-0 z-[120] flex items-end justify-center bg-black/70 p-0 sm:items-center sm:p-6" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+      <div className="max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-t-3xl border border-line bg-panel p-5 shadow-2xl sm:rounded-3xl sm:p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div><div className="flex flex-wrap items-center gap-2"><h2 className="text-xl font-bold text-fg">{user.fullname || user.username || "Unnamed user"}</h2><Status value={user.blocked ? "blocked" : user.kyc_status || "pending"} /></div><p className="mt-1 break-all text-sm text-muted">{user.email || "No email"} · {user.country || "Country not set"}</p><p className="mt-1 break-all text-xs text-subtle">{user.user_id}</p></div>
+          <button type="button" onClick={onClose} className="self-end rounded-xl border border-line px-3 py-2 text-sm text-muted hover:text-fg sm:self-auto">Close</button>
+        </div>
+
+        <div className="mt-5 grid gap-3 sm:grid-cols-4">
+          <MiniStat label="Available" value={money(user.available_balance)} />
+          <MiniStat label="Locked" value={money(user.locked_balance)} />
+          <MiniStat label="Deposits" value={money(user.total_deposits)} />
+          <MiniStat label="Withdrawals" value={money(user.total_withdrawals)} />
+        </div>
+
+        <div className="mt-5 rounded-2xl border border-line bg-surface p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <div className="min-w-0 flex-1"><label className="text-xs font-semibold uppercase tracking-wide text-muted">Block reason</label><input value={blockReason} onChange={(event) => setBlockReason(event.target.value)} maxLength={300} disabled={!canUsers} className="mt-2 w-full rounded-xl border border-line bg-panel px-3 py-2.5 text-sm text-fg outline-none focus:border-accent disabled:opacity-60" placeholder="Reason shown in admin records" /></div>
+            <button type="button" disabled={!canUsers || busy === `block:${user.user_id}`} onClick={onBlock} className={user.blocked ? "inline-flex items-center justify-center gap-2 rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60" : "inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"}><Ban size={16} /> {user.blocked ? "Unblock user" : "Block user"}</button>
+          </div>
+        </div>
+
+        <div className="mt-5 flex items-center justify-between">
+          <div><h3 className="font-semibold text-fg">Investment operations</h3><p className="text-xs text-muted">{activeInvestments} active investment(s)</p></div>
+          <button type="button" disabled={!canInvestments || busy === `accrue:${user.user_id}`} onClick={onAccrue} className="inline-flex items-center gap-2 rounded-xl border border-accent/30 bg-accent/10 px-3 py-2 text-xs font-semibold text-accent disabled:opacity-60"><TrendingUp size={15} /> Accrue due now</button>
+        </div>
+
+        <div className="mt-3 space-y-3">
+          {investments.length === 0 ? <EmptyState text="No investments found for this user." /> : investments.map((investment) => (
+            <div key={investment.id} className="rounded-2xl border border-line bg-surface p-4">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                <div><div className="flex flex-wrap items-center gap-2"><span className="font-semibold text-fg">{investment.plan_id || "Investment plan"}</span><Status value={investment.status} /><Status value={investment.daily_accrual_enabled ? "accrual on" : "accrual off"} /></div><div className="mt-2 grid gap-2 text-sm text-muted sm:grid-cols-3"><span>Principal: <b className="text-fg">{money(investment.principal)}</b></span><span>Daily rate: <b className="text-fg">{percent(investment.daily_rate)}</b></span><span>Profit credited: <b className="text-fg">{money(investment.credited_profit)}</b></span></div><div className="mt-1 text-xs text-subtle">{investment.duration_days} days · Started {new Date(investment.started_at).toLocaleDateString()} · Last accrual {new Date(investment.last_accrual_at).toLocaleString()}</div></div>
+                <div className="flex flex-wrap gap-2">
+                  <input aria-label="Daily rate percent" type="number" min="0" step="0.01" value={rateDrafts[investment.id] ?? String(Number(investment.daily_rate) * 100)} onChange={(event) => setRateDrafts((current) => ({ ...current, [investment.id]: event.target.value }))} disabled={!canInvestments} className="w-28 rounded-xl border border-line bg-panel px-3 py-2 text-sm text-fg outline-none disabled:opacity-60" />
+                  <button type="button" disabled={!canInvestments || busy === `investment:${investment.id}`} onClick={() => { const value = Number(rateDrafts[investment.id]); if (!Number.isFinite(value) || value < 0) return; void onUpdateInvestment(investment.id, value); }} className="rounded-xl border border-line px-3 py-2 text-sm font-medium text-fg hover:bg-elevated disabled:opacity-60">Save rate %</button>
+                  <button type="button" disabled={!canInvestments || busy === `investment:${investment.id}`} onClick={() => void onUpdateInvestment(investment.id, undefined, !investment.daily_accrual_enabled)} className="inline-flex items-center gap-2 rounded-xl border border-line px-3 py-2 text-sm font-medium text-fg hover:bg-elevated disabled:opacity-60">{investment.daily_accrual_enabled ? <><PauseCircle size={15} /> Pause</> : <><PlayCircle size={15} /> Enable</>}</button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-5 rounded-2xl border border-line bg-surface p-4">
+          <h3 className="font-semibold text-fg">Recent transactions</h3>
+          <div className="mt-3 space-y-2">{txs.length ? txs.map((tx) => <div key={tx.id} className="flex flex-col gap-1 border-b border-line pb-2 text-sm last:border-0"><div className="flex justify-between gap-3"><span className="capitalize text-fg">{tx.type}</span><span className="text-fg">{money(tx.amount)}</span></div><div className="text-xs text-muted">{tx.status} · {new Date(tx.created_at).toLocaleString()}</div></div>) : <EmptyState text="No recent transactions loaded." />}</div>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -542,13 +746,13 @@ function ControlCard({ icon: Icon, title, text, onClick }: { icon: typeof Users;
 }
 
 function TabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
-  return <button type="button" onClick={onClick} className={active ? "rounded-lg bg-panel px-4 py-2 text-sm font-semibold text-fg shadow-sm" : "rounded-lg px-4 py-2 text-sm text-muted"}>{children}</button>;
+  return <button type="button" onClick={onClick} className={active ? "rounded-lg bg-panel px-4 py-2 text-sm font-semibold text-fg shadow-sm" : "rounded-lg px-4 py-2 text-sm text-muted hover:text-fg"}>{children}</button>;
 }
 
 function Status({ value }: { value: string }) {
   const normalized = value.toLowerCase();
-  const positive = ["approved", "completed", "verified", "active", "accrual on"].includes(normalized);
-  const negative = ["rejected", "failed", "blocked", "paused", "accrual off"].includes(normalized);
+  const positive = ["approved", "completed", "verified", "active", "accrual on", "ok"].includes(normalized);
+  const negative = ["rejected", "failed", "blocked", "paused", "accrual off", "review"].includes(normalized);
   return <span className={"inline-flex rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide " + (positive ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300" : negative ? "border-red-500/30 bg-red-500/10 text-red-300" : "border-amber-500/30 bg-amber-500/10 text-amber-300")}>{value}</span>;
 }
 

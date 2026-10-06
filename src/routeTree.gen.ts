@@ -229,6 +229,9 @@ export interface FileRoutesById {
   '/register': typeof RegisterRoute
   '/admin': typeof AdminRoute
   '/admin/login': typeof AdminLoginRoute
+  '/admin/transactions': typeof AdminTransactionsRoute
+  '/admin/deposits': typeof AdminDepositsRoute
+  '/admin/withdrawals': typeof AdminWithdrawalsRoute
   '/app/admin': typeof AppAdminRoute
   '/app/deposit': typeof AppDepositRoute
   '/app/history': typeof AppHistoryRoute

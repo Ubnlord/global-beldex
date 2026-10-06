@@ -5,6 +5,7 @@ import path from "node:path";
 
 const root = process.cwd();
 const migration = fs.readFileSync(path.join(root, "migrations/0008_security_hardening_v1.sql"), "utf8");
+const directWriteLockdown = fs.readFileSync(path.join(root, "migrations/0009_lock_down_direct_client_writes.sql"), "utf8");
 
 const mustContain = [
   "revoke all on function public.admin_has_permission(text) from public, anon, authenticated;",

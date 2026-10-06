@@ -10,6 +10,7 @@ const suite = fs.readFileSync(path.join(root, "supabase/tests/financial_safeguar
 const withdrawalMigration = fs.readFileSync(path.join(root, "migrations/0019_withdrawal_address_validation.sql"), "utf8");
 const withdrawalValidator = fs.readFileSync(path.join(root, "src/lib/financial/withdrawal-address.ts"), "utf8");
 const operationsHardening = fs.readFileSync(path.join(root, "migrations/0020_post_release_operations_hardening.sql"), "utf8");
+const adminAuditIdentity = fs.readFileSync(path.join(root, "migrations/0022_admin_audit_identity_hardening.sql"), "utf8");
 const adminRoute = fs.readFileSync(path.join(root, "src/routes/admin.tsx"), "utf8");
 const adminShell = fs.readFileSync(path.join(root, "src/components/admin/admin-shell.tsx"), "utf8");
 
@@ -46,6 +47,8 @@ test("permanent financial safeguard suite is present and non-destructive", () =>
   assert.match(operationsHardening, /p\.total_deposits - coalesce\(d\.amount,0\)/);
   assert.match(operationsHardening, /p\.total_withdrawals - coalesce\(w\.amount,0\)/);
   assert.match(operationsHardening, /p\.locked_balance-coalesce\(i\.active_principal,0\)/);
+  assert.match(adminAuditIdentity, /select id\\s+into v_admin_id\\s+from public\.admin_user\\s+where user_id = auth\.uid\(\)/i);
+  assert.match(adminAuditIdentity, /alter column admin_id drop not null/i);
   for (const section of ["Transactions", "Users", "Investments", "KYC", "Reconciliation", "Audit log", "Operations"]) {
     assert.match(adminRoute, new RegExp(section));
     assert.match(adminShell, new RegExp(section));

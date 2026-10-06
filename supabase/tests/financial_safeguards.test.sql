@@ -123,7 +123,7 @@ select function_privs_are('public', 'admin_adjust_balance', array['uuid','numeri
 select function_privs_are('public', 'create_financial_transaction', array['text','numeric','text','text','uuid'], 'authenticated', array['EXECUTE'], 'authenticated can create financial requests');
 
 select ok(
-  position("p_type = 'withdraw' and p_amount < 300" in pg_get_functiondef('public.create_financial_transaction(text,numeric,text,text,uuid)'::regprocedure)) > 0,
+  position('p_type = ''withdraw'' and p_amount < 300' in pg_get_functiondef('public.create_financial_transaction(text,numeric,text,text,uuid)'::regprocedure)) > 0,
   'withdrawal RPC enforces the $300 minimum'
 );
 select function_privs_are('public', 'swap_assets', array['uuid','text','text','numeric','numeric'], 'authenticated', '{}', 'authenticated cannot execute swap_assets directly');

@@ -1,4 +1,5 @@
 import type { ErrorComponentProps } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { TriangleAlert } from "lucide-react";
 import { copy } from "@/lib/platform/i18n";
 import { usePlatform } from "@/lib/platform/store";
@@ -11,6 +12,30 @@ export function AppErrorComponent({ error }: ErrorComponentProps) {
       : typeof error === "string" && error
         ? error
         : p.errorFallback;
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const isChunkFailure =
+      message.includes("Failed to fetch dynamically imported module") ||
+      message.includes("Importing a module script failed") ||
+      message.includes("ChunkLoadError");
+
+    if (!isChunkFailure) return;
+
+    // GitHub Pages replaces hashed assets on each deployment. A user can keep
+    // an older SPA shell in the browser cache that points at a chunk that no
+    // longer exists. TanStack Router renders this error inside React, so the
+    // global recovery listener in __root.tsx is not guaranteed to see it.
+    // Force one fresh document request for the current route.
+    const marker = "__gb_reload";
+    const url = new URL(window.location.href);
+    if (url.searchParams.has(marker)) return;
+
+    url.searchParams.set(marker, String(Date.now()));
+    window.location.replace(url.toString());
+  }, [message]);
+
   return (
     <main
       className={

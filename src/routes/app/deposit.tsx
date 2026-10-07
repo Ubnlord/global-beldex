@@ -26,8 +26,10 @@ function DepositPage() {
   const t = copy[lang];
   const { book } = useBeldexQuote();
   const [amount, setAmount] = useState("");
+  const [currency, setCurrency] = useState<"BDX" | "USD">("BDX");
   const [method, setMethod] = useState<keyof typeof DEPOSIT_METHODS>("BELDEX");
   const isBeldex = method === "BELDEX";
+  const isBdxCurrency = currency === "BDX";
   const [step, setStep] = useState<"form" | "pay">(() => {
     if (typeof window === "undefined") return "form";
     return new URLSearchParams(window.location.search).get("step") === "pay" ? "pay" : "form";
@@ -51,7 +53,8 @@ function DepositPage() {
 
   const goPay = () => {
     const n = parseFloat(amount);
-    if (!n || (isBeldex ? n < 4000 : n < 300)) {
+    const minimum = isBeldex ? (isBdxCurrency ? 4000 : bdxToUsd(4000)) : 300;
+    if (!n || n < minimum) {
       toast(t.err.MIN_DEPOSIT);
       return;
     }
@@ -64,7 +67,7 @@ function DepositPage() {
 
   const confirm = async () => {
     const n = parseFloat(amount);
-    const err = await deposit(n, DEPOSIT_METHODS[method].title, requestId ?? crypto.randomUUID());
+    const err = await deposit(n, DEPOSIT_METHODS[method].title, requestId ?? crypto.randomUUID(), currency);
     if (err) {
       toastError(err);
       return;
@@ -91,19 +94,25 @@ function DepositPage() {
 
       {step === "form" ? (
         <div className="mt-6 rounded-lg border border-line bg-elevated p-5">
-          <FieldLabel>{isBeldex ? "Amount (BDX)" : t.amountUsd}</FieldLabel>
+          <FieldLabel>Deposit currency</FieldLabel>
+          <div className="mt-2 grid grid-cols-2 gap-2 rounded-md border border-line bg-surface p-1">
+            <button type="button" onClick={() => { setCurrency("BDX"); setMethod("BELDEX"); }} className={currency === "BDX" ? "rounded-md bg-accent px-3 py-2 text-xs font-semibold text-accent-fg" : "rounded-md px-3 py-2 text-xs text-subtle"}>BDX</button>
+            <button type="button" onClick={() => setCurrency("USD")} className={currency === "USD" ? "rounded-md bg-accent px-3 py-2 text-xs font-semibold text-accent-fg" : "rounded-md px-3 py-2 text-xs text-subtle"}>USD</button>
+          </div>
+          <FieldLabel><span className="mt-4 block">{currency === "BDX" ? "Amount (BDX)" : "Amount (USD)"}</span></FieldLabel>
           <div className="relative mt-2">
-            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-subtle">{isBeldex ? "BDX" : "$"}</span>
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-subtle">{currency === "BDX" ? "BDX" : "$"}</span>
             <Input
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               type="number"
-              placeholder={isBeldex ? "Enter BDX amount..." : "Enter amount... Min $300"}
+              placeholder={currency === "BDX" ? "Enter BDX amount... Min 4,000" : "Enter USD amount... Min $293.984"}
               className="mt-0 pl-8"
             />
           </div>
           <div className="mt-2 text-[10px] text-subtle">
-            {isBeldex ? `Minimum: ${formatBdx(4000)} · ${formatUsd(bdxToUsd(4000), 3)} · 1 BDX = ${formatUsd(BDX_USD_RATE, 6)}` : t.minHint}
+            {currency === "BDX" ? `Minimum: ${formatBdx(4000)} · ${formatUsd(bdxToUsd(4000), 3)}` : `Minimum: ${formatUsd(bdxToUsd(4000), 3)} · ${formatBdx(4000)} equivalent`}
+            {isBeldex ? ` · 1 BDX = ${formatUsd(BDX_USD_RATE, 6)}` : ""}
           </div>
           <div className="mt-5">
             <div className="mb-2 text-[11px] text-muted">{t.payMethod}</div>
@@ -135,14 +144,14 @@ function DepositPage() {
               </button>
               <Method
                 active={method === "BTC"}
-                onClick={() => setMethod("BTC")}
+                onClick={() => { setMethod("BTC"); setCurrency("USD"); }}
                 coin="bitcoin"
                 title="Bitcoin"
                 detail="BTC · 1-2 hrs"
               />
               <Method
                 active={method === "ETH"}
-                onClick={() => setMethod("ETH")}
+                onClick={() => { setMethod("ETH"); setCurrency("USD"); }}
                 coin="ethereum"
                 title="Ethereum"
                 detail="ETH · ERC-20"
@@ -157,22 +166,22 @@ function DepositPage() {
         <div className="mt-6 rounded-lg border border-line bg-elevated p-5">
           <div className="text-xs text-muted">{t.sendExactly}</div>
           <div className="text-2xl font-bold tabular text-accent">
-            {isBeldex ? `${formatBdx(parseFloat(amount || "0"))} · ${formatUsd(bdxToUsd(parseFloat(amount || "0")), 3)}` : `${parseFloat(amount || "0").toFixed(2)}`}
+            {currency === "BDX" ? `${formatBdx(parseFloat(amount || "0"))} · ${formatUsd(bdxToUsd(parseFloat(amount || "0")), 3)}` : `${parseFloat(amount || "0").toFixed(3)}`}
           </div>
           <div className="mt-1 text-[11px] text-subtle">
             via {DEPOSIT_METHODS[method].title}
-            {isBeldex ? ` · Platform rate: 1 BDX = ${formatUsd(BDX_USD_RATE, 6)}` : spot ? ` · ${formatCoinUsd(spot.usd)}` : ""}
+            {isBeldex && currency === "BDX" ? ` · Platform rate: 1 BDX = ${formatUsd(BDX_USD_RATE, 6)}` : isBeldex && currency === "USD" ? ` · ${formatBdx((parseFloat(amount || "0") || 0) / BDX_USD_RATE)} required` : spot ? ` · ${formatCoinUsd(spot.usd)}` : ""}
           </div>
           {isBeldex ? (
             <div className="mt-3 rounded-md border border-accent/30 bg-accent/5 px-3 py-2.5">
               <div className="text-[10px] text-subtle">Account conversion rate</div>
               <div className="mt-1 flex items-end justify-between gap-3">
-                <div className="text-lg font-bold tabular text-fg">{formatUsd(BDX_USD_RATE, 6)} / BDX</div>
+                <div className="text-lg font-bold tabular text-fg">{currency === "BDX" ? `${formatUsd(BDX_USD_RATE, 6)} / BDX` : `${formatBdx((parseFloat(amount || "0") || 0) / BDX_USD_RATE)} required`}</div>
                 <div className="text-right text-sm font-semibold tabular text-accent">
-                  {formatUsd(bdxToUsd(parseFloat(amount || "0")), 3)} USD
+                  {currency === "BDX" ? formatUsd(bdxToUsd(parseFloat(amount || "0")), 3) : formatUsd(parseFloat(amount || "0") || 0, 3)} USD
                 </div>
               </div>
-              <div className="mt-1 text-[10px] text-subtle">This platform uses the fixed BDX denomination rate for deposits.</div>
+              <div className="mt-1 text-[10px] text-subtle">{currency === "BDX" ? "This platform uses the fixed BDX denomination rate." : "USD deposits through Beldex are converted to the BDX amount shown before sending."}</div>
             </div>
           ) : qty && spot ? (
             <div className="mt-3 rounded-md border border-line bg-surface px-3 py-2.5">

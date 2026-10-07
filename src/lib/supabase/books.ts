@@ -26,7 +26,7 @@ export async function pullCloudBook(): Promise<Book | null> {
       .order("created_at", { ascending: false }),
     supabase
       .from("user_investment")
-      .select("id,plan_id,principal,daily_rate,duration_days,started_at,credited_profit,status,investment_plan_catalog(name)")
+      .select("id,plan_id,principal,daily_rate,duration_days,started_at,last_accrual_at,credited_profit,status,investment_plan_catalog(name)")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false }),
   ]);
@@ -59,6 +59,8 @@ export async function pullCloudBook(): Promise<Book | null> {
       status: p.status === "completed" ? "completed" : "active",
       color: "#2AF5D4",
       creditedDays: undefined,
+      creditedProfit: num(p.credited_profit),
+      lastAccrualAt: p.last_accrual_at ? new Date(p.last_accrual_at).getTime() : undefined,
     };
   });
 

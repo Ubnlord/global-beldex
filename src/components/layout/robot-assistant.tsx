@@ -1,5 +1,5 @@
 import { Bot, ChevronDown, Maximize2, MessageCircle, Send, X } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { usePlatform } from "@/lib/platform/store";
 
 type ChatMessage = {
@@ -44,6 +44,16 @@ export function RobotAssistant() {
   const lang = usePlatform((s) => s.lang);
   const user = usePlatform((s) => s.user);
   const [open, setOpen] = useState(false);
+  const [pulse, setPulse] = useState(false);
+
+  useEffect(() => {
+    const pulseButton = () => {
+      setPulse(true);
+      window.setTimeout(() => setPulse(false), 900);
+    };
+    const timer = window.setInterval(pulseButton, 10_000);
+    return () => window.clearInterval(timer);
+  }, []);
   const [expanded, setExpanded] = useState(false);
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>(() => [
@@ -77,11 +87,11 @@ export function RobotAssistant() {
           type="button"
           onClick={() => setOpen(true)}
           aria-label="Open Global Beldex Assistant"
-          className="fixed bottom-[88px] right-4 z-[70] flex size-14 items-center justify-center rounded-full border border-accent/40 bg-accent text-accent-fg shadow-2xl shadow-black/30 transition hover:scale-105 active:scale-95"
+          className={`fixed bottom-[88px] right-4 z-[70] flex size-14 items-center justify-center rounded-full border border-red-300/50 bg-red-600 text-white shadow-2xl shadow-black/30 transition hover:scale-105 active:scale-95 ${pulse ? "animate-bounce" : ""}`}
         >
           <span className="relative">
             <Bot size={28} strokeWidth={2.2} />
-            <span className="absolute -right-1 -top-1 size-2.5 rounded-full bg-white" />
+            <span className="absolute -right-1 -top-1 size-2.5 rounded-full bg-accent ring-2 ring-red-600" />
           </span>
         </button>
       )}

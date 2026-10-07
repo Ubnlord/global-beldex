@@ -53,6 +53,8 @@ export type ActivePlan = {
   color: string;
   /** Full days of interest already added to the simulated balance. */
   creditedDays?: number;
+  creditedProfit?: number;
+  lastAccrualAt?: number;
 };
 
 export type Notice = {

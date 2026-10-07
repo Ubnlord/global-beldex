@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { RotateCw } from "lucide-react";
 import { Navigate, Outlet } from "@tanstack/react-router";
 import { usePlatform } from "@/lib/platform/store";
 import { pullCloudBook } from "@/lib/supabase/books";
@@ -98,8 +99,16 @@ export function AppShell() {
   if (!hydrated) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-bg text-muted">
-        <div className="animate-pulse text-base font-semibold tracking-wide">
-          Loading Global Beldex<span className="inline-block animate-bounce">...</span>
+        <div className="flex flex-col items-center">
+          <RotateCw
+            size={34}
+            strokeWidth={2.5}
+            className="mb-3 animate-spin text-accent"
+            aria-hidden="true"
+          />
+          <div className="animate-pulse text-base font-semibold tracking-wide">
+            Loading Global Beldex<span className="inline-block animate-bounce">...</span>
+          </div>
         </div>
       </div>
     );

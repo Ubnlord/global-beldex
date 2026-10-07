@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { copy, fill, type Lang } from "./i18n";
 import { planCeiling, type Plan } from "./catalog";
-import { uid } from "@/lib/utils";
+import { bdxToUsd, uid } from "@/lib/utils";
 import { pullCloudBook } from "@/lib/supabase/books";
 import { supabase } from "@/lib/supabase/client";
 import type { CloudProfile } from "@/lib/supabase/auth";
@@ -235,10 +235,10 @@ export const usePlatform = create<PlatformState>()(
         },
 
         deposit: async (amount, method, requestId) => {
-          if (!amount || amount < 300) return "MIN_DEPOSIT";
+          if (!amount || (method === "BELDEX" ? bdxToUsd(amount) < 300 : amount < 300)) return "MIN_DEPOSIT";
           const { error } = await supabase.rpc("create_financial_transaction", {
             p_type: "deposit",
-            p_amount: amount,
+            p_amount: method === "BELDEX" ? bdxToUsd(amount) : amount,
             p_method: method,
             p_note: null,
             p_request_id: requestId ? requestId : null,
@@ -253,10 +253,11 @@ export const usePlatform = create<PlatformState>()(
           const addressError = validateWithdrawalDestination(method, address);
           if (addressError) return addressError;
           if (!amount || amount <= 0) return "NEED_AMOUNT";
-          if (amount > get().available) return "INSUFFICIENT";
+          const usdAmount = method === "Beldex" ? bdxToUsd(amount) : amount;
+          if (usdAmount > get().available) return "INSUFFICIENT";
           const { error } = await supabase.rpc("create_financial_transaction", {
             p_type: "withdraw",
-            p_amount: amount,
+            p_amount: usdAmount,
             p_method: method,
             p_note: address.trim(),
             p_request_id: requestId ? requestId : null,

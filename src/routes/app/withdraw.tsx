@@ -134,7 +134,7 @@ function WithdrawPage() {
             min={currency === "BDX" ? 4000 : bdxToUsd(4000)}
             step={currency === "BDX" ? "0.001" : "0.001"}
             placeholder={currency === "BDX" ? "Minimum 4,000 BDX" : "Minimum $293.984"}
-            className="mt-0 pl-8"
+            className="mt-0 h-14 border-2 border-line-strong bg-surface pl-16 pr-4 text-base font-medium placeholder:text-muted focus:border-accent focus:ring-2 focus:ring-accent/20"
           />
         </div>
         <div className="mt-2 flex justify-between text-[11px]">

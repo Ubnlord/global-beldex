@@ -113,8 +113,8 @@ type PlatformState = {
   setUserProfile: (user: User | CloudProfile) => void;
   logout: () => void;
   updateProfile: (patch: Partial<User>) => void;
-  deposit: (amount: number, method: string, requestId?: string) => Promise<string | null>;
-  withdraw: (amount: number, method: string, address: string, requestId?: string) => Promise<string | null>;
+  deposit: (amount: number, method: string, requestId?: string, currency?: "BDX" | "USD") => Promise<string | null>;
+  withdraw: (amount: number, method: string, address: string, requestId?: string, currency?: "BDX" | "USD") => Promise<string | null>;
   buyPlan: (plan: Plan, amount: number) => Promise<string | null>;
   settlePlans: () => Promise<void>;
   swap: (from: "USD" | "BDX", to: "USD" | "BDX", amount: number, rate?: number) => Promise<string | null>;
@@ -234,11 +234,13 @@ export const usePlatform = create<PlatformState>()(
           set({ txs });
         },
 
-        deposit: async (amount, method, requestId) => {
-          if (!amount || (method === "BELDEX" ? bdxToUsd(amount) < 300 : amount < 300)) return "MIN_DEPOSIT";
+        deposit: async (amount, method, requestId, currency = "BDX") => {
+          const isBeldex = method === "BELDEX";
+          const usdAmount = isBeldex && currency === "BDX" ? bdxToUsd(amount) : amount;
+          if (!amount || (isBeldex ? usdAmount < bdxToUsd(4000) : usdAmount < 300)) return "MIN_DEPOSIT";
           const { error } = await supabase.rpc("create_financial_transaction", {
             p_type: "deposit",
-            p_amount: method === "BELDEX" ? bdxToUsd(amount) : amount,
+            p_amount: usdAmount,
             p_method: method,
             p_note: null,
             p_request_id: requestId ? requestId : null,
@@ -248,12 +250,13 @@ export const usePlatform = create<PlatformState>()(
           return null;
         },
 
-        withdraw: async (amount, method, address, requestId) => {
+        withdraw: async (amount, method, address, requestId, currency = "BDX") => {
           if (!method) return "NEED_METHOD";
           const addressError = validateWithdrawalDestination(method, address);
           if (addressError) return addressError;
           if (!amount || amount <= 0) return "NEED_AMOUNT";
-          const usdAmount = method === "Beldex" ? bdxToUsd(amount) : amount;
+          const usdAmount = method === "Beldex" && currency === "BDX" ? bdxToUsd(amount) : amount;
+          if (usdAmount < (method === "Beldex" ? bdxToUsd(4000) : 300)) return "MIN_WITHDRAWAL";
           if (usdAmount > get().available) return "INSUFFICIENT";
           const { error } = await supabase.rpc("create_financial_transaction", {
             p_type: "withdraw",

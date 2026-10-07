@@ -9,10 +9,10 @@ export const LANGS: { id: Lang; label: string; short: string }[] = [
   { id: "it", label: "Italiano", short: "IT" },
   { id: "pt", label: "Português", short: "PT" },
   { id: "nl", label: "Nederlands", short: "NL" },
-  { id: "yue", label: "Cantonese (粵語)", short: "YUE" },
-  { id: "zh", label: "Mandarin (普通话)", short: "ZH" },
-  { id: "hi", label: "हिन्दी", short: "HI" },
-  { id: "ta", label: "தமிழ்", short: "TA" },
+  { id: "yue", label: "🇭🇰 Cantonese — 粵語", short: "YUE" },
+  { id: "zh", label: "🇨🇳 Mandarin — 普通话", short: "ZH" },
+  { id: "hi", label: "🇮🇳 Hindi — हिन्दी", short: "HI" },
+  { id: "ta", label: "🇮🇳 Tamil — தமிழ்", short: "TA" },
 ];
 
 const en = {

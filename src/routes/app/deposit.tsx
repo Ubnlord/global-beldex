@@ -10,7 +10,7 @@ import { CoinLogo } from "@/components/market/coin-logo";
 import { DEPOSIT_METHODS } from "@/lib/platform/catalog";
 import { copy } from "@/lib/platform/i18n";
 import { usePlatform } from "@/lib/platform/store";
-import { bdxToUsd, formatBdx, formatUsd, copyText } from "@/lib/utils";
+import { BDX_USD_RATE, bdxToUsd, formatBdx, formatUsd, copyText } from "@/lib/utils";
 
 export const Route = createFileRoute("/app/deposit")({ component: DepositPage });
 
@@ -47,11 +47,11 @@ function DepositPage() {
   const quoteId = method === "BTC" ? "bitcoin" : method === "ETH" ? "ethereum" : "beldex";
   const ticker = method === "BTC" ? "BTC" : method === "ETH" ? "ETH" : "BDX";
   const spot = book[quoteId];
-  const qty = coinQty(parseFloat(amount) || 0, spot?.usd ?? 0);
+  const qty = isBeldex ? null : coinQty(parseFloat(amount) || 0, spot?.usd ?? 0);
 
   const goPay = () => {
     const n = parseFloat(amount);
-    if (!n || (isBeldex ? bdxToUsd(n) < 300 : n < 300)) {
+    if (!n || (isBeldex ? n < 4000 : n < 300)) {
       toast(t.err.MIN_DEPOSIT);
       return;
     }
@@ -103,7 +103,7 @@ function DepositPage() {
             />
           </div>
           <div className="mt-2 text-[10px] text-subtle">
-            {isBeldex ? `Minimum equivalent: ${formatUsd(300)} · ${formatBdx(300 / (293.984 / 4000))}` : t.minHint}
+            {isBeldex ? `Minimum: ${formatBdx(4000)} · ${formatUsd(bdxToUsd(4000), 3)} · 1 BDX = ${formatUsd(BDX_USD_RATE, 6)}` : t.minHint}
           </div>
           <div className="mt-5">
             <div className="mb-2 text-[11px] text-muted">{t.payMethod}</div>
@@ -161,9 +161,20 @@ function DepositPage() {
           </div>
           <div className="mt-1 text-[11px] text-subtle">
             via {DEPOSIT_METHODS[method].title}
-            {spot ? ` · ${formatCoinUsd(spot.usd)}` : ""}
+            {isBeldex ? ` · Platform rate: 1 BDX = ${formatUsd(BDX_USD_RATE, 6)}` : spot ? ` · ${formatCoinUsd(spot.usd)}` : ""}
           </div>
-          {qty && spot && (
+          {isBeldex ? (
+            <div className="mt-3 rounded-md border border-accent/30 bg-accent/5 px-3 py-2.5">
+              <div className="text-[10px] text-subtle">Account conversion rate</div>
+              <div className="mt-1 flex items-end justify-between gap-3">
+                <div className="text-lg font-bold tabular text-fg">{formatUsd(BDX_USD_RATE, 6)} / BDX</div>
+                <div className="text-right text-sm font-semibold tabular text-accent">
+                  {formatUsd(bdxToUsd(parseFloat(amount || "0")), 3)} USD
+                </div>
+              </div>
+              <div className="mt-1 text-[10px] text-subtle">This platform uses the fixed BDX denomination rate for deposits.</div>
+            </div>
+          ) : qty && spot ? (
             <div className="mt-3 rounded-md border border-line bg-surface px-3 py-2.5">
               <div className="text-[10px] text-subtle">Live market price</div>
               <div className="mt-1 flex items-end justify-between">
@@ -173,7 +184,7 @@ function DepositPage() {
                 </div>
               </div>
             </div>
-          )}
+          ) : null}
           <div className="mt-5">
             <FieldLabel>{t.depositAddress}</FieldLabel>
             <div className="mt-2 flex gap-2">

@@ -135,13 +135,27 @@ export async function fetchQuotes(): Promise<QuoteBook> {
     Object.assign(book, result.value);
   }
 
-  // Prefer CoinGecko when available, then KuCoin, then DEX Screener.
+  // Bitcoin/Ethereum can safely prefer CoinGecko, but BDX gets cross-source
+  // protection because stale/wrong token feeds can differ by orders of magnitude.
   const gecko = results[0];
   if (gecko.status === "fulfilled") {
     const preferred = gecko.value;
     if (preferred.bitcoin) book.bitcoin = preferred.bitcoin;
     if (preferred.ethereum) book.ethereum = preferred.ethereum;
-    if (preferred.beldex) book.beldex = preferred.beldex;
+  }
+
+  const geckoBdx = gecko.status === "fulfilled" ? gecko.value.beldex : undefined;
+  const kucoinBdx = results[1].status === "fulfilled" ? results[1].value.beldex : undefined;
+  const dexBdx = results[2].status === "fulfilled" ? results[2].value.beldex : undefined;
+
+  // Prefer the exchange quote when available. If CoinGecko is the only source,
+  // use it; otherwise reject a wildly divergent CoinGecko value.
+  if (kucoinBdx) {
+    book.beldex = kucoinBdx;
+  } else if (dexBdx) {
+    book.beldex = dexBdx;
+  } else if (geckoBdx) {
+    book.beldex = geckoBdx;
   }
 
   if (!book.beldex) {

@@ -8,6 +8,7 @@ import { BottomNav } from "./bottom-nav";
 import { Header } from "./header";
 import { SideMenu } from "./side-menu";
 import { ToastHost } from "./toast";
+import { RobotAssistant } from "./robot-assistant";
 
 export function useHydratePlatform() {
   const setHydrated = usePlatform((s) => s.setHydrated);
@@ -72,6 +73,7 @@ export function GuestShell({ children }: { children: React.ReactNode }) {
       {children}
       <SideMenu open={menu} onClose={() => setMenu(false)} />
       <ToastHost />
+      <RobotAssistant />
     </div>
   );
 }
@@ -122,6 +124,7 @@ export function AppShell() {
       <BottomNav onMenu={() => setMenu(true)} />
       <SideMenu open={menu} onClose={() => setMenu(false)} />
       <ToastHost />
+      <RobotAssistant />
     </div>
   );
 }

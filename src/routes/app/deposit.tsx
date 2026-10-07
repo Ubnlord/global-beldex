@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Check, Copy } from "lucide-react";
 import { useEffect, useState } from "react";
-import { TickerTape, SymbolOverview } from "@/components/market/tradingview";
+import { TickerTape } from "@/components/market/tradingview";
 import { BeldexLivePrice, CoinPrice, MarketBoard, coinQty, formatCoinUsd, useBeldexQuote } from "@/components/market/live-price";
 import { toast, toastError } from "@/components/layout/toast";
 import { Button } from "@/components/ui/button";
@@ -79,21 +79,6 @@ function DepositPage() {
       </div>
       <h2 className="text-xl font-bold">{t.depositTitle}</h2>
       <p className="mt-1 text-xs text-subtle">{t.depositLead}</p>
-
-      <div className="mt-4 rounded-lg border border-line bg-elevated p-4">
-        <div className="mb-2 flex items-center justify-between">
-          <div className="text-xs font-semibold text-fg">Live BDXUSD</div>
-          <a
-            href="https://www.tradingview.com/symbols/BDXUSD/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[10px] text-accent"
-          >
-            TradingView
-          </a>
-        </div>
-        <SymbolOverview />
-      </div>
 
       <div className="mt-4">
         <BeldexLivePrice />

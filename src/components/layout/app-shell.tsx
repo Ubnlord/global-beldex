@@ -98,7 +98,7 @@ export function AppShell() {
   if (!hydrated) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-bg text-muted">
-        Loading workspace…
+        Preparing your GLOBAL BELDEX dashboard…
       </div>
     );
   }

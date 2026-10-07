@@ -97,7 +97,7 @@ function Dashboard() {
           <ArrowDownToLine size={16} /> {t.investNow}
         </Button>
         <Button
-          className="mt-3 w-full bg-violet-600 text-white hover:bg-violet-500"
+          className="mt-3 w-full bg-green-500 text-white hover:bg-green-400"
           onClick={() => navigate({ to: "/app/plans" })}
         >
           <TrendingUp size={16} /> {t.buyPlan}

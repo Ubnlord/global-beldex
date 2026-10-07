@@ -95,7 +95,7 @@ function WithdrawPage() {
               <button
                 key={m.id}
                 type="button"
-                onClick={() => { setMethod(m.label); if (m.id !== "BDX") setCurrency("USD"); }}
+                onClick={() => { setMethod(m.label); if (m.id !== "BELDEX") setCurrency("USD"); }}
                 className={
                   active
                     ? "flex items-center justify-between rounded-md border-2 border-accent bg-accent/10 p-3"

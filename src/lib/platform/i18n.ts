@@ -3,12 +3,12 @@ import { pageEn, pageEs } from "@/lib/platform/page-copy";
 export type Lang = "en" | "es" | "fr" | "it" | "pt" | "nl" | "yue" | "zh" | "hi" | "ta";
 
 export const LANGS: { id: Lang; label: string; short: string }[] = [
-  { id: "en", label: "English", short: "EN" },
-  { id: "es", label: "Español", short: "ES" },
-  { id: "fr", label: "Français", short: "FR" },
-  { id: "it", label: "Italiano", short: "IT" },
-  { id: "pt", label: "Português", short: "PT" },
-  { id: "nl", label: "Nederlands", short: "NL" },
+  { id: "en", label: "🇬🇧 English", short: "EN" },
+  { id: "es", label: "🇪🇸 Español", short: "ES" },
+  { id: "fr", label: "🇫🇷 Français", short: "FR" },
+  { id: "it", label: "🇮🇹 Italiano", short: "IT" },
+  { id: "pt", label: "🇵🇹 Português", short: "PT" },
+  { id: "nl", label: "🇳🇱 Nederlands", short: "NL" },
   { id: "yue", label: "🇭🇰 Cantonese — 粵語", short: "YUE" },
   { id: "zh", label: "🇨🇳 Mandarin — 普通话", short: "ZH" },
   { id: "hi", label: "🇮🇳 Hindi — हिन्दी", short: "HI" },

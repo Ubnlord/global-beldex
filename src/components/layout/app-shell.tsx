@@ -9,6 +9,7 @@ import { Header } from "./header";
 import { SideMenu } from "./side-menu";
 import { ToastHost } from "./toast";
 import { RobotAssistant } from "./robot-assistant";
+import { useRealtimeUserNotifications } from "@/lib/supabase/realtime-notifications";
 
 export function useHydratePlatform() {
   const setHydrated = usePlatform((s) => s.setHydrated);
@@ -80,6 +81,7 @@ export function GuestShell({ children }: { children: React.ReactNode }) {
 
 export function AppShell() {
   useHydratePlatform();
+  useRealtimeUserNotifications();
   const [menu, setMenu] = useState(false);
   const user = usePlatform((s) => s.user);
   const hydrated = usePlatform((s) => s.hydrated);

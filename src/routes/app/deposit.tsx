@@ -101,13 +101,12 @@ function DepositPage() {
           </div>
           <FieldLabel><span className="mt-4 block">{currency === "BDX" ? "Amount (BDX)" : "Amount (USD)"}</span></FieldLabel>
           <div className="relative mt-2">
-            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-subtle">{currency === "BDX" ? "BDX" : "$"}</span>
             <Input
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               type="number"
               placeholder={currency === "BDX" ? "Enter BDX amount... Min 4,000" : "Enter USD amount... Min $293.984"}
-              className="mt-0 h-14 border-2 border-line-strong bg-surface pl-16 pr-4 text-base font-medium placeholder:text-muted focus:border-accent focus:ring-2 focus:ring-accent/20"
+              className="mt-0 h-14 border-2 border-line-strong bg-surface px-4 text-base font-medium placeholder:text-muted focus:border-accent focus:ring-2 focus:ring-accent/20"
             />
           </div>
           <div className="mt-2 text-[10px] text-subtle">

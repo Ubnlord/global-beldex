@@ -98,7 +98,9 @@ export function AppShell() {
   if (!hydrated) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-bg text-muted">
-        Preparing your GLOBAL BELDEX dashboard…
+        <div className="animate-pulse text-base font-semibold tracking-wide">
+          Loading Global Beldex<span className="inline-block animate-bounce">...</span>
+        </div>
       </div>
     );
   }

@@ -9,7 +9,7 @@ import type { Plan } from "@/lib/platform/catalog";
 import { projectedReturn } from "@/lib/platform/catalog";
 import { copy, fill } from "@/lib/platform/i18n";
 import { usePlatform } from "@/lib/platform/store";
-import { formatUsd } from "@/lib/utils";
+import { bdxToUsd, formatBdx, formatUsd } from "@/lib/utils";
 
 export const Route = createFileRoute("/app/plans")({ component: PlansPage });
 
@@ -69,7 +69,8 @@ function PlansPage() {
             <div className="text-[11px] font-bold tracking-widest text-accent">
               {selected.name}
             </div>
-            <div className="mt-1 text-xl font-bold">{selected.min.toLocaleString()} BDX min</div>
+            <div className="mt-1 text-xl font-bold">{formatBdx(selected.min)} min</div>
+            <div className="mt-1 text-xs font-semibold text-accent">≈ {formatUsd(bdxToUsd(selected.min), 3)} USD</div>
             <p className="mt-2 text-[13px] text-subtle">
               {selected.profit} · {selected.duration} · max {selected.max}
             </p>
@@ -131,8 +132,8 @@ function InvestmentMetrics({ plan }: { plan: import("@/lib/platform/store").Acti
     : nextRun.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
 
   const metrics = [
-    { label: "Today's Interest", value: `+${formatUsd(dailyInterest)}` },
-    { label: "Total Interest Earned", value: `+${formatUsd(totalInterest)}` },
+    { label: "Today's Interest", value: `+${formatBdx(dailyInterest)} · ${formatUsd(bdxToUsd(dailyInterest), 3)}` },
+    { label: "Total Interest Earned", value: `+${formatBdx(totalInterest)} · ${formatUsd(bdxToUsd(totalInterest), 3)}` },
     { label: "Next Interest", value: nextInterest },
     { label: "Days Remaining", value: String(daysRemaining) },
   ];
@@ -142,7 +143,8 @@ function InvestmentMetrics({ plan }: { plan: import("@/lib/platform/store").Acti
       <div className="flex items-center justify-between gap-3">
         <div>
           <div className="text-[11px] font-bold tracking-widest text-accent">{plan.name}</div>
-          <div className="mt-1 text-sm font-semibold">{formatUsd(plan.amount)} principal</div>
+          <div className="mt-1 text-sm font-semibold">{formatBdx(plan.amount)} principal</div>
+          <div className="mt-0.5 text-xs text-subtle">≈ {formatUsd(bdxToUsd(plan.amount), 3)} USD</div>
         </div>
         <span className="rounded-full border border-line px-2 py-1 text-[10px] font-semibold uppercase text-subtle">
           {plan.status}

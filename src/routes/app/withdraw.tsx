@@ -1,10 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Shield, Zap } from "lucide-react";
 import { useState } from "react";
-import { AdvancedChart, TickerTape } from "@/components/market/tradingview";
+import { TickerTape } from "@/components/market/tradingview";
 import { BeldexLivePrice, CoinPrice, MarketBoard, coinQty, formatCoinUsd, useBeldexQuote } from "@/components/market/live-price";
 import { toast, toastError } from "@/components/layout/toast";
-import { TvCredit } from "@/components/platform/plan-card";
 import { Button } from "@/components/ui/button";
 import { FieldLabel, Input } from "@/components/ui/input";
 import { CoinLogo } from "@/components/market/coin-logo";
@@ -69,11 +68,6 @@ function WithdrawPage() {
       <TickerTape />
       <h2 className="mt-4 text-xl font-bold">{t.withdrawTitle}</h2>
       <p className="mt-1 text-xs text-subtle">{t.withdrawLead}</p>
-
-      <div className="mt-4 rounded-lg border border-line bg-elevated p-4">
-        <AdvancedChart />
-        <TvCredit className="mt-2" />
-      </div>
 
       <div className="mt-4">
         <BeldexLivePrice />

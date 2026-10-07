@@ -62,3 +62,10 @@ export function initials(name: string) {
 export function uid() {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
+
+
+/** Platform BDX/USD quote used for account denomination and display. */
+export const BDX_USD_RATE = 293.984 / 4000;
+export function bdxToUsd(bdx: number) { return bdx * BDX_USD_RATE; }
+export function usdToBdx(usd: number) { return usd / BDX_USD_RATE; }
+export function formatBdx(n: number, digits = 3) { return `${n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: digits })} BDX`; }

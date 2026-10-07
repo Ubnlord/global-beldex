@@ -26,8 +26,8 @@ function DepositPage() {
   const t = copy[lang];
   const { book } = useBeldexQuote();
   const [amount, setAmount] = useState("");
-  const isBeldex = method === "BELDEX";
   const [method, setMethod] = useState<keyof typeof DEPOSIT_METHODS>("BELDEX");
+  const isBeldex = method === "BELDEX";
   const [step, setStep] = useState<"form" | "pay">(() => {
     if (typeof window === "undefined") return "form";
     return new URLSearchParams(window.location.search).get("step") === "pay" ? "pay" : "form";

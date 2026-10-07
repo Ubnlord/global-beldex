@@ -96,6 +96,13 @@ function Dashboard() {
         <Button className="mt-5 w-full" onClick={() => navigate({ to: "/app/deposit" })}>
           <ArrowDownToLine size={16} /> {t.investNow}
         </Button>
+        <Button
+          variant="secondary"
+          className="mt-3 w-full"
+          onClick={() => navigate({ to: "/app/plans" })}
+        >
+          <TrendingUp size={16} /> {t.buyPlan}
+        </Button>
       </div>
 
       <div className="mt-4">

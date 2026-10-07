@@ -10,7 +10,7 @@ import { CoinLogo } from "@/components/market/coin-logo";
 import { DEPOSIT_METHODS } from "@/lib/platform/catalog";
 import { copy } from "@/lib/platform/i18n";
 import { usePlatform } from "@/lib/platform/store";
-import { copyText } from "@/lib/utils";
+import { bdxToUsd, formatBdx, formatUsd, copyText } from "@/lib/utils";
 
 export const Route = createFileRoute("/app/deposit")({ component: DepositPage });
 
@@ -26,6 +26,7 @@ function DepositPage() {
   const t = copy[lang];
   const { book } = useBeldexQuote();
   const [amount, setAmount] = useState("");
+  const isBeldex = method === "BELDEX";
   const [method, setMethod] = useState<keyof typeof DEPOSIT_METHODS>("BELDEX");
   const [step, setStep] = useState<"form" | "pay">(() => {
     if (typeof window === "undefined") return "form";
@@ -50,7 +51,7 @@ function DepositPage() {
 
   const goPay = () => {
     const n = parseFloat(amount);
-    if (!n || n < 300) {
+    if (!n || (isBeldex ? bdxToUsd(n) < 300 : n < 300)) {
       toast(t.err.MIN_DEPOSIT);
       return;
     }
@@ -90,19 +91,19 @@ function DepositPage() {
 
       {step === "form" ? (
         <div className="mt-6 rounded-lg border border-line bg-elevated p-5">
-          <FieldLabel>{t.amountUsd}</FieldLabel>
+          <FieldLabel>{isBeldex ? "Amount (BDX)" : t.amountUsd}</FieldLabel>
           <div className="relative mt-2">
-            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-subtle">$</span>
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-subtle">{isBeldex ? "BDX" : "$"}</span>
             <Input
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               type="number"
-              placeholder="Enter amount... Min $300"
+              placeholder={isBeldex ? "Enter BDX amount..." : "Enter amount... Min $300"}
               className="mt-0 pl-8"
             />
           </div>
           <div className="mt-2 text-[10px] text-subtle">
-            {t.minHint}
+            {isBeldex ? `Minimum equivalent: ${formatUsd(300)} · ${formatBdx(300 / (293.984 / 4000))}` : t.minHint}
           </div>
           <div className="mt-5">
             <div className="mb-2 text-[11px] text-muted">{t.payMethod}</div>
@@ -156,7 +157,7 @@ function DepositPage() {
         <div className="mt-6 rounded-lg border border-line bg-elevated p-5">
           <div className="text-xs text-muted">{t.sendExactly}</div>
           <div className="text-2xl font-bold tabular text-accent">
-            ${parseFloat(amount || "0").toFixed(2)}
+            {isBeldex ? `${formatBdx(parseFloat(amount || "0"))} · ${formatUsd(bdxToUsd(parseFloat(amount || "0")), 3)}` : `${parseFloat(amount || "0").toFixed(2)}`}
           </div>
           <div className="mt-1 text-[11px] text-subtle">
             via {DEPOSIT_METHODS[method].title}

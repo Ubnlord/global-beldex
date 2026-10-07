@@ -65,15 +65,15 @@ function SettingsPage() {
       </section>
 
       <section className="mt-6">
-        <div className="text-[11px] font-semibold tracking-widest text-subtle">Notifications</div>
+        <div className="text-[11px] font-semibold tracking-widest text-subtle">{t.notifications}</div>
         <div className="mt-2 space-y-3">
-          <Row label="Real-time alerts">
+          <Row label={t.realTimeAlerts}>
             <div className="flex items-center gap-2 text-xs text-subtle">
               <Bell size={16} className="text-accent" />
-              <span>Live account updates</span>
+              <span>{t.liveAccountUpdates}</span>
             </div>
           </Row>
-          <Row label="Notification sound">
+          <Row label={t.notificationSound}>
             <button
               type="button"
               onClick={() => {
@@ -88,7 +88,7 @@ function SettingsPage() {
               {notificationSound ? "On" : "Off"}
             </button>
           </Row>
-          <Row label="Browser notifications">
+          <Row label={t.browserNotifications}>
             <button
               type="button"
               onClick={async () => {

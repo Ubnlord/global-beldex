@@ -107,7 +107,7 @@ function DepositPage() {
               onChange={(e) => setAmount(e.target.value)}
               type="number"
               placeholder={currency === "BDX" ? "Enter BDX amount... Min 4,000" : "Enter USD amount... Min $293.984"}
-              className="mt-0 pl-8"
+              className="mt-0 h-14 border-2 border-line-strong bg-surface pl-16 pr-4 text-base font-medium placeholder:text-muted focus:border-accent focus:ring-2 focus:ring-accent/20"
             />
           </div>
           <div className="mt-2 text-[10px] text-subtle">

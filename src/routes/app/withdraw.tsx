@@ -10,7 +10,7 @@ import { CoinLogo } from "@/components/market/coin-logo";
 import { WITHDRAW_METHODS } from "@/lib/platform/catalog";
 import { copy } from "@/lib/platform/i18n";
 import { usePlatform } from "@/lib/platform/store";
-import { formatUsd } from "@/lib/utils";
+import { bdxToUsd, formatBdx, formatUsd, usdToBdx } from "@/lib/utils";
 import { validateWithdrawalDestination } from "@/lib/financial/withdrawal-address";
 
 const MIN_WITHDRAWAL = 300;
@@ -24,10 +24,11 @@ function WithdrawPage() {
   const lang = usePlatform((s) => s.lang);
   const t = copy[lang];
   const { book } = useBeldexQuote();
-  const [method, setMethod] = useState("");
+  const [method, setMethod] = useState("Beldex");
   const [amount, setAmount] = useState("");
   const [address, setAddress] = useState("");
   const [requestId, setRequestId] = useState<string | null>(null);
+  const isBeldex = method === "Beldex";
 
   const submit = async () => {
     const n = parseFloat(amount);
@@ -39,7 +40,7 @@ function WithdrawPage() {
       toastError("Amount must be greater than zero");
       return;
     }
-    if (n < MIN_WITHDRAWAL) {
+    if (n < (isBeldex ? usdToBdx(MIN_WITHDRAWAL) : MIN_WITHDRAWAL)) {
       toastError(`Minimum withdrawal is $${MIN_WITHDRAWAL}`);
       return;
     }
@@ -48,7 +49,7 @@ function WithdrawPage() {
       toastError(addressError);
       return;
     }
-    if (n > available) {
+    if ((isBeldex ? bdxToUsd(n) : n) > available) {
       toastError("Insufficient balance");
       return;
     }
@@ -115,25 +116,25 @@ function WithdrawPage() {
           <span className="mt-5 block">{t.amount}</span>
         </FieldLabel>
         <div className="relative mt-2">
-          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-subtle">$</span>
+          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-subtle">{isBeldex ? "BDX" : "$"}</span>
           <Input
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             type="number"
             min={MIN_WITHDRAWAL}
             step="0.01"
-            placeholder={`Minimum ${MIN_WITHDRAWAL}`}
+            placeholder={isBeldex ? `Minimum ${formatBdx(usdToBdx(MIN_WITHDRAWAL))}` : `Minimum ${MIN_WITHDRAWAL}`}
             className="mt-0 pl-8"
           />
         </div>
         <div className="mt-2 flex justify-between text-[11px]">
-          <span className="text-subtle">{t.available}: {formatUsd(available)} · Min: {formatUsd(MIN_WITHDRAWAL)}</span>
+          <span className="text-subtle">{t.available}: {formatUsd(available)} · Min: {isBeldex ? `${formatBdx(usdToBdx(MIN_WITHDRAWAL))} (${formatUsd(MIN_WITHDRAWAL)})` : formatUsd(MIN_WITHDRAWAL)}</span>
           <button type="button" onClick={() => setAmount(String(available))} className="text-accent">
             {t.max}
           </button>
         </div>
         {method && (
-          <CoinEstimate label={method} usd={parseFloat(amount) || 0} book={book} />
+          <CoinEstimate label={method} usd={isBeldex ? bdxToUsd(parseFloat(amount) || 0) : parseFloat(amount) || 0} book={book} />
         )}
 
         <FieldLabel>

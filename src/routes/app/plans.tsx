@@ -75,7 +75,7 @@ function PlansPage() {
               {selected.profit} · {selected.duration} · max {selected.max}
             </p>
             <div className="mt-4">
-              <FieldLabel>{t.lockAmount}</FieldLabel>
+              <FieldLabel>Amount (BDX)</FieldLabel>
               <Input
                 type="number"
                 value={amount}

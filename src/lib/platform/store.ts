@@ -104,6 +104,8 @@ type PlatformState = {
   tickets: Ticket[];
   lang: Lang;
   setLang: (lang: Lang) => void;
+  notificationSound: boolean;
+  setNotificationSound: (enabled: boolean) => void;
   welcomeOpen: boolean;
   dismissWelcome: () => void;
   sessionOnly: boolean;
@@ -169,6 +171,8 @@ export const usePlatform = create<PlatformState>()(
         ...emptyBook(),
         lang: "en",
         setLang: (lang) => set({ lang }),
+        notificationSound: true,
+        setNotificationSound: (enabled) => set({ notificationSound: enabled }),
         welcomeOpen: true,
         dismissWelcome: () => set({ welcomeOpen: false }),
         sessionOnly: false,
@@ -353,6 +357,7 @@ export const usePlatform = create<PlatformState>()(
       },
       partialize: (s) => ({
         lang: s.lang,
+        notificationSound: s.notificationSound,
         welcomeOpen: s.welcomeOpen,
         sessionOnly: s.sessionOnly,
       }),

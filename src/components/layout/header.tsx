@@ -32,7 +32,7 @@ export function Header({ onMenu }: { onMenu?: () => void }) {
           >
             {LANGS.map((item) => (
               <option key={item.id} value={item.id}>
-                {item.short}
+                {item.label}
               </option>
             ))}
           </select>

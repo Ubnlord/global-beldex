@@ -10,7 +10,7 @@ import { CoinLogo } from "@/components/market/coin-logo";
 import { WITHDRAW_METHODS } from "@/lib/platform/catalog";
 import { copy } from "@/lib/platform/i18n";
 import { usePlatform } from "@/lib/platform/store";
-import { bdxToUsd, formatBdx, formatUsd, usdToBdx } from "@/lib/utils";
+import { BDX_USD_RATE, bdxToUsd, formatBdx, formatUsd, usdToBdx } from "@/lib/utils";
 import { validateWithdrawalDestination } from "@/lib/financial/withdrawal-address";
 
 const MIN_WITHDRAWAL = 300;
@@ -40,8 +40,8 @@ function WithdrawPage() {
       toastError("Amount must be greater than zero");
       return;
     }
-    if (n < (isBeldex ? usdToBdx(MIN_WITHDRAWAL) : MIN_WITHDRAWAL)) {
-      toastError(`Minimum withdrawal is $${MIN_WITHDRAWAL}`);
+    if (n < (isBeldex ? 4000 : MIN_WITHDRAWAL)) {
+      toastError(isBeldex ? `Minimum withdrawal is ${formatBdx(4000)} (${formatUsd(bdxToUsd(4000), 3)})` : `Minimum withdrawal is ${MIN_WITHDRAWAL}`);
       return;
     }
     const addressError = validateWithdrawalDestination(method, address);
@@ -128,13 +128,13 @@ function WithdrawPage() {
           />
         </div>
         <div className="mt-2 flex justify-between text-[11px]">
-          <span className="text-subtle">{t.available}: {formatUsd(available)} · Min: {isBeldex ? `${formatBdx(usdToBdx(MIN_WITHDRAWAL))} (${formatUsd(MIN_WITHDRAWAL)})` : formatUsd(MIN_WITHDRAWAL)}</span>
-          <button type="button" onClick={() => setAmount(String(available))} className="text-accent">
+          <span className="text-subtle">{t.available}: {formatUsd(available)} · Min: {isBeldex ? `${formatBdx(4000)} (${formatUsd(bdxToUsd(4000), 3)})` : formatUsd(MIN_WITHDRAWAL)}</span>
+          <button type="button" onClick={() => setAmount(isBeldex ? usdToBdx(available).toFixed(3) : String(available))} className="text-accent">
             {t.max}
           </button>
         </div>
         {method && (
-          <CoinEstimate label={method} usd={isBeldex ? bdxToUsd(parseFloat(amount) || 0) : parseFloat(amount) || 0} book={book} />
+          <CoinEstimate label={method} amount={parseFloat(amount) || 0} usd={isBeldex ? bdxToUsd(parseFloat(amount) || 0) : parseFloat(amount) || 0} book={book} />
         )}
 
         <FieldLabel>
@@ -180,14 +180,25 @@ function WithdrawPage() {
 function CoinEstimate({
   label,
   usd,
+  amount,
   book,
 }: {
   label: string;
   usd: number;
+  amount: number;
   book: Record<string, { usd: number; change: number }>;
 }) {
   const id = label === "Bitcoin" ? "bitcoin" : label === "Ethereum" ? "ethereum" : "beldex";
   const ticker = label === "Bitcoin" ? "BTC" : label === "Ethereum" ? "ETH" : "BDX";
+  if (id === "beldex") {
+    return (
+      <div className="mt-2 rounded-md border border-accent/30 bg-accent/5 px-3 py-2 text-[11px] text-subtle">
+        <div>Platform rate: <span className="font-semibold text-fg">{formatUsd(BDX_USD_RATE, 6)} per BDX</span></div>
+        <div className="mt-0.5">Account value: <span className="font-semibold text-accent">{formatUsd(usd, 3)}</span> for {formatBdx(amount)}</div>
+        <div className="mt-0.5 text-[10px]">Live market price above is informational only; it does not change this account conversion.</div>
+      </div>
+    );
+  }
   const row = book[id];
   if (!row) return null;
   const qty = usd > 0 ? coinQty(usd, row.usd) : null;

@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { TickerTape } from "@/components/market/tradingview";
 import { toast, toastError } from "@/components/layout/toast";
 import { PlanGrid } from "@/components/platform/plan-card";
@@ -16,6 +16,7 @@ export const Route = createFileRoute("/app/plans")({ component: PlansPage });
 function PlansPage() {
   const navigate = useNavigate();
   const available = usePlatform((s) => s.available);
+  const activePlans = usePlatform((s) => s.plans);
   const buyPlan = usePlatform((s) => s.buyPlan);
   const lang = usePlatform((s) => s.lang);
   const t = copy[lang];
@@ -40,6 +41,20 @@ function PlansPage() {
       <TickerTape />
       <h2 className="mt-4 text-xl font-bold">{t.plansTitle}</h2>
       <p className="mt-1 text-xs text-subtle">{fill(t.plansLead, { amount: formatUsd(available) })}</p>
+      {activePlans.length > 0 && (
+        <section className="mt-5 space-y-3">
+          <div>
+            <h3 className="text-sm font-bold">{t.activePlans}</h3>
+            <p className="mt-1 text-xs text-subtle">
+              Your daily interest is calculated from the server-backed investment record.
+            </p>
+          </div>
+          {activePlans.map((plan) => (
+            <InvestmentMetrics key={plan.id} plan={plan} />
+          ))}
+        </section>
+      )}
+
       <PlanGrid
         cta={t.buyPlan}
         onAction={(p) => {
@@ -93,6 +108,54 @@ function Projection({ amount, plan }: { amount: number; plan: Plan }) {
     <div className="mt-3 rounded-md border border-line bg-surface px-3 py-2 text-[12px] text-subtle">
       {t.heldTerm} <span className="text-accent">+{formatUsd(profit)}</span> {t.profitWord} ·{" "}
       {formatUsd(total)} {t.returned}
+    </div>
+  );
+}
+
+
+function InvestmentMetrics({ plan }: { plan: import("@/lib/platform/store").ActivePlan }) {
+  const now = Date.now();
+  const dailyInterest = plan.amount * (plan.dailyPct / 100);
+  const totalInterest = plan.creditedProfit ?? 0;
+  const endAt = plan.startedAt + plan.durationDays * 86_400_000;
+  const remainingMs = Math.max(0, endAt - now);
+  const daysRemaining = Math.ceil(remainingMs / 86_400_000);
+  const nextRun = useMemo(() => {
+    const d = new Date(now);
+    d.setUTCHours(24, 0, 0, 0);
+    return d;
+  }, [now]);
+
+  const nextInterest = plan.status === "completed"
+    ? "Completed"
+    : nextRun.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+
+  const metrics = [
+    { label: "Today's Interest", value: `+${formatUsd(dailyInterest)}` },
+    { label: "Total Interest Earned", value: `+${formatUsd(totalInterest)}` },
+    { label: "Next Interest", value: nextInterest },
+    { label: "Days Remaining", value: String(daysRemaining) },
+  ];
+
+  return (
+    <div className="rounded-xl border border-line bg-surface p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <div className="text-[11px] font-bold tracking-widest text-accent">{plan.name}</div>
+          <div className="mt-1 text-sm font-semibold">{formatUsd(plan.amount)} principal</div>
+        </div>
+        <span className="rounded-full border border-line px-2 py-1 text-[10px] font-semibold uppercase text-subtle">
+          {plan.status}
+        </span>
+      </div>
+      <div className="mt-4 grid grid-cols-2 gap-2">
+        {metrics.map((metric) => (
+          <div key={metric.label} className="rounded-lg border border-line bg-bg/60 p-3">
+            <div className="text-[10px] uppercase tracking-wide text-subtle">{metric.label}</div>
+            <div className="mt-1 text-sm font-bold text-accent">{metric.value}</div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

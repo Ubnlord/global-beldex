@@ -1,6 +1,6 @@
 import { pageEn, pageEs } from "@/lib/platform/page-copy";
 
-export type Lang = "en" | "es" | "fr" | "it" | "pt" | "nl";
+export type Lang = "en" | "es" | "fr" | "it" | "pt" | "nl" | "yue" | "zh" | "hi" | "ta";
 
 export const LANGS: { id: Lang; label: string; short: string }[] = [
   { id: "en", label: "English", short: "EN" },
@@ -9,6 +9,10 @@ export const LANGS: { id: Lang; label: string; short: string }[] = [
   { id: "it", label: "Italiano", short: "IT" },
   { id: "pt", label: "Português", short: "PT" },
   { id: "nl", label: "Nederlands", short: "NL" },
+  { id: "yue", label: "Cantonese (粵語)", short: "YUE" },
+  { id: "zh", label: "Mandarin (普通话)", short: "ZH" },
+  { id: "hi", label: "हिन्दी", short: "HI" },
+  { id: "ta", label: "தமிழ்", short: "TA" },
 ];
 
 const en = {
@@ -581,7 +585,7 @@ import { extraLangs } from "@/lib/platform/extra-langs";
 export const copy: Record<Lang, typeof en> = {
   en,
   es,
-  ...(extraLangs(en) as unknown as Pick<Record<Lang, typeof en>, "fr" | "it" | "pt" | "nl">),
+  ...(extraLangs(en) as unknown as Pick<Record<Lang, typeof en>, "fr" | "it" | "pt" | "nl" | "yue" | "zh" | "hi" | "ta">),
 };
 
 export function fill(template: string, vars: Record<string, string | number>) {

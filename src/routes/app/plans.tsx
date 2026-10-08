@@ -107,8 +107,8 @@ function Projection({ amount, plan }: { amount: number; plan: Plan }) {
   const { profit, total } = projectedReturn(amount, plan);
   return (
     <div className="mt-3 rounded-md border border-line bg-surface px-3 py-2 text-[12px] text-subtle">
-      {t.heldTerm} <span className="text-accent">+{formatUsd(profit)}</span> {t.profitWord} ·{" "}
-      {formatUsd(total)} {t.returned}
+      {t.heldTerm} <span className="text-accent">+{formatBdx(profit)}</span> {t.profitWord} ·{" "}
+      {formatUsd(bdxToUsd(profit), 3)} USD · {formatBdx(total)} ({formatUsd(bdxToUsd(total), 3)} USD) {t.returned}
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Mail, Phone } from "lucide-react";
+import { Mail, Phone, MessageCircle } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { toastError } from "@/components/layout/toast";
 import { Button } from "@/components/ui/button";
@@ -30,17 +30,39 @@ function SupportPage() {
     <div className="mx-auto max-w-[480px] px-4 pb-[100px] pt-4">
       <h2 className="text-xl font-bold">{t.support}</h2>
       <p className="mt-1 text-xs text-subtle">{t.supportLead}</p>
+
       <div id="contact" className="mt-4 scroll-mt-24 rounded-lg border border-line bg-elevated px-4 py-3">
         <div className="text-[11px] text-subtle">{t.supportEmail}</div>
-        <a href="mailto:support@global-beldex.com" className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-md bg-accent px-4 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90">
+
+        <a
+          href="mailto:support@global-beldex.com"
+          className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-md bg-accent px-4 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+        >
           <Mail size={16} />
           Email Support
         </a>
-        <a href="tel:" aria-disabled="true" onClick={(e) => e.preventDefault()} className="mt-2 inline-flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-md border border-line-strong bg-surface px-4 py-2.5 text-sm font-semibold text-muted" title="Support phone number not configured yet">
+
+        <a
+          href="tel:+14195080286"
+          className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-md border border-line-strong bg-surface px-4 py-2.5 text-sm font-semibold text-fg transition-opacity hover:opacity-90"
+        >
           <Phone size={16} />
           Call Support
         </a>
+
+        <a
+          href="https://wa.me/14195080286?text=Hello%20GLOBAL%20BELDEX%20Support%2C%20I%20need%20assistance."
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-md border border-line-strong bg-surface px-4 py-2.5 text-sm font-semibold text-fg transition-opacity hover:opacity-90"
+        >
+          <MessageCircle size={16} />
+          WhatsApp Support
+        </a>
+
+        <div className="mt-2 text-center text-xs text-subtle">+1 (419) 508-0286</div>
       </div>
+
       <div className="mt-3 rounded-lg border border-line bg-elevated px-4 py-3">
         <div className="text-[11px] text-subtle">{t.supportAddress}</div>
         <a
@@ -58,6 +80,7 @@ function SupportPage() {
           United States
         </a>
       </div>
+
       <form onSubmit={onSubmit} className="mt-6 space-y-4 rounded-lg border border-line bg-elevated p-5">
         <div className="text-sm font-semibold">{t.messageDesk}</div>
         <div>
@@ -70,6 +93,7 @@ function SupportPage() {
         </div>
         <Button type="submit" className="w-full">{t.send}</Button>
       </form>
+
       {(tickets ?? []).length > 0 && (
         <div className="mt-4 divide-y divide-line overflow-hidden rounded-lg border border-line bg-elevated">
           {tickets.map((ticket) => (
@@ -83,6 +107,7 @@ function SupportPage() {
           ))}
         </div>
       )}
+
       <div id="faq" className="mt-6 scroll-mt-24 divide-y divide-line overflow-hidden rounded-lg border border-line bg-elevated">
         {t.page.faqs.map((item) => (
           <details key={item.q} className="p-4">

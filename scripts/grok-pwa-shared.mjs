@@ -262,6 +262,7 @@ export function readOgSite(cwd = process.cwd()) {
 export function ogCardPublicPath(cwd = process.cwd()) {
   if (existsSync(join(cwd, "public/og.jpg"))) return "/og.jpg";
   if (existsSync(join(cwd, "public/og.png"))) return "/og.png";
+  if (existsSync(join(cwd, "public/og.svg"))) return "/og.svg";
   return "";
 }
 
@@ -285,6 +286,8 @@ export function snapshotOgIdentity(cwd = process.cwd()) {
   }
   if (existsSync(join(cwd, "public/x-banner.jpg"))) {
     site.banner = site.banner || "/x-banner.jpg";
+  } else if (existsSync(join(cwd, "public/x-banner.svg"))) {
+    site.banner = site.banner || "/x-banner.svg";
   }
   return { site };
 }

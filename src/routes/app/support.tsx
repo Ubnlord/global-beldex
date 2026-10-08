@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Mail } from "lucide-react";
+import { Mail, Phone } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { toastError } from "@/components/layout/toast";
 import { Button } from "@/components/ui/button";
@@ -22,7 +22,7 @@ function SupportPage() {
       toastError("NEED_TICKET");
       return;
     }
-    const href = `mailto:globalbeldex1@gmail.com?subject=${encodeURIComponent(subject.trim())}&body=${encodeURIComponent(body.trim())}`;
+    const href = `mailto:support@global-beldex.com?subject=${encodeURIComponent(subject.trim())}&body=${encodeURIComponent(body.trim())}`;
     window.location.href = href;
   };
 
@@ -32,31 +32,30 @@ function SupportPage() {
       <p className="mt-1 text-xs text-subtle">{t.supportLead}</p>
       <div id="contact" className="mt-4 scroll-mt-24 rounded-lg border border-line bg-elevated px-4 py-3">
         <div className="text-[11px] text-subtle">{t.supportEmail}</div>
-        <a
-          href="mailto:globalbeldex1@gmail.com"
-          className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-md bg-accent px-4 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
-        >
+        <a href="mailto:support@global-beldex.com" className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-md bg-accent px-4 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90">
           <Mail size={16} />
           Email Support
+        </a>
+        <a href="tel:" aria-disabled="true" onClick={(e) => e.preventDefault()} className="mt-2 inline-flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-md border border-line-strong bg-surface px-4 py-2.5 text-sm font-semibold text-muted" title="Support phone number not configured yet">
+          <Phone size={16} />
+          Call Support
         </a>
       </div>
       <div className="mt-3 rounded-lg border border-line bg-elevated px-4 py-3">
         <div className="text-[11px] text-subtle">{t.supportAddress}</div>
         <a
-          href="https://maps.google.com/?q=Bethanee+Dong+Tumulus+Avenue+Newcastle+upon+Tyne+NE6+4US"
+          href="https://maps.google.com/?q=Lisbeth+Geoghan%2C+11481+West+County+Road+200+South%2C+Bloomington%2C+IN+47406%2C+United+States"
           target="_blank"
           rel="noopener noreferrer"
           className="mt-1 block text-sm font-semibold leading-5 text-accent underline underline-offset-2"
         >
-          Bethanee Dong
+          Lisbeth Geoghan
           <br />
-          Tumulus Avenue
+          11481 West County Road 200 South
           <br />
-          Newcastle upon Tyne
+          Bloomington, IN 47406
           <br />
-          NE6 4US
-          <br />
-          United Kingdom
+          United States
         </a>
       </div>
       <form onSubmit={onSubmit} className="mt-6 space-y-4 rounded-lg border border-line bg-elevated p-5">
@@ -67,17 +66,9 @@ function SupportPage() {
         </div>
         <div>
           <FieldLabel>{t.message}</FieldLabel>
-          <textarea
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            placeholder={t.page.messagePh}
-            rows={4}
-            className="mt-1 w-full rounded-md border border-line-strong bg-surface px-4 py-3 text-base text-fg outline-none focus:border-accent"
-          />
+          <textarea value={body} onChange={(e) => setBody(e.target.value)} placeholder={t.page.messagePh} rows={4} className="mt-1 w-full rounded-md border border-line-strong bg-surface px-4 py-3 text-base text-fg outline-none focus:border-accent" />
         </div>
-        <Button type="submit" className="w-full">
-          {t.send}
-        </Button>
+        <Button type="submit" className="w-full">{t.send}</Button>
       </form>
       {(tickets ?? []).length > 0 && (
         <div className="mt-4 divide-y divide-line overflow-hidden rounded-lg border border-line bg-elevated">

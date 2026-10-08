@@ -1,5 +1,6 @@
 import type { Book, ActivePlan, Transaction, TxStatus, TxType } from "@/lib/platform/store";
 import { supabase } from "./client";
+import { usdToBdx } from "@/lib/utils";
 
 function num(v: unknown) {
   const n = Number(v);
@@ -52,14 +53,14 @@ export async function pullCloudBook(): Promise<Book | null> {
       id: p.id,
       planId: p.plan_id,
       name: catalog?.name ?? p.plan_id,
-      amount: num(p.principal),
+      amount: usdToBdx(num(p.principal)),
       dailyPct: num(p.daily_rate) * 100,
       startedAt: new Date(p.started_at).getTime(),
       durationDays: Number(p.duration_days) || 0,
       status: p.status === "completed" ? "completed" : "active",
       color: "#2AF5D4",
       creditedDays: undefined,
-      creditedProfit: num(p.credited_profit),
+      creditedProfit: usdToBdx(num(p.credited_profit)),
       lastAccrualAt: p.last_accrual_at ? new Date(p.last_accrual_at).getTime() : undefined,
     };
   });

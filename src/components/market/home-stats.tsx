@@ -3,6 +3,7 @@ import { copy } from "@/lib/platform/i18n";
 import { usePlatform } from "@/lib/platform/store";
 import { CoinLogo } from "@/components/market/coin-logo";
 import { cn } from "@/lib/utils";
+import { useBeldexQuote } from "@/components/market/live-price";
 
 const RANGES = ["24h", "7d", "1m", "3m", "6m", "YTD", "1y"] as const;
 
@@ -165,6 +166,7 @@ export function HomeBeldexStats() {
   const t = copy[lang];
   const [detail, setDetail] = useState<Detail>(EMPTY);
   const [range, setRange] = useState<(typeof RANGES)[number]>("24h");
+  const live = useBeldexQuote();
 
   useEffect(() => {
     let stop = false;
@@ -181,7 +183,11 @@ export function HomeBeldexStats() {
     };
   }, []);
 
-  const change = detail.changes[range] ?? null;
+  // Always use the protected live quote for the headline BDX price and 24h change.
+  // The detail endpoint is supplementary and can be rate-limited independently.
+  const livePrice = live.usd ?? detail.usd;
+  const live24h = live.change24h ?? detail.changes["24h"] ?? null;
+  const change = range === "24h" ? live24h : detail.changes[range] ?? null;
   const up = (change ?? 0) >= 0;
 
   return (
@@ -194,9 +200,9 @@ export function HomeBeldexStats() {
             <div className="text-[11px] text-subtle">BDX/USD</div>
           </div>
           <div className="ml-auto text-right">
-            <div className="text-lg font-bold tabular">{money(detail.usd)}</div>
+            <div className="text-lg font-bold tabular">{money(livePrice)}</div>
             <div className={cn("text-xs font-semibold tabular", up ? "text-accent" : "text-danger")}>
-              {pct(detail.changes["24h"] ?? null)}
+              {pct(live24h)}
             </div>
           </div>
         </div>

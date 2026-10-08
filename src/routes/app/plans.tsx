@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { TickerTape } from "@/components/market/tradingview";
 import { toast, toastError } from "@/components/layout/toast";
 import { PlanGrid } from "@/components/platform/plan-card";
@@ -10,6 +10,7 @@ import { projectedReturn } from "@/lib/platform/catalog";
 import { copy, fill } from "@/lib/platform/i18n";
 import { usePlatform } from "@/lib/platform/store";
 import { bdxToUsd, formatBdx, formatUsd } from "@/lib/utils";
+import { fetchQuotes } from "@/lib/market/live-quotes";
 
 export const Route = createFileRoute("/app/plans")({ component: PlansPage });
 
@@ -22,6 +23,21 @@ function PlansPage() {
   const t = copy[lang];
   const [selected, setSelected] = useState<Plan | null>(null);
   const [amount, setAmount] = useState("");
+  const [bdxUsdRate, setBdxUsdRate] = useState(bdxToUsd(1));
+
+  useEffect(() => {
+    let cancelled = false;
+    const refresh = async () => {
+      const quotes = await fetchQuotes();
+      if (!cancelled) setBdxUsdRate(quotes.beldex.usd);
+    };
+    void refresh();
+    const timer = window.setInterval(() => void refresh(), 30_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, []);
 
   const confirm = async () => {
     if (!selected) return;
@@ -70,7 +86,8 @@ function PlansPage() {
               {selected.name}
             </div>
             <div className="mt-1 text-xl font-bold">{formatBdx(selected.min)} min</div>
-            <div className="mt-1 text-xs font-semibold text-accent">≈ {formatUsd(bdxToUsd(selected.min), 3)} USD</div>
+            <div className="mt-1 text-xs font-semibold text-accent">≈ {formatUsd(selected.min * bdxUsdRate, 3)} USD</div>
+            <div className="mt-1 text-[10px] font-medium text-subtle">Live BDX price: {formatUsd(bdxUsdRate, 5)} per BDX</div>
             <p className="mt-2 text-[13px] text-subtle">
               {selected.profit} · {selected.duration} · max {selected.max}
             </p>
@@ -82,7 +99,7 @@ function PlansPage() {
                 onChange={(e) => setAmount(e.target.value)}
               />
             </div>
-            <Projection amount={parseFloat(amount) || selected.min} plan={selected} />
+            <Projection amount={parseFloat(amount) || selected.min} plan={selected} bdxUsdRate={bdxUsdRate} />
             <div className="mt-6 flex gap-2">
               <Button variant="secondary" className="flex-1" onClick={() => setSelected(null)}>
                 {t.close}
@@ -101,14 +118,14 @@ function PlansPage() {
   );
 }
 
-function Projection({ amount, plan }: { amount: number; plan: Plan }) {
+function Projection({ amount, plan, bdxUsdRate }: { amount: number; plan: Plan; bdxUsdRate: number }) {
   const lang = usePlatform((s) => s.lang);
   const t = copy[lang];
   const { profit, total } = projectedReturn(amount, plan);
   return (
     <div className="mt-3 rounded-md border border-line bg-surface px-3 py-2 text-[12px] text-subtle">
       {t.heldTerm} <span className="text-accent">+{formatBdx(profit)}</span> {t.profitWord} ·{" "}
-      {formatUsd(bdxToUsd(profit), 3)} USD · {formatBdx(total)} ({formatUsd(bdxToUsd(total), 3)} USD) {t.returned}
+      {formatUsd(profit * bdxUsdRate, 3)} USD · {formatBdx(total)} ({formatUsd(total * bdxUsdRate, 3)} USD) {t.returned}
     </div>
   );
 }

@@ -274,7 +274,13 @@ export const usePlatform = create<PlatformState>()(
           if (amount < plan.min) return "MIN_PLAN|" + plan.name + "|" + plan.min.toLocaleString();
           const cap = planCeiling(plan);
           if (cap != null && amount > cap) return "MAX_PLAN|" + plan.name + "|" + cap.toLocaleString();
-          const { error } = await supabase.rpc("buy_investment_plan", { p_plan_id: plan.id, p_amount: amount });
+          // Plan amounts are entered/displayed in BDX, but the server ledger is USD-denominated.
+          // Convert exactly once at the RPC boundary: 4,000 BDX => $293.984 USD.
+          const usdAmount = bdxToUsd(amount);
+          const { error } = await supabase.rpc("buy_investment_plan", {
+            p_plan_id: plan.id,
+            p_amount: usdAmount,
+          });
           if (error) return error.message;
           const remote = await pullCloudBook();
           if (remote) set({ ...remote, tickets: remote.tickets ?? [] });

@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import type { ComponentType } from "react";
 import {
   ArrowDownToLine,
   ArrowUpFromLine,
@@ -27,8 +27,6 @@ import {
   usePlatform,
 } from "@/lib/platform/store";
 import { formatUsd, copyText } from "@/lib/utils";
-import type { ComponentType } from "react";
-
 export const Route = createFileRoute("/app/")({ component: Dashboard });
 
 function Dashboard() {
@@ -48,11 +46,6 @@ function Dashboard() {
   const lang = usePlatform((s) => s.lang);
   const t = copy[lang];
   const active = plans.filter((p) => p.status === "active");
-  return () => {
-      mounted = false;
-      window.clearInterval(timer);
-    };
-  }, []);
 
   return (
     <div className="mx-auto max-w-[480px] px-4 pb-[100px] pt-4">

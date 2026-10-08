@@ -48,26 +48,7 @@ function Dashboard() {
   const lang = usePlatform((s) => s.lang);
   const t = copy[lang];
   const active = plans.filter((p) => p.status === "active");
-  const [bdxUsdRate, setBdxUsdRate] = useState(0);
-  const totalAccountUsd = available + locked;
-  const totalAccountBdx = bdxUsdRate > 0 ? totalAccountUsd / bdxUsdRate : 0;
-
-  useEffect(() => {
-    let mounted = true;
-    const refreshBdxRate = async () => {
-      try {
-        const quotes = await fetchQuotes();
-        if (mounted && Number.isFinite(quotes.beldex.usd) && quotes.beldex.usd > 0) {
-          setBdxUsdRate(quotes.beldex.usd);
-        }
-      } catch {
-        // Keep the last valid protected quote if a refresh fails.
-      }
-    };
-
-    void refreshBdxRate();
-    const timer = window.setInterval(refreshBdxRate, 30_000);
-    return () => {
+  return () => {
       mounted = false;
       window.clearInterval(timer);
     };
@@ -105,27 +86,6 @@ function Dashboard() {
           <div>
             <div className="text-[11px] text-subtle">{t.locked}</div>
             <div className="text-xl font-bold tabular text-warn">{formatUsd(locked)}</div>
-          </div>
-        </div>
-        <div className="mt-3 flex items-center justify-between rounded-md border border-line bg-surface px-3 py-2 text-xs">
-          <div>
-            <span className="text-subtle">{t.bdxWallet}</span>
-            <div className="mt-0.5 text-[10px] text-faint">
-              Total active account balance
-            </div>
-          </div>
-          <div className="text-right">
-            <div className="font-semibold tabular text-fg">
-              {totalAccountBdx > 0 ? totalAccountBdx.toLocaleString("en-US", {
-                minimumFractionDigits: 4,
-                maximumFractionDigits: 4,
-              }) : "0.0000"} BDX
-            </div>
-            {bdxUsdRate > 0 && (
-              <div className="mt-0.5 text-[10px] text-subtle">
-                1 BDX = ${bdxUsdRate.toFixed(5)}
-              </div>
-            )}
           </div>
         </div>
         <div className="mt-5 grid grid-cols-2 gap-3">

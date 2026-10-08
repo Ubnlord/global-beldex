@@ -411,6 +411,56 @@ function Landing() {
               </div>
             </div>
 
+            <section className="mt-8 border-t border-line pt-6" aria-labelledby="contact-address-title">
+              <div id="contact-address-title" className="text-xs font-semibold tracking-widest text-accent">
+                CONTACT &amp; ADDRESS
+              </div>
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                <div className="rounded-lg border border-line bg-surface p-4">
+                  <div className="grid gap-3 text-[13px]">
+                    <a
+                      href="tel:+14195080286"
+                      className="text-subtle transition-colors hover:text-accent"
+                    >
+                      📞 Call Support <span className="text-fg">+1 (419) 508-0286</span>
+                    </a>
+                    <a
+                      href="https://wa.me/14195080286?text=Hello%20GLOBAL%20BELDEX%20Support%2C%20I%20need%20assistance."
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-subtle transition-colors hover:text-accent"
+                    >
+                      💬 WhatsApp Support <span className="text-fg">+1 (419) 508-0286</span>
+                    </a>
+                    <a
+                      href="mailto:support@global-beldex.com"
+                      className="text-subtle transition-colors hover:text-accent"
+                    >
+                      📧 Email Support <span className="text-fg">support@global-beldex.com</span>
+                    </a>
+                  </div>
+                </div>
+
+                <a
+                  href="https://www.google.com/maps/search/?api=1&query=Lisbeth%20Geoghan%2C%2011481%20West%20County%20Road%20200%20South%2C%20Bloomington%2C%20IN%2047406%2C%20United%20States"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-lg border border-line bg-surface p-4 text-[13px] text-subtle transition-colors hover:border-accent hover:text-fg"
+                >
+                  <div className="font-semibold text-fg">📍 Address</div>
+                  <div className="mt-2 leading-6">
+                    Lisbeth Geoghan
+                    <br />
+                    11481 West County Road 200 South
+                    <br />
+                    Bloomington, IN 47406
+                    <br />
+                    United States
+                  </div>
+                </a>
+              </div>
+            </section>
+
             <div className="mt-8 border-t border-line pt-6">
               <div className="text-xs font-semibold tracking-widest text-accent">LEGAL</div>
               <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-[13px]">

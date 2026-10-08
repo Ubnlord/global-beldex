@@ -40,6 +40,13 @@ function friendly(message: string) {
   if (m.includes("invalid login") || m.includes("invalid credentials")) {
     return "Email or password is wrong.";
   }
+  if (
+    m.includes("over_email_send_rate_limit") ||
+    m.includes("email rate limit") ||
+    m.includes("too many emails")
+  ) {
+    return "Email sending is temporarily rate-limited. Please wait before trying again. For production, the site administrator must configure custom SMTP in Supabase Auth.";
+  }
   if (m.includes("email not confirmed")) {
     return "Confirm your email first. Check the inbox for the link.";
   }

@@ -66,7 +66,7 @@ function PlansPage() {
             </p>
           </div>
           {activePlans.map((plan) => (
-            <InvestmentMetrics key={plan.id} plan={plan} />
+            <InvestmentMetrics key={plan.id} plan={plan} bdxUsdRate={bdxUsdRate} />
           ))}
         </section>
       )}
@@ -131,7 +131,7 @@ function Projection({ amount, plan, bdxUsdRate }: { amount: number; plan: Plan; 
 }
 
 
-function InvestmentMetrics({ plan }: { plan: import("@/lib/platform/store").ActivePlan }) {
+function InvestmentMetrics({ plan, bdxUsdRate }: { plan: import("@/lib/platform/store").ActivePlan; bdxUsdRate: number }) {
   const now = Date.now();
   const dailyInterest = plan.amount * (plan.dailyPct / 100);
   const totalInterest = plan.creditedProfit ?? 0;
@@ -149,8 +149,8 @@ function InvestmentMetrics({ plan }: { plan: import("@/lib/platform/store").Acti
     : nextRun.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
 
   const metrics = [
-    { label: "Today's Interest", value: `+${formatBdx(dailyInterest)} · ${formatUsd(bdxToUsd(dailyInterest), 3)}` },
-    { label: "Total Interest Earned", value: `+${formatBdx(totalInterest)} · ${formatUsd(bdxToUsd(totalInterest), 3)}` },
+    { label: "Today's Interest", value: `+${formatBdx(dailyInterest)} · ${formatUsd(dailyInterest * bdxUsdRate, 3)}` },
+    { label: "Total Interest Earned", value: `+${formatBdx(totalInterest)} · ${formatUsd(totalInterest * bdxUsdRate, 3)}` },
     { label: "Next Interest", value: nextInterest },
     { label: "Days Remaining", value: String(daysRemaining) },
   ];
@@ -161,7 +161,7 @@ function InvestmentMetrics({ plan }: { plan: import("@/lib/platform/store").Acti
         <div>
           <div className="text-[11px] font-bold tracking-widest text-accent">{plan.name}</div>
           <div className="mt-1 text-sm font-semibold">{formatBdx(plan.amount)} principal</div>
-          <div className="mt-0.5 text-xs text-subtle">≈ {formatUsd(bdxToUsd(plan.amount), 3)} USD</div>
+          <div className="mt-0.5 text-xs text-subtle">≈ {formatUsd(plan.amount * bdxUsdRate, 3)} USD</div>
         </div>
         <span className="rounded-full border border-line px-2 py-1 text-[10px] font-semibold uppercase text-subtle">
           {plan.status}

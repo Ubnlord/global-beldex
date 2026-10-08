@@ -60,7 +60,6 @@ function SupportPage() {
           WhatsApp Support
         </a>
 
-        <div className="mt-2 text-center text-xs text-subtle">+1 (419) 508-0286</div>
       </div>
 
       <div className="mt-3 rounded-lg border border-line bg-elevated px-4 py-3">

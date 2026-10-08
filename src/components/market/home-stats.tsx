@@ -69,7 +69,7 @@ async function fetchBeldexDetail(): Promise<Detail> {
       ),
     ]);
 
-    if (coinRes.status === "fulfilled") {
+    if (coinRes.status === "fulfilled" && coinRes.value.market_data) {
       const md = coinRes.value.market_data;
       const changes: Record<string, number | null> = {
         "24h": md?.price_change_percentage_24h ?? null,

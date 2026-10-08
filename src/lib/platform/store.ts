@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import { copy, fill, type Lang } from "./i18n";
 import { planCeiling, type Plan } from "./catalog";
 import { bdxToUsd, uid } from "@/lib/utils";
+import { fetchQuotes } from "@/lib/market/live-quotes";
 import { pullCloudBook } from "@/lib/supabase/books";
 import { supabase } from "@/lib/supabase/client";
 import type { CloudProfile } from "@/lib/supabase/auth";
@@ -276,7 +277,10 @@ export const usePlatform = create<PlatformState>()(
           if (cap != null && amount > cap) return "MAX_PLAN|" + plan.name + "|" + cap.toLocaleString();
           // Plan amounts are entered/displayed in BDX, but the server ledger is USD-denominated.
           // Convert exactly once at the RPC boundary: 4,000 BDX => $293.984 USD.
-          const usdAmount = bdxToUsd(amount);
+          // Use the protected live BDX/USD market quote at purchase time.
+          // The fixed conversion is only the emergency fallback if all feeds are unavailable.
+          const liveQuote = await fetchQuotes();
+          const usdAmount = amount * liveQuote.beldex.usd;
           const { error } = await supabase.rpc("buy_investment_plan", {
             p_plan_id: plan.id,
             p_amount: usdAmount,

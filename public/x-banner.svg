@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 400" role="img" aria-labelledby="title desc">
+  <title id="title">GLOBAL BELDEX</title>
+  <desc id="desc">GLOBAL BELDEX brand banner</desc>
+  <rect width="1200" height="400" fill="#fff"/>
+  <g transform="translate(55 55)">
+    <circle cx="145" cy="145" r="145" fill="#fff" stroke="#18a83a" stroke-width="10"/>
+    <path d="M90 82v128c0 38 28 70 66 70h48c35 0 63-28 63-63v-83c0-38-28-70-63-70h-55v70h55c10 0 18 8 18 18v47c0 10-8 18-18 18h-48c-10 0-18-8-18-18V82z" fill="#20c43a"/>
+    <path d="M112 105h85c38 0 68 30 68 68v78c0 35-28 63-63 63h-48v-70h48c10 0 18-8 18-18v-45c0-10-8-18-18-18h-42v-58z" fill="#0787e8" opacity=".96"/>
+    <path d="M176 108h58c36 0 64 29 64 65v78c0 36-28 65-64 65h-58v-70h58c10 0 18-8 18-18v-42c0-10-8-18-18-18h-58z" fill="#087ee1" opacity=".92"/>
+  </g>
+  <g font-family="Arial, Helvetica, sans-serif" font-weight="800">
+    <text x="390" y="165" font-size="112" fill="#087ee1" letter-spacing="-5">GLOBAL</text>
+    <text x="390" y="280" font-size="112" fill="#16a638" letter-spacing="-5">BELDEX</text>
+  </g>
+</svg>

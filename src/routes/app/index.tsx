@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import {
   ArrowDownToLine,
   ArrowUpFromLine,
@@ -39,7 +40,6 @@ function Dashboard() {
   const bonus = usePlatform((s) => s.bonus);
   const referralBonus = usePlatform((s) => s.referralBonus);
   const withdrawn = usePlatform((s) => s.withdrawn);
-  const bdx = usePlatform((s) => s.bdx);
   const txs = usePlatform((s) => s.txs);
   const plans = usePlatform((s) => s.plans);
   const welcomeOpen = usePlatform((s) => s.welcomeOpen);
@@ -48,6 +48,30 @@ function Dashboard() {
   const lang = usePlatform((s) => s.lang);
   const t = copy[lang];
   const active = plans.filter((p) => p.status === "active");
+  const [bdxUsdRate, setBdxUsdRate] = useState(0);
+  const totalAccountUsd = available + locked;
+  const totalAccountBdx = bdxUsdRate > 0 ? totalAccountUsd / bdxUsdRate : 0;
+
+  useEffect(() => {
+    let mounted = true;
+    const refreshBdxRate = async () => {
+      try {
+        const quotes = await fetchQuotes();
+        if (mounted && Number.isFinite(quotes.beldex.usd) && quotes.beldex.usd > 0) {
+          setBdxUsdRate(quotes.beldex.usd);
+        }
+      } catch {
+        // Keep the last valid protected quote if a refresh fails.
+      }
+    };
+
+    void refreshBdxRate();
+    const timer = window.setInterval(refreshBdxRate, 30_000);
+    return () => {
+      mounted = false;
+      window.clearInterval(timer);
+    };
+  }, []);
 
   return (
     <div className="mx-auto max-w-[480px] px-4 pb-[100px] pt-4">
@@ -84,8 +108,25 @@ function Dashboard() {
           </div>
         </div>
         <div className="mt-3 flex items-center justify-between rounded-md border border-line bg-surface px-3 py-2 text-xs">
-          <span className="text-subtle">{t.bdxWallet}</span>
-          <span className="font-semibold tabular text-fg">{bdx.toFixed(4)} BDX</span>
+          <div>
+            <span className="text-subtle">{t.bdxWallet}</span>
+            <div className="mt-0.5 text-[10px] text-faint">
+              Total active account balance
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="font-semibold tabular text-fg">
+              {totalAccountBdx > 0 ? totalAccountBdx.toLocaleString("en-US", {
+                minimumFractionDigits: 4,
+                maximumFractionDigits: 4,
+              }) : "0.0000"} BDX
+            </div>
+            {bdxUsdRate > 0 && (
+              <div className="mt-0.5 text-[10px] text-subtle">
+                1 BDX = ${bdxUsdRate.toFixed(5)}
+              </div>
+            )}
+          </div>
         </div>
         <div className="mt-5 grid grid-cols-2 gap-3">
           <Stat icon={TrendingUp} label={t.totalProfit} value={formatUsd(profit, 0)} tone="text-accent" />

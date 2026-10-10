@@ -13,6 +13,8 @@ import { useRealtimeUserNotifications } from "@/lib/supabase/realtime-notificati
 
 export function useHydratePlatform() {
   const setHydrated = usePlatform((s) => s.setHydrated);
+  const user = usePlatform((s) => s.user);
+  const settlePlans = usePlatform((s) => s.settlePlans);
 
   useEffect(() => {
     const persist = usePlatform.persist;
@@ -73,6 +75,33 @@ export function useHydratePlatform() {
       unsub();
     };
   }, [setHydrated]);
+
+  // Keep the server-authoritative daily accrual current while an authenticated
+  // session is open. The RPC only credits complete elapsed days and is idempotent.
+  useEffect(() => {
+    if (!user) return;
+    let running = false;
+    const refresh = async () => {
+      if (running || document.visibilityState === "hidden") return;
+      running = true;
+      try {
+        await settlePlans();
+      } finally {
+        running = false;
+      }
+    };
+    const timer = window.setInterval(() => void refresh(), 60_000);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void refresh();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onVisible);
+    };
+  }, [user, settlePlans]);
 }
 
 export function GuestShell({ children }: { children: React.ReactNode }) {

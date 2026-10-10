@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { RotateCw } from "lucide-react";
+import { toastError } from "@/components/layout/toast";
 import { Navigate, Outlet } from "@tanstack/react-router";
 import { usePlatform } from "@/lib/platform/store";
 import { pullCloudBook } from "@/lib/supabase/books";
@@ -35,6 +36,7 @@ export function useHydratePlatform() {
             if (profileError) {
               refreshFailed = true;
               usePlatform.setState({ accrualFailed: true });
+              toastError(`We couldn't sync your account profile: ${profileError}`);
             } else {
               usePlatform.getState().setUserProfile(profile);
             }

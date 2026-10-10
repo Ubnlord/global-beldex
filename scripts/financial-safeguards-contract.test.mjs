@@ -42,7 +42,7 @@ test("permanent financial safeguard suite is present and non-destructive", () =>
   assert.doesNotMatch(suite, /createUser|deleteUser|SUPABASE_SERVICE_ROLE_KEY/i);
   assert.match(operationsHardening, /Investment principal returned/);
   assert.match(operationsHardening, /global-beldex-daily-investment-accrual/);
-  assert.match(operationsHardening, /0 0 \\* \\* \\*/);
+  assert.match(operationsHardening, /0 0 \* \* \*/);
   assert.match(operationsHardening, /admin_financial_reconciliation/);
   assert.match(operationsHardening, /p\.total_deposits,coalesce\(d\.amount,0\),p\.total_deposits-coalesce\(d\.amount,0\)/);
   assert.match(operationsHardening, /p\.total_withdrawals,coalesce\(w\.amount,0\),p\.total_withdrawals-coalesce\(w\.amount,0\)/);

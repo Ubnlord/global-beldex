@@ -7,7 +7,7 @@ import { FieldLabel, Input } from "@/components/ui/input";
 import { COUNTRIES } from "@/lib/platform/catalog";
 import { copy } from "@/lib/platform/i18n";
 import { usePlatform } from "@/lib/platform/store";
-import { signUpAccount } from "@/lib/supabase/auth";
+import { ensureCloudProfile, signUpAccount } from "@/lib/supabase/auth";
 
 export const Route = createFileRoute("/register")({ component: RegisterPage });
 
@@ -51,40 +51,65 @@ function Register() {
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (!form.username.trim()) {
+      toastError("Choose a username.");
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+      toastError("Enter a valid email address.");
+      return;
+    }
+    if (!form.country) {
+      toastError("Select your country.");
+      return;
+    }
     if (form.pass !== form.repeat) {
-      toast(t.mismatch);
+      toastError(t.mismatch);
       return;
     }
     if (form.pass.length < 6) {
-      toast(t.shortPass);
+      toastError(t.shortPass);
       return;
     }
+
     setBusy(true);
-    const result = await signUpAccount({
-      email: form.email,
-      username: form.username,
-      fullname: form.fullname,
-      phone: form.phone,
-      country: form.country,
-      ref: form.ref,
-      pass: form.pass,
-    });
-    setBusy(false);
-    if (result.error) {
-      toast(result.error);
-      return;
+    try {
+      const result = await signUpAccount({
+        email: form.email,
+        username: form.username,
+        fullname: form.fullname,
+        phone: form.phone,
+        country: form.country,
+        ref: form.ref,
+        pass: form.pass,
+      });
+      if (result.error) {
+        toastError(result.error);
+        return;
+      }
+      if (result.needsConfirm) {
+        setPendingEmail(form.email.trim());
+        return;
+      }
+      if (!result.profile) {
+        toastError("We couldn't load your new account details. Please try signing in before registering again.");
+        return;
+      }
+      // If email confirmation is disabled, create/attach the server profile now so
+      // referral attribution errors are shown on signup instead of failing silently later.
+      const profileError = await ensureCloudProfile(result.profile);
+      if (profileError) {
+        toastError(`Your account was created, but setup didn't finish: ${profileError} Please sign in or contact support; don't register again.`);
+        return;
+      }
+      setUserProfile(result.profile);
+      toast(t.created);
+      void navigate({ to: "/app" });
+    } catch {
+      toastError("Sign-up failed unexpectedly. Check your connection and try again.");
+    } finally {
+      setBusy(false);
     }
-    if (result.needsConfirm) {
-      setPendingEmail(form.email.trim());
-      return;
-    }
-    if (!result.profile) {
-      toastError("Account created, but the profile could not be loaded. Please sign in.");
-      return;
-    }
-    setUserProfile(result.profile);
-    toast(t.created);
-    void navigate({ to: "/app" });
   };
 
   if (pendingEmail) {

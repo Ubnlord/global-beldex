@@ -40,37 +40,42 @@ function Login() {
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
     const identity = email.trim().toLowerCase();
-    if (!identity.includes("@")) {
-      toastError("Enter the email address linked to your Global Beldex account.");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identity)) {
+      toastError("Enter a valid email address.");
+      return;
+    }
+    if (!pass) {
+      toastError("Enter your password.");
       return;
     }
 
     setBusy(true);
-    const cloud = await signInAccount(identity, pass);
-    setBusy(false);
+    try {
+      const cloud = await signInAccount(identity, pass);
+      if (cloud.error) {
+        toastError(cloud.error);
+        return;
+      }
+      if (!cloud.profile) {
+        toastError("We couldn't load your account details. Please try again.");
+        return;
+      }
 
-    if (cloud.error) {
-      toast(cloud.error);
-      return;
+      setUserProfile(cloud.profile);
+      if (!remember) {
+        sessionStorage.setItem("lb-session", "1");
+        setSessionOnly(true);
+      } else {
+        sessionStorage.removeItem("lb-session");
+        setSessionOnly(false);
+      }
+      toast(t.welcomeBack);
+      void navigate({ to: "/app" });
+    } catch {
+      toastError("Sign-in failed unexpectedly. Check your connection and try again.");
+    } finally {
+      setBusy(false);
     }
-
-    if (!cloud.profile) {
-      toastError("Unable to load your account profile. Please try again.");
-      return;
-    }
-
-    setUserProfile(cloud.profile);
-
-    if (!remember) {
-      sessionStorage.setItem("lb-session", "1");
-      setSessionOnly(true);
-    } else {
-      sessionStorage.removeItem("lb-session");
-      setSessionOnly(false);
-    }
-
-    toast(t.welcomeBack);
-    void navigate({ to: "/app" });
   };
 
   return (

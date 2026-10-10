@@ -1,18 +1,24 @@
 import type { Book, ActivePlan, Transaction, TxStatus, TxType } from "@/lib/platform/store";
 import { supabase } from "./client";
 import { usdToBdx } from "@/lib/utils";
+import { isCompleteCloudRefresh } from "./cloud-book-guard";
 
 function num(v: unknown) {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 }
 
-export async function pullCloudBook(): Promise<Book | null> {
+export async function pullCloudBook(options: { skipAccrual?: boolean } = {}): Promise<Book | null> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
   // Accrual is idempotent: PostgreSQL only credits elapsed days not already processed.
-  await supabase.rpc("accrue_user_investments", { p_user_id: null });
+  // Callers that just completed the RPC can skip a redundant second call.
+  let accrualFailed = false;
+  if (!options.skipAccrual) {
+    const accrualResult = await supabase.rpc("accrue_user_investments", { p_user_id: null });
+    accrualFailed = Boolean(accrualResult.error);
+  }
 
   const [profileResult, txResult, investmentsResult] = await Promise.all([
     supabase
@@ -32,8 +38,10 @@ export async function pullCloudBook(): Promise<Book | null> {
       .order("created_at", { ascending: false }),
   ]);
 
-  if (profileResult.error) return null;
-  const p = profileResult.data;
+  // A missing profile is not a valid zero-balance account. Keep the last known
+  // local book intact if any financial query failed or the profile row is absent.
+  if (!isCompleteCloudRefresh(profileResult, txResult, investmentsResult)) return null;
+  const p = profileResult.data as NonNullable<typeof profileResult.data>;
   const rawTxs = txResult.data ?? [];
   const txs: Transaction[] = rawTxs.map((t: any) => ({
     id: t.id,
@@ -85,6 +93,7 @@ export async function pullCloudBook(): Promise<Book | null> {
     plans,
     notices: [],
     tickets: [],
+    accrualFailed,
   };
 }
 

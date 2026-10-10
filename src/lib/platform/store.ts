@@ -8,6 +8,7 @@ import { pullCloudBook } from "@/lib/supabase/books";
 import { supabase } from "@/lib/supabase/client";
 import type { CloudProfile } from "@/lib/supabase/auth";
 import { validateWithdrawalDestination } from "@/lib/financial/withdrawal-address";
+import { runWithFailureFallback } from "@/lib/supabase/refresh-safety";
 
 export type { Lang };
 
@@ -86,6 +87,8 @@ export type Book = {
   plans: ActivePlan[];
   notices: Notice[];
   tickets: Ticket[];
+  /** True when the latest cloud hydration could not run server-side accrual. */
+  accrualFailed: boolean;
 };
 
 type PlatformState = {
@@ -103,6 +106,7 @@ type PlatformState = {
   plans: ActivePlan[];
   notices: Notice[];
   tickets: Ticket[];
+  accrualFailed: boolean;
   lang: Lang;
   setLang: (lang: Lang) => void;
   notificationSound: boolean;
@@ -143,6 +147,7 @@ function emptyBook(): Book {
     plans: [],
     notices: [],
     tickets: [],
+    accrualFailed: false,
   };
 }
 
@@ -159,6 +164,7 @@ function snapshot(s: Book): Book {
     plans: s.plans,
     notices: s.notices,
     tickets: s.tickets ?? [],
+    accrualFailed: s.accrualFailed ?? false,
   };
 }
 
@@ -292,10 +298,20 @@ export const usePlatform = create<PlatformState>()(
         },
 
         settlePlans: async () => {
-          const { error } = await supabase.rpc("accrue_user_investments", { p_user_id: null });
-          if (error) return;
-          const remote = await pullCloudBook();
-          if (remote) set({ ...remote, tickets: remote.tickets ?? [] });
+          const remote = await runWithFailureFallback(async () => {
+            const { error } = await supabase.rpc("accrue_user_investments", { p_user_id: null });
+            if (error) throw error;
+            return await pullCloudBook({ skipAccrual: true });
+          }, () => {
+            // Rejected network/RPC promises must never clear saved financial values.
+            set({ accrualFailed: true });
+          });
+          if (remote) {
+            set({ ...remote, tickets: remote.tickets ?? [] });
+          } else {
+            // Never clear or zero financial values after an incomplete cloud refresh.
+            set({ accrualFailed: true });
+          }
         },
 
         swap: async (from, to, amount) => {
@@ -311,11 +327,7 @@ export const usePlatform = create<PlatformState>()(
           if (remote) set({ ...remote, tickets: remote.tickets ?? [] });
           return null;
         },
-        copyReferral: () => {
-          const u = get().user;
-          const slug = u?.username || "guest";
-          return `https://global-beldex.com/ref/${slug}`;
-        },
+        copyReferral: () => referralLink(get().user),
 
         addNotice: (title, body) => {
           set({ notices: [notice(title, body), ...get().notices] });
@@ -366,6 +378,7 @@ export const usePlatform = create<PlatformState>()(
           plans: p.plans ?? [],
           notices: p.notices ?? [],
           tickets,
+          accrualFailed: p.accrualFailed ?? false,
         });
         return { ...p, tickets, user: null };
       },
@@ -380,7 +393,12 @@ export const usePlatform = create<PlatformState>()(
 );
 
 export function referralLink(user: User | null) {
-  return `https://global-beldex.com/ref/${user?.username || "mrkenmk"}`;
+  // Username is accepted by ensure_user_profile as a referral lookup key.
+  // Do not use user.ref here: before profile hydration it can still contain
+  // the sponsor's code from signup metadata rather than this user's own code.
+  const code = user?.username?.trim();
+  const base = "https://global-beldex.com/register";
+  return code ? `${base}?ref=${encodeURIComponent(code)}` : base;
 }
 
 export function accruedProfit(p: ActivePlan, now = Date.now()) {

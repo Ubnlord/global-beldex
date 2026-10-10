@@ -14,11 +14,11 @@
     "preview:restart": "node scripts/preview.mjs restart",
     "preview:stop": "node scripts/preview.mjs stop",
     "typecheck": "tsc --noEmit",
-    "test": "node --experimental-strip-types --test src/lib/app-data/app-data.test.ts src/lib/app-data/readiness-schedule.test.ts",
+    "test": "node --experimental-strip-types --test src/lib/app-data/app-data.test.ts src/lib/app-data/readiness-schedule.test.ts src/lib/supabase/cloud-book-guard.test.ts src/lib/supabase/refresh-safety.test.ts",
     "test:template": "node --test 'scripts/**/*.test.mjs'",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "test:security": "node --test scripts/security-static-audit.test.mjs scripts/financial-safeguards-contract.test.mjs scripts/security-regression.test.mjs"
+    "test:security": "node --test scripts/security-static-audit.test.mjs scripts/financial-safeguards-contract.test.mjs scripts/security-regression.test.mjs scripts/auth-lifecycle-regression.test.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.7.0",

@@ -40,6 +40,7 @@ function Dashboard() {
   const withdrawn = usePlatform((s) => s.withdrawn);
   const txs = usePlatform((s) => s.txs);
   const plans = usePlatform((s) => s.plans);
+  const accrualFailed = usePlatform((s) => s.accrualFailed);
   const welcomeOpen = usePlatform((s) => s.welcomeOpen);
   const dismissWelcome = usePlatform((s) => s.dismissWelcome);
   const copyReferral = usePlatform((s) => s.copyReferral);
@@ -49,6 +50,11 @@ function Dashboard() {
 
   return (
     <div className="mx-auto max-w-[480px] px-4 pb-[100px] pt-4">
+      {accrualFailed && (
+        <div role="alert" className="mb-4 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-200">
+          We couldn't refresh your account data from the server. Your last saved balances are still shown; they may be out of date. Please refresh later or contact support if this continues.
+        </div>
+      )}
       {welcomeOpen && (
         <div className="mb-4 flex items-start justify-between rounded-lg border border-line-strong bg-elevated p-4">
           <div>

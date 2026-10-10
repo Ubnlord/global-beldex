@@ -86,6 +86,8 @@ export type Book = {
   plans: ActivePlan[];
   notices: Notice[];
   tickets: Ticket[];
+  /** True when the latest cloud hydration could not run server-side accrual. */
+  accrualFailed: boolean;
 };
 
 type PlatformState = {
@@ -143,6 +145,7 @@ function emptyBook(): Book {
     plans: [],
     notices: [],
     tickets: [],
+    accrualFailed: false,
   };
 }
 
@@ -159,6 +162,7 @@ function snapshot(s: Book): Book {
     plans: s.plans,
     notices: s.notices,
     tickets: s.tickets ?? [],
+    accrualFailed: s.accrualFailed ?? false,
   };
 }
 

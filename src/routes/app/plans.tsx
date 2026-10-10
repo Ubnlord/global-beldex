@@ -138,7 +138,15 @@ function Projection({ amount, plan, bdxUsdRate }: { amount: number; plan: Plan; 
 
 
 function InvestmentMetrics({ plan, bdxUsdRate }: { plan: import("@/lib/platform/store").ActivePlan; bdxUsdRate: number }) {
-  const now = Date.now();
+  const [now, setNow] = useState(() => Date.now());
+
+  // Re-render time-based metrics while this screen stays open. This is display-only:
+  // actual interest is still credited exclusively by the server accrual RPC.
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 30_000);
+    return () => window.clearInterval(timer);
+  }, []);
+
   const dailyInterest = plan.amount * (plan.dailyPct / 100);
   const totalInterest = plan.creditedProfit ?? 0;
   const elapsedDays = Math.min(
@@ -154,13 +162,14 @@ function InvestmentMetrics({ plan, bdxUsdRate }: { plan: import("@/lib/platform/
   const endAt = plan.startedAt + plan.durationDays * 86_400_000;
   const remainingMs = Math.max(0, endAt - now);
   const daysRemaining = Math.ceil(remainingMs / 86_400_000);
-  const nextRun = useMemo(() => {
-    const d = new Date(now);
-    d.setUTCHours(24, 0, 0, 0);
-    return d;
-  }, [now]);
+  // The server accrues complete 24-hour periods measured from started_at,
+  // not at midnight UTC. Show the next matching accrual boundary.
+  const nextRun = new Date(Math.min(
+    plan.startedAt + (elapsedDays + 1) * 86_400_000,
+    endAt,
+  ));
 
-  const nextInterest = plan.status === "completed"
+  const nextInterest = plan.status === "completed" || elapsedDays >= plan.durationDays
     ? "Completed"
     : nextRun.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
 

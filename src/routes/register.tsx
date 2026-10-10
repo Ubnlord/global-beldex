@@ -7,7 +7,7 @@ import { FieldLabel, Input } from "@/components/ui/input";
 import { COUNTRIES } from "@/lib/platform/catalog";
 import { copy } from "@/lib/platform/i18n";
 import { usePlatform } from "@/lib/platform/store";
-import { signUpAccount } from "@/lib/supabase/auth";
+import { ensureCloudProfile, signUpAccount } from "@/lib/supabase/auth";
 
 export const Route = createFileRoute("/register")({ component: RegisterPage });
 
@@ -93,6 +93,13 @@ function Register() {
       }
       if (!result.profile) {
         toastError("We couldn't load your new account details. Please try signing in before registering again.");
+        return;
+      }
+      // If email confirmation is disabled, create/attach the server profile now so
+      // referral attribution errors are shown on signup instead of failing silently later.
+      const profileError = await ensureCloudProfile(result.profile);
+      if (profileError) {
+        toastError(`Your account was created, but setup didn't finish: ${profileError} Please sign in or contact support; don't register again.`);
         return;
       }
       setUserProfile(result.profile);

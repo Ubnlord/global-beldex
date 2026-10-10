@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Copy } from "lucide-react";
-import { toast } from "@/components/layout/toast";
+import { toast, toastError } from "@/components/layout/toast";
 import { Button } from "@/components/ui/button";
 import { referralLink, usePlatform } from "@/lib/platform/store";
 import { copy } from "@/lib/platform/i18n";
@@ -31,8 +31,16 @@ function ReferralsPage() {
           className="mt-4 w-full"
           onClick={async () => {
             const next = copyReferral();
-            await copyText(next);
-            toast(t.linkCopied);
+            try {
+              const copied = await copyText(next);
+              if (!copied) {
+                toastError("Couldn't copy the referral link. Please select and copy it manually.");
+                return;
+              }
+              toast(t.linkCopied);
+            } catch {
+              toastError("Couldn't copy the referral link. Please select and copy it manually.");
+            }
           }}
         >
           <Copy size={14} /> {t.copyLink}

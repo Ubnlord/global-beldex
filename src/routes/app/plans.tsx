@@ -18,6 +18,7 @@ function PlansPage() {
   const navigate = useNavigate();
   const available = usePlatform((s) => s.available);
   const activePlans = usePlatform((s) => s.plans);
+  const accrualFailed = usePlatform((s) => s.accrualFailed);
   const buyPlan = usePlatform((s) => s.buyPlan);
   const lang = usePlatform((s) => s.lang);
   const t = copy[lang];
@@ -57,6 +58,11 @@ function PlansPage() {
       <TickerTape />
       <h2 className="mt-4 text-xl font-bold">{t.plansTitle}</h2>
       <p className="mt-1 text-xs text-subtle">{fill(t.plansLead, { amount: formatUsd(available) })}</p>
+      {accrualFailed && (
+        <div role="alert" className="mt-4 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-200">
+          We couldn't refresh interest from the server. The amounts below show the last saved records; estimated pending interest is not credited to your balance. Please refresh later or contact support if this continues.
+        </div>
+      )}
       {activePlans.length > 0 && (
         <section className="mt-5 space-y-3">
           <div>
@@ -135,6 +141,16 @@ function InvestmentMetrics({ plan, bdxUsdRate }: { plan: import("@/lib/platform/
   const now = Date.now();
   const dailyInterest = plan.amount * (plan.dailyPct / 100);
   const totalInterest = plan.creditedProfit ?? 0;
+  const elapsedDays = Math.min(
+    plan.durationDays,
+    Math.max(0, Math.floor((now - plan.startedAt) / 86_400_000)),
+  );
+  const lastProcessedDays = Math.min(
+    plan.durationDays,
+    Math.max(0, Math.floor(((plan.lastAccrualAt ?? plan.startedAt) - plan.startedAt) / 86_400_000)),
+  );
+  const pendingDays = plan.status === "completed" ? 0 : Math.max(0, elapsedDays - lastProcessedDays);
+  const pendingEstimate = dailyInterest * pendingDays;
   const endAt = plan.startedAt + plan.durationDays * 86_400_000;
   const remainingMs = Math.max(0, endAt - now);
   const daysRemaining = Math.ceil(remainingMs / 86_400_000);
@@ -150,7 +166,8 @@ function InvestmentMetrics({ plan, bdxUsdRate }: { plan: import("@/lib/platform/
 
   const metrics = [
     { label: "Today's Interest", value: `+${formatBdx(dailyInterest)} · ${formatUsd(dailyInterest * bdxUsdRate, 3)}` },
-    { label: "Total Interest Earned", value: `+${formatBdx(totalInterest)} · ${formatUsd(totalInterest * bdxUsdRate, 3)}` },
+    { label: "Total Interest Earned (Credited)", value: `+${formatBdx(totalInterest)} · ${formatUsd(totalInterest * bdxUsdRate, 3)}` },
+    { label: "Pending Interest (Estimate)", value: `~${formatBdx(pendingEstimate)} · ${formatUsd(pendingEstimate * bdxUsdRate, 3)}` },
     { label: "Next Interest", value: nextInterest },
     { label: "Days Remaining", value: String(daysRemaining) },
   ];

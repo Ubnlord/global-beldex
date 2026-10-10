@@ -8,6 +8,7 @@ import { pullCloudBook } from "@/lib/supabase/books";
 import { supabase } from "@/lib/supabase/client";
 import type { CloudProfile } from "@/lib/supabase/auth";
 import { validateWithdrawalDestination } from "@/lib/financial/withdrawal-address";
+import { runWithFailureFallback } from "@/lib/supabase/refresh-safety";
 
 export type { Lang };
 
@@ -297,12 +298,14 @@ export const usePlatform = create<PlatformState>()(
         },
 
         settlePlans: async () => {
-          const { error } = await supabase.rpc("accrue_user_investments", { p_user_id: null });
-          if (error) {
+          const remote = await runWithFailureFallback(async () => {
+            const { error } = await supabase.rpc("accrue_user_investments", { p_user_id: null });
+            if (error) throw error;
+            return await pullCloudBook({ skipAccrual: true });
+          }, () => {
+            // Rejected network/RPC promises must never clear saved financial values.
             set({ accrualFailed: true });
-            return;
-          }
-          const remote = await pullCloudBook({ skipAccrual: true });
+          });
           if (remote) {
             set({ ...remote, tickets: remote.tickets ?? [] });
           } else {

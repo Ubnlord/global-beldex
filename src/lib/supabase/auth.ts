@@ -32,6 +32,40 @@ export function profileFromUser(user: User | null | undefined): CloudProfile | n
   };
 }
 
+function friendlyAuth(message: unknown, flow: "sign-in" | "sign-up") {
+  const raw = message instanceof Error ? message.message : String(message ?? "");
+  const m = raw.toLowerCase();
+
+  if (m.includes("already registered") || m.includes("already been registered") ||
+      m.includes("user already exists") || m.includes("already exists")) {
+    return "That email is already registered. Please sign in instead.";
+  }
+  if (m.includes("invalid login") || m.includes("invalid credentials") ||
+      m.includes("email or password") || m.includes("user not found")) {
+    return "Email or password is incorrect. Check your details and try again.";
+  }
+  if (m.includes("email not confirmed")) {
+    return "Your email isn't confirmed yet. Open the confirmation link sent to your inbox.";
+  }
+  if (m.includes("over_email_send_rate_limit") || m.includes("email rate limit") ||
+      m.includes("too many emails") || m.includes("rate limit")) {
+    return "Too many attempts in a short time. Please wait a few minutes and try again.";
+  }
+  if (m.includes("invalid email") || m.includes("email address") && m.includes("invalid")) {
+    return "Enter a valid email address.";
+  }
+  if (m.includes("password") && (m.includes("short") || m.includes("least") || m.includes("weak"))) {
+    return "Choose a stronger password with at least 6 characters.";
+  }
+  if (m.includes("fetch failed") || m.includes("network") || m.includes("timeout") ||
+      m.includes("failed to fetch") || m.includes("load failed")) {
+    return "Connection problem. Check your internet connection and try again.";
+  }
+  return flow === "sign-in"
+    ? "We couldn't sign you in. Check your email and password, then try again."
+    : "We couldn't create your account. Check your details and connection, then try again.";
+}
+
 function friendly(message: string) {
   const m = message.toLowerCase();
   if (m.includes("already registered") || m.includes("already been registered")) {
@@ -57,23 +91,35 @@ function friendly(message: string) {
 }
 
 export async function signUpAccount(input: CloudProfile & { pass: string }) {
-  const { data, error } = await supabase.auth.signUp({
-    email: input.email.trim().toLowerCase(),
-    password: input.pass,
-    options: {
-      emailRedirectTo: redirectTo("/auth/confirm"),
-      data: {
-        username: input.username.trim(),
-        full_name: input.fullname.trim() || input.username.trim(),
-        phone: input.phone.trim(),
-        country: input.country.trim(),
-        ref: input.ref?.trim() || "",
+  try {
+    const { data, error } = await supabase.auth.signUp({
+      email: input.email.trim().toLowerCase(),
+      password: input.pass,
+      options: {
+        emailRedirectTo: redirectTo("/auth/confirm"),
+        data: {
+          username: input.username.trim(),
+          full_name: input.fullname.trim() || input.username.trim(),
+          phone: input.phone.trim(),
+          country: input.country.trim(),
+          ref: input.ref?.trim() || "",
+        },
       },
-    },
-  });
-  if (error) return { error: friendly(error.message), needsConfirm: false, profile: null };
-  const profile = profileFromUser(data.user);
-  return { error: null, needsConfirm: !data.session, profile };
+    });
+    if (error) return { error: friendlyAuth(error.message, "sign-up"), needsConfirm: false, profile: null };
+    // Supabase can return an empty identities array for an existing email to
+    // avoid account enumeration. Don't incorrectly tell that user signup worked.
+    if (data.user && !data.session && (data.user.identities?.length ?? 1) === 0) {
+      return { error: "That email may already be registered. Try signing in or resetting your password.", needsConfirm: false, profile: null };
+    }
+    const profile = profileFromUser(data.user);
+    if (!profile) {
+      return { error: "Your account response was incomplete. Please try signing in before registering again.", needsConfirm: false, profile: null };
+    }
+    return { error: null, needsConfirm: !data.session, profile };
+  } catch (error) {
+    return { error: friendlyAuth(error, "sign-up"), needsConfirm: false, profile: null };
+  }
 }
 
 export async function ensureCloudProfile(profile: CloudProfile) {
@@ -110,12 +156,18 @@ export async function updateCloudProfile(profile: CloudProfile) {
 }
 
 export async function signInAccount(email: string, password: string) {
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email: email.trim().toLowerCase(),
-    password,
-  });
-  if (error) return { error: friendly(error.message), profile: null };
-  return { error: null, profile: profileFromUser(data.user) };
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: email.trim().toLowerCase(),
+      password,
+    });
+    if (error) return { error: friendlyAuth(error.message, "sign-in"), profile: null };
+    const profile = profileFromUser(data.user);
+    if (!profile) return { error: "We couldn't load your account details. Please try again.", profile: null };
+    return { error: null, profile };
+  } catch (error) {
+    return { error: friendlyAuth(error, "sign-in"), profile: null };
+  }
 }
 
 export async function signOutCloud() {

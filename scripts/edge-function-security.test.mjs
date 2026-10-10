@@ -17,4 +17,6 @@ test("swap Edge Function restricts browser origins", () => {
   assert.match(source, /headers\["Access-Control-Allow-Origin"\] = origin/);
   assert.match(source, /"Vary": "Origin"/);
   assert.doesNotMatch(source, /"Access-Control-Allow-Origin": "\*"/);
+  assert.match(source, /Swap could not be completed\. Please try again\./);
+  assert.doesNotMatch(source, /throw new Error\(error\.message\)/);
 });

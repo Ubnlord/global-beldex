@@ -4,7 +4,7 @@ import { toastError } from "@/components/layout/toast";
 import { Navigate, Outlet } from "@tanstack/react-router";
 import { usePlatform } from "@/lib/platform/store";
 import { pullCloudBook } from "@/lib/supabase/books";
-import { currentProfile, ensureCloudProfile } from "@/lib/supabase/auth";
+import { currentProfile } from "@/lib/supabase/auth";
 import { BottomNav } from "./bottom-nav";
 import { Header } from "./header";
 import { SideMenu } from "./side-menu";
@@ -32,14 +32,10 @@ export function useHydratePlatform() {
           if (profile) {
             // A profile-sync failure should not prevent the app from finishing hydration.
             // The saved account figures remain in place until a full cloud refresh succeeds.
-            const profileError = await ensureCloudProfile(profile);
-            if (profileError) {
-              refreshFailed = true;
-              usePlatform.setState({ accrualFailed: true });
-              toastError(`We couldn't sync your account profile: ${profileError}`);
-            } else {
-              usePlatform.getState().setUserProfile(profile);
-            }
+            // Never create/upsert a profile during ordinary hydration: a missing
+            // server profile must remain visible as a recovery condition, not be
+            // silently recreated (which can also trigger a welcome-bonus mutation).
+            usePlatform.getState().setUserProfile(profile);
           }
           const remote = await pullCloudBook();
           const state = usePlatform.getState();

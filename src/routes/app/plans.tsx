@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { TickerTape } from "@/components/market/tradingview";
 import { toast, toastError } from "@/components/layout/toast";
 import { PlanGrid } from "@/components/platform/plan-card";

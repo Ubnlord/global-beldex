@@ -1,14 +1,43 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const cors = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+const allowedOrigins = new Set([
+  "https://global-beldex.com",
+  // Local development only; these exact origins cannot be supplied by a remote browser.
+  "http://localhost:8080",
+  "http://127.0.0.1:8080",
+]);
+
+function corsHeaders(origin: string | null): Record<string, string> {
+  const headers: Record<string, string> = {
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Max-Age": "600",
+    "Vary": "Origin",
+  };
+
+  if (origin && allowedOrigins.has(origin)) {
+    headers["Access-Control-Allow-Origin"] = origin;
+  }
+
+  return headers;
+}
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("Origin");
+
+  // CORS is defense in depth, not authentication. JWT verification and the
+  // database RPC's user/permission checks remain mandatory.
+  if (origin && !allowedOrigins.has(origin)) {
+    return new Response(JSON.stringify({ error: "Origin not allowed" }), {
+      status: 403,
+      headers: { "Vary": "Origin", "Content-Type": "application/json" },
+    });
+  }
+
+  const cors = corsHeaders(origin);
+
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: cors });
+    return new Response(null, { status: 204, headers: cors });
   }
 
   if (req.method !== "POST") {
@@ -81,7 +110,11 @@ Deno.serve(async (req) => {
       p_rate: rate,
     });
 
-    if (error) throw new Error(error.message);
+    if (error) {
+      // Log only the machine-readable code; do not expose database details to clients.
+      console.error("swap_assets RPC failed", { code: error.code });
+      throw new Error("Swap could not be completed. Please try again.");
+    }
 
     return new Response(JSON.stringify({ transaction: data, rate }), {
       status: 200,

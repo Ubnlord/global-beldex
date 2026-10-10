@@ -8,13 +8,17 @@ function num(v: unknown) {
   return Number.isFinite(n) ? n : 0;
 }
 
-export async function pullCloudBook(): Promise<Book | null> {
+export async function pullCloudBook(options: { skipAccrual?: boolean } = {}): Promise<Book | null> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
   // Accrual is idempotent: PostgreSQL only credits elapsed days not already processed.
-  // Preserve a safe status flag so the UI can warn when the server call fails.
-  const accrualResult = await supabase.rpc("accrue_user_investments", { p_user_id: null });
+  // Callers that just completed the RPC can skip a redundant second call.
+  let accrualFailed = false;
+  if (!options.skipAccrual) {
+    const accrualResult = await supabase.rpc("accrue_user_investments", { p_user_id: null });
+    accrualFailed = Boolean(accrualResult.error);
+  }
 
   const [profileResult, txResult, investmentsResult] = await Promise.all([
     supabase
@@ -89,7 +93,7 @@ export async function pullCloudBook(): Promise<Book | null> {
     plans,
     notices: [],
     tickets: [],
-    accrualFailed: Boolean(accrualResult.error),
+    accrualFailed,
   };
 }
 

@@ -41,7 +41,7 @@ const mustContain = [
 
 test("database/API defense-in-depth migrations keep critical controls", () => {
   for (const needle of mustContain) assert.ok(migration.includes(needle), `Missing security control: ${needle}`);
-  assert.equal((migration.match(/grant execute on function public\\.swap_assets\\(/g) || []).length, 1);
+  assert.equal((migration.match(/grant execute on function public\.swap_assets\(/g) || []).length, 1);
 
   for (const needle of [
     "revoke all on table public.books from anon, authenticated;",
@@ -56,13 +56,13 @@ test("database/API defense-in-depth migrations keep critical controls", () => {
     "check (credited_profit >= 0)",
   ]) assert.ok(databaseDefense.includes(needle), `Missing defense-in-depth control: ${needle}`);
 
-  assert.match(authorizationTightening, /revoke all on function public\\.is_admin\\(\\) from public, anon, authenticated;/i);
-  assert.match(authorizationTightening, /unique \\(user_id\\)/i);
-  assert.match(anonymousAuditLockdown, /revoke select on table public\\.admin_action_audit from anon;/i);
+  assert.match(authorizationTightening, /revoke all on function public\.is_admin\(\) from public, anon, authenticated;/i);
+  assert.match(authorizationTightening, /unique \(user_id\)/i);
+  assert.match(anonymousAuditLockdown, /revoke select on table public\.admin_action_audit from anon;/i);
 });
 
 test("unused legacy balance RPCs are not callable by client roles", () => {
-  assert.match(legacyBalanceRpcLockdown, /revoke all on function public\\.admin_fund_user\\(uuid,numeric,text\\)\\s+from public, anon, authenticated;/i);
-  assert.match(legacyBalanceRpcLockdown, /revoke all on function public\\.admin_adjust_balance\\(uuid,numeric,text\\)\\s+from public, anon, authenticated;/i);
-  assert.doesNotMatch(legacyBalanceRpcLockdown, /grant execute on function public\\.(admin_fund_user|admin_adjust_balance).*to authenticated/i);
+  assert.match(legacyBalanceRpcLockdown, /revoke all on function public\.admin_fund_user\(uuid,numeric,text\)\s+from public, anon, authenticated;/i);
+  assert.match(legacyBalanceRpcLockdown, /revoke all on function public\.admin_adjust_balance\(uuid,numeric,text\)\s+from public, anon, authenticated;/i);
+  assert.doesNotMatch(legacyBalanceRpcLockdown, /grant execute on function public\.(admin_fund_user|admin_adjust_balance).*to authenticated/i);
 });

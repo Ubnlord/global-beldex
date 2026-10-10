@@ -33,7 +33,9 @@ export async function pullCloudBook(): Promise<Book | null> {
       .order("created_at", { ascending: false }),
   ]);
 
-  if (profileResult.error) return null;
+  // Treat any failed financial query as a failed refresh. Returning partial data here
+  // could replace cached transactions or investments with empty arrays.
+  if (profileResult.error || txResult.error || investmentsResult.error) return null;
   const p = profileResult.data;
   const rawTxs = txResult.data ?? [];
   const txs: Transaction[] = rawTxs.map((t: any) => ({

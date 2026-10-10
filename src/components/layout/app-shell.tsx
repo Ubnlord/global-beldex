@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { RotateCw } from "lucide-react";
-import { toastError } from "@/components/layout/toast";
 import { Navigate, Outlet } from "@tanstack/react-router";
 import { usePlatform } from "@/lib/platform/store";
 import { pullCloudBook } from "@/lib/supabase/books";
@@ -22,7 +21,6 @@ export function useHydratePlatform() {
     let cancelled = false;
     const finish = () => {
       void (async () => {
-        let refreshFailed = false;
         try {
           const s = usePlatform.getState();
           if (s.sessionOnly && sessionStorage.getItem("lb-session") !== "1") {
@@ -43,7 +41,7 @@ export function useHydratePlatform() {
             usePlatform.setState({
               ...remote,
               tickets: remote.tickets ?? [],
-              accrualFailed: refreshFailed || remote.accrualFailed,
+              accrualFailed: remote.accrualFailed,
             });
           } else if (state.user) {
             // Keep the last known financial figures, but make the failed cloud refresh visible.

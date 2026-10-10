@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(66);
+select plan(68);
 
 -- Schema and RLS baseline.
 select has_table('public', 'user_profile', 'user_profile exists');
@@ -119,8 +119,10 @@ select function_privs_are('public', 'admin_reject_withdrawal', array['uuid','tex
 select function_privs_are('public', 'admin_manage_investment', array['uuid','numeric','text','text'], 'anon', '{}', 'anon cannot execute admin_manage_investment');
 
 -- Client-facing execution is authenticated-only where intended.
-select function_privs_are('public', 'admin_fund_user', array['uuid','numeric','text'], 'authenticated', array['EXECUTE'], 'authenticated can reach admin_fund_user; function enforces permission');
-select function_privs_are('public', 'admin_adjust_balance', array['uuid','numeric','text'], 'authenticated', array['EXECUTE'], 'authenticated can reach admin_adjust_balance; function enforces permission');
+select function_privs_are('public', 'admin_fund_user', array['uuid','numeric','text'], 'authenticated', '{}', 'authenticated cannot execute legacy admin_fund_user');
+select function_privs_are('public', 'admin_adjust_balance', array['uuid','numeric','text'], 'authenticated', '{}', 'authenticated cannot execute legacy admin_adjust_balance');
+select function_privs_are('public', 'admin_fund_user', array['uuid','numeric','text'], 'service_role', array['EXECUTE'], 'service role retains controlled admin_fund_user execution');
+select function_privs_are('public', 'admin_adjust_balance', array['uuid','numeric','text'], 'service_role', array['EXECUTE'], 'service role retains controlled admin_adjust_balance execution');
 
 select function_privs_are('public', 'create_financial_transaction', array['text','numeric','text','text','uuid'], 'authenticated', array['EXECUTE'], 'authenticated can create financial requests');
 

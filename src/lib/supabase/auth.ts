@@ -68,6 +68,16 @@ function friendlyAuth(message: unknown, flow: "sign-in" | "sign-up") {
 
 function friendly(message: string) {
   const m = message.toLowerCase();
+  if (m.includes("duplicate key") || m.includes("user_profile_username") ||
+      (m.includes("username") && (m.includes("unique") || m.includes("already"))) ) {
+    return "That username is already in use. Choose another username.";
+  }
+  if (m.includes("cannot refer yourself") || m.includes("refer yourself")) {
+    return "You can't use your own referral code.";
+  }
+  if (m.includes("unauthorized") || m.includes("jwt expired")) {
+    return "Your session has expired. Please sign in again.";
+  }
   if (m.includes("already registered") || m.includes("already been registered")) {
     return "That email is already registered. Sign in instead.";
   }

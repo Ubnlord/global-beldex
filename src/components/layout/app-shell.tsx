@@ -31,6 +31,9 @@ export function useHydratePlatform() {
         const state = usePlatform.getState();
         if (remote && state.user) {
           usePlatform.setState({ ...remote, tickets: remote.tickets ?? [] });
+        } else if (state.user) {
+          // Keep the last known financial figures, but make the failed cloud refresh visible.
+          usePlatform.setState({ accrualFailed: true });
         }
         setHydrated(true);
       })();

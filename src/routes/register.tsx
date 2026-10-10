@@ -51,40 +51,58 @@ function Register() {
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (!form.username.trim()) {
+      toastError("Choose a username.");
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+      toastError("Enter a valid email address.");
+      return;
+    }
+    if (!form.country) {
+      toastError("Select your country.");
+      return;
+    }
     if (form.pass !== form.repeat) {
-      toast(t.mismatch);
+      toastError(t.mismatch);
       return;
     }
     if (form.pass.length < 6) {
-      toast(t.shortPass);
+      toastError(t.shortPass);
       return;
     }
+
     setBusy(true);
-    const result = await signUpAccount({
-      email: form.email,
-      username: form.username,
-      fullname: form.fullname,
-      phone: form.phone,
-      country: form.country,
-      ref: form.ref,
-      pass: form.pass,
-    });
-    setBusy(false);
-    if (result.error) {
-      toast(result.error);
-      return;
+    try {
+      const result = await signUpAccount({
+        email: form.email,
+        username: form.username,
+        fullname: form.fullname,
+        phone: form.phone,
+        country: form.country,
+        ref: form.ref,
+        pass: form.pass,
+      });
+      if (result.error) {
+        toastError(result.error);
+        return;
+      }
+      if (result.needsConfirm) {
+        setPendingEmail(form.email.trim());
+        return;
+      }
+      if (!result.profile) {
+        toastError("We couldn't load your new account details. Please try signing in before registering again.");
+        return;
+      }
+      setUserProfile(result.profile);
+      toast(t.created);
+      void navigate({ to: "/app" });
+    } catch {
+      toastError("Sign-up failed unexpectedly. Check your connection and try again.");
+    } finally {
+      setBusy(false);
     }
-    if (result.needsConfirm) {
-      setPendingEmail(form.email.trim());
-      return;
-    }
-    if (!result.profile) {
-      toastError("Account created, but the profile could not be loaded. Please sign in.");
-      return;
-    }
-    setUserProfile(result.profile);
-    toast(t.created);
-    void navigate({ to: "/app" });
   };
 
   if (pendingEmail) {

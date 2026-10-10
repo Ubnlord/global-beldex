@@ -371,6 +371,7 @@ export const usePlatform = create<PlatformState>()(
           plans: p.plans ?? [],
           notices: p.notices ?? [],
           tickets,
+          accrualFailed: p.accrualFailed ?? false,
         });
         return { ...p, tickets, user: null };
       },

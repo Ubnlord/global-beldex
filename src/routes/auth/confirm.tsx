@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { FieldLabel, Input } from "@/components/ui/input";
 import { copy } from "@/lib/platform/i18n";
 import { usePlatform } from "@/lib/platform/store";
-import { completeAuthRedirect, updateCloudPassword, type CloudProfile } from "@/lib/supabase/auth";
+import { completeAuthRedirect, ensureCloudProfile, updateCloudPassword, type CloudProfile } from "@/lib/supabase/auth";
 
 export const Route = createFileRoute("/auth/confirm")({ component: ConfirmPage });
 
@@ -43,6 +43,14 @@ function Confirm() {
       setProfile(result.profile);
       if (params.get("type") === "recovery") {
         setRecovery(true);
+        return;
+      }
+      // Finalize signup metadata (including sponsor referral) only after the
+      // email-confirmation callback has established an authenticated session.
+      const profileError = await ensureCloudProfile(result.profile);
+      if (gone) return;
+      if (profileError) {
+        setError(`Your email is confirmed, but account setup couldn't finish: ${profileError} Please contact support before registering again.`);
         return;
       }
       setUserProfile(result.profile);

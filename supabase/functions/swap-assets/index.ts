@@ -110,7 +110,11 @@ Deno.serve(async (req) => {
       p_rate: rate,
     });
 
-    if (error) throw new Error(error.message);
+    if (error) {
+      // Log only the machine-readable code; do not expose database details to clients.
+      console.error("swap_assets RPC failed", { code: error.code });
+      throw new Error("Swap could not be completed. Please try again.");
+    }
 
     return new Response(JSON.stringify({ transaction: data, rate }), {
       status: 200,

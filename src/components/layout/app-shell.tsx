@@ -16,37 +16,55 @@ export function useHydratePlatform() {
 
   useEffect(() => {
     const persist = usePlatform.persist;
+    let cancelled = false;
     const finish = () => {
       void (async () => {
-        const s = usePlatform.getState();
-        if (s.sessionOnly && sessionStorage.getItem("lb-session") !== "1") {
-          usePlatform.setState({ user: null });
+        try {
+          const s = usePlatform.getState();
+          if (s.sessionOnly && sessionStorage.getItem("lb-session") !== "1") {
+            usePlatform.setState({ user: null });
+          }
+          const profile = await currentProfile();
+          if (profile) {
+            // A profile-sync failure should not prevent the app from finishing hydration.
+            // The saved account figures remain in place until a full cloud refresh succeeds.
+            const profileError = await ensureCloudProfile(profile);
+            if (profileError) {
+              usePlatform.setState({ accrualFailed: true });
+            } else {
+              usePlatform.getState().setUserProfile(profile);
+            }
+          }
+          const remote = await pullCloudBook();
+          const state = usePlatform.getState();
+          if (remote && state.user) {
+            usePlatform.setState({ ...remote, tickets: remote.tickets ?? [] });
+          } else if (state.user) {
+            // Keep the last known financial figures, but make the failed cloud refresh visible.
+            usePlatform.setState({ accrualFailed: true });
+          }
+        } catch {
+          // Network or unexpected auth/profile errors must not leave the app on its loading screen.
+          // Do not replace cached financial values with zeroes when refresh fails.
+          if (usePlatform.getState().user) {
+            usePlatform.setState({ accrualFailed: true });
+          }
+        } finally {
+          if (!cancelled) setHydrated(true);
         }
-        const profile = await currentProfile();
-        if (profile) {
-          await ensureCloudProfile(profile);
-          usePlatform.getState().setUserProfile(profile);
-        }
-        const remote = await pullCloudBook();
-        const state = usePlatform.getState();
-        if (remote && state.user) {
-          usePlatform.setState({ ...remote, tickets: remote.tickets ?? [] });
-        } else if (state.user) {
-          // Keep the last known financial figures, but make the failed cloud refresh visible.
-          usePlatform.setState({ accrualFailed: true });
-        }
-        setHydrated(true);
       })();
     };
     if (persist.hasHydrated()) {
       finish();
-      return () => undefined;
+      return () => {
+        cancelled = true;
+      };
     }
     const unsub = persist.onFinishHydration(finish);
     void persist.rehydrate();
     return () => {
+      cancelled = true;
       unsub();
-
     };
   }, [setHydrated]);
 }

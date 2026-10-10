@@ -302,7 +302,7 @@ export const usePlatform = create<PlatformState>()(
             set({ accrualFailed: true });
             return;
           }
-          const remote = await pullCloudBook();
+          const remote = await pullCloudBook({ skipAccrual: true });
           if (remote) {
             set({ ...remote, tickets: remote.tickets ?? [] });
           } else {

@@ -316,11 +316,7 @@ export const usePlatform = create<PlatformState>()(
           if (remote) set({ ...remote, tickets: remote.tickets ?? [] });
           return null;
         },
-        copyReferral: () => {
-          const u = get().user;
-          const slug = u?.username || "guest";
-          return `https://global-beldex.com/ref/${slug}`;
-        },
+        copyReferral: () => referralLink(get().user),
 
         addNotice: (title, body) => {
           set({ notices: [notice(title, body), ...get().notices] });
@@ -386,7 +382,9 @@ export const usePlatform = create<PlatformState>()(
 );
 
 export function referralLink(user: User | null) {
-  return `https://global-beldex.com/ref/${user?.username || "mrkenmk"}`;
+  const code = user?.ref?.trim() || user?.username?.trim();
+  const base = "https://global-beldex.com/register";
+  return code ? `${base}?ref=${encodeURIComponent(code)}` : base;
 }
 
 export function accruedProfit(p: ActivePlan, now = Date.now()) {

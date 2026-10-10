@@ -13,6 +13,9 @@ const operationsHardening = fs.readFileSync(path.join(root, "migrations/0020_pos
 const adminAuditIdentity = fs.readFileSync(path.join(root, "migrations/0022_admin_audit_identity_hardening.sql"), "utf8");
 const adminRoute = fs.readFileSync(path.join(root, "src/routes/admin.tsx"), "utf8");
 const adminShell = fs.readFileSync(path.join(root, "src/components/admin/admin-shell.tsx"), "utf8");
+const cloudBookGuard = fs.readFileSync(path.join(root, "src/lib/supabase/cloud-book-guard.ts"), "utf8");
+const cloudBookGuardTests = fs.readFileSync(path.join(root, "src/lib/supabase/cloud-book-guard.test.ts"), "utf8");
+const appShell = fs.readFileSync(path.join(root, "src/components/layout/app-shell.tsx"), "utf8");
 
 test("permanent financial safeguard suite is present and non-destructive", () => {
   for (const needle of [
@@ -62,4 +65,17 @@ test("permanent financial safeguard suite is present and non-destructive", () =>
   assert.match(adminRoute, /view_audit_log/);
   assert.match(adminRoute, /admin_financial_reconciliation/);
   assert.match(adminRoute, /never writes balances, investments or transaction states directly/);
+});
+
+
+test("financial refresh cannot present failed cold-start hydration as verified zero balances", () => {
+  assert.match(appShell, /financialBookUnavailable/);
+  assert.match(appShell, /Retry account refresh/);
+  assert.match(appShell, /won't display placeholder zeroes/);
+  assert.match(cloudBookGuard, /hasValidBalances/);
+  assert.match(cloudBookGuard, /isArrayData\(txResult\.data\)/);
+  assert.match(cloudBookGuard, /isArrayData\(investmentsResult\.data\)/);
+  assert.match(cloudBookGuardTests, /transaction data is null, missing, or not an array/);
+  assert.match(cloudBookGuardTests, /investment data is null, missing, or not an array/);
+  assert.match(cloudBookGuardTests, /genuinely empty ledgers/);
 });

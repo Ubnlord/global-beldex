@@ -298,9 +298,17 @@ export const usePlatform = create<PlatformState>()(
 
         settlePlans: async () => {
           const { error } = await supabase.rpc("accrue_user_investments", { p_user_id: null });
-          if (error) return;
+          if (error) {
+            set({ accrualFailed: true });
+            return;
+          }
           const remote = await pullCloudBook();
-          if (remote) set({ ...remote, tickets: remote.tickets ?? [] });
+          if (remote) {
+            set({ ...remote, tickets: remote.tickets ?? [] });
+          } else {
+            // Never clear or zero financial values after an incomplete cloud refresh.
+            set({ accrualFailed: true });
+          }
         },
 
         swap: async (from, to, amount) => {
@@ -382,7 +390,10 @@ export const usePlatform = create<PlatformState>()(
 );
 
 export function referralLink(user: User | null) {
-  const code = user?.ref?.trim() || user?.username?.trim();
+  // Username is accepted by ensure_user_profile as a referral lookup key.
+  // Do not use user.ref here: before profile hydration it can still contain
+  // the sponsor's code from signup metadata rather than this user's own code.
+  const code = user?.username?.trim();
   const base = "https://global-beldex.com/register";
   return code ? `${base}?ref=${encodeURIComponent(code)}` : base;
 }

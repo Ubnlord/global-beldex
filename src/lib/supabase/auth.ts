@@ -133,14 +133,18 @@ export async function signUpAccount(input: CloudProfile & { pass: string }) {
 }
 
 export async function ensureCloudProfile(profile: CloudProfile) {
-  const { error } = await supabase.rpc("ensure_user_profile", {
-    p_username: profile.username,
-    p_fullname: profile.fullname,
-    p_phone: profile.phone,
-    p_country: profile.country,
-    p_ref: profile.ref || null,
-  });
-  return error ? friendly(error.message) : null;
+  try {
+    const { error } = await supabase.rpc("ensure_user_profile", {
+      p_username: profile.username,
+      p_fullname: profile.fullname,
+      p_phone: profile.phone,
+      p_country: profile.country,
+      p_ref: profile.ref || null,
+    });
+    return error ? friendly(error.message) : null;
+  } catch (error) {
+    return friendlyAuth(error, "sign-up");
+  }
 }
 
 export async function updateCloudProfile(profile: CloudProfile) {

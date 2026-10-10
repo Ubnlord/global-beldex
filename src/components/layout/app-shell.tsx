@@ -105,6 +105,20 @@ export function GuestShell({ children }: { children: React.ReactNode }) {
   const [menu, setMenu] = useState(false);
   const user = usePlatform((s) => s.user);
   const hydrated = usePlatform((s) => s.hydrated);
+  const accrualFailed = usePlatform((s) => s.accrualFailed);
+  const available = usePlatform((s) => s.available);
+  const bdx = usePlatform((s) => s.bdx);
+  const locked = usePlatform((s) => s.locked);
+  const profit = usePlatform((s) => s.profit);
+  const txs = usePlatform((s) => s.txs);
+  const plans = usePlatform((s) => s.plans);
+  const settlePlans = usePlatform((s) => s.settlePlans);
+  const [retryingFinancialRefresh, setRetryingFinancialRefresh] = useState(false);
+  // On a cold start, a failed cloud read leaves the store's initial empty book.
+  // Do not render those placeholder zeroes as if they were authoritative balances.
+  const financialBookUnavailable = Boolean(user && accrualFailed &&
+    available === 0 && bdx === 0 && locked === 0 && profit === 0 &&
+    txs.length === 0 && plans.length === 0);
 
   useEffect(() => {
     const onErr = (z: ErrorEvent) => {
@@ -170,6 +184,39 @@ export function AppShell() {
     );
   }
   if (!user) return <Navigate to="/login" replace />;
+
+  if (financialBookUnavailable) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-bg px-4 text-fg">
+        <div className="w-full max-w-md rounded-xl border border-amber-500/40 bg-surface p-6">
+          <h1 className="text-lg font-bold">Your financial records aren't available yet</h1>
+          <p className="mt-2 text-sm text-subtle">
+            We couldn't verify your latest account balances. To protect your records,
+            we won't display placeholder zeroes. Your saved server-side records have not
+            been changed by this failed refresh.
+          </p>
+          <button
+            type="button"
+            disabled={retryingFinancialRefresh}
+            onClick={async () => {
+              setRetryingFinancialRefresh(true);
+              try {
+                await settlePlans();
+              } finally {
+                setRetryingFinancialRefresh(false);
+              }
+            }}
+            className="mt-5 w-full rounded-lg bg-accent px-4 py-3 text-sm font-semibold text-black disabled:opacity-60"
+          >
+            {retryingFinancialRefresh ? "Checking account…" : "Retry account refresh"}
+          </button>
+          <p className="mt-3 text-xs text-subtle">
+            If this continues, contact support before making any financial decisions.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-bg text-fg font-sans">

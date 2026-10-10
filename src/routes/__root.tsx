@@ -37,8 +37,16 @@ function DynamicImportRecovery() {
     };
 
     const onError = (event: ErrorEvent) => {
-      const message = String(event.error?.message || event.message || "");
+      // Module-script load errors often expose only a generic event.error while
+      // the useful browser message is in event.message. Keep both signals.
+      const message = [event.error?.message, event.message]
+        .filter(Boolean)
+        .join(" ");
+      const failedModuleScript =
+        event.target instanceof HTMLScriptElement &&
+        event.target.type === "module";
       if (
+        failedModuleScript ||
         message.includes("Failed to fetch dynamically imported module") ||
         message.includes("Importing a module script failed") ||
         message.includes("ChunkLoadError")

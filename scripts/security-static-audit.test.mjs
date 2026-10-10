@@ -10,6 +10,7 @@ const databaseDefense = fs.readFileSync(path.join(root, "migrations/0011_databas
 const authorizationTightening = fs.readFileSync(path.join(root, "migrations/0012_tighten_authorization_helpers.sql"), "utf8");
 const anonymousAuditLockdown = fs.readFileSync(path.join(root, "migrations/0013_remove_anon_audit_access.sql"), "utf8");
 const adminFinancialControls = fs.readFileSync(path.join(root, "migrations/0014_admin_financial_controls.sql"), "utf8");
+const rootRoute = fs.readFileSync(path.join(root, "src/routes/__root.tsx"), "utf8");
 
 const mustContain = [
   "revoke all on function public.admin_has_permission(text) from public, anon, authenticated;",
@@ -58,4 +59,13 @@ test("database/API defense-in-depth migrations keep critical controls", () => {
   assert.match(authorizationTightening, /revoke all on function public\.is_admin\(\) from public, anon, authenticated;/i);
   assert.match(authorizationTightening, /unique \(user_id\)/i);
   assert.match(anonymousAuditLockdown, /revoke select on table public\.admin_action_audit from anon;/i);
+});
+
+
+test("dynamic import failures trigger guarded recovery", () => {
+  assert.match(rootRoute, /\[event\.error\?\.message, event\.message\]/);
+  assert.match(rootRoute, /event\.target instanceof HTMLScriptElement/);
+  assert.match(rootRoute, /event\.target\.type === "module"/);
+  assert.match(rootRoute, /__global_beldex_chunk_recovery/);
+  assert.match(rootRoute, /__gb_reload/);
 });

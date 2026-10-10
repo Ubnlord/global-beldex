@@ -105,20 +105,6 @@ export function GuestShell({ children }: { children: React.ReactNode }) {
   const [menu, setMenu] = useState(false);
   const user = usePlatform((s) => s.user);
   const hydrated = usePlatform((s) => s.hydrated);
-  const accrualFailed = usePlatform((s) => s.accrualFailed);
-  const available = usePlatform((s) => s.available);
-  const bdx = usePlatform((s) => s.bdx);
-  const locked = usePlatform((s) => s.locked);
-  const profit = usePlatform((s) => s.profit);
-  const txs = usePlatform((s) => s.txs);
-  const plans = usePlatform((s) => s.plans);
-  const settlePlans = usePlatform((s) => s.settlePlans);
-  const [retryingFinancialRefresh, setRetryingFinancialRefresh] = useState(false);
-  // On a cold start, a failed cloud read leaves the store's initial empty book.
-  // Do not render those placeholder zeroes as if they were authoritative balances.
-  const financialBookUnavailable = Boolean(user && accrualFailed &&
-    available === 0 && bdx === 0 && locked === 0 && profit === 0 &&
-    txs.length === 0 && plans.length === 0);
 
   useEffect(() => {
     const onErr = (z: ErrorEvent) => {
@@ -151,6 +137,20 @@ export function AppShell() {
   const [menu, setMenu] = useState(false);
   const user = usePlatform((s) => s.user);
   const hydrated = usePlatform((s) => s.hydrated);
+  const accrualFailed = usePlatform((s) => s.accrualFailed);
+  const available = usePlatform((s) => s.available);
+  const bdx = usePlatform((s) => s.bdx);
+  const locked = usePlatform((s) => s.locked);
+  const profit = usePlatform((s) => s.profit);
+  const txs = usePlatform((s) => s.txs);
+  const plans = usePlatform((s) => s.plans);
+  const settlePlans = usePlatform((s) => s.settlePlans);
+  const [retryingFinancialRefresh, setRetryingFinancialRefresh] = useState(false);
+  // On a cold start, a failed cloud read leaves the store's initial empty book.
+  // Do not render those placeholder zeroes as if they were authoritative balances.
+  const financialBookUnavailable = Boolean(user && accrualFailed &&
+    available === 0 && bdx === 0 && locked === 0 && profit === 0 &&
+    txs.length === 0 && plans.length === 0);
 
   useEffect(() => {
     const onErr = (z: ErrorEvent) => {

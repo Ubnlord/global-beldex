@@ -227,7 +227,8 @@ export async function currentProfile() {
     fullname: row.fullname || base.fullname,
     phone: row.phone || "",
     country: row.country || "",
-    ref: row.referral_code || base.ref,
+    // `ref` is the signup sponsor code from auth metadata, not this user's own referral_code.
+    ref: base.ref,
     avatar: row.avatar_url || undefined,
   };
 }

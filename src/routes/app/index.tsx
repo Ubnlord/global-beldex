@@ -26,7 +26,7 @@ import {
   referralLink,
   usePlatform,
 } from "@/lib/platform/store";
-import { formatUsd, copyText } from "@/lib/utils";
+import { formatBdx, formatUsd, copyText } from "@/lib/utils";
 export const Route = createFileRoute("/app/")({ component: Dashboard });
 
 function Dashboard() {
@@ -226,12 +226,12 @@ function Dashboard() {
                 <div className="flex items-center justify-between">
                   <div className="text-xs font-bold tracking-widest">{p.name}</div>
                   <div className="text-[11px] text-accent">
-                    +{formatUsd(accruedProfit(p))} {t.accrued}
+                    +{formatBdx(accruedProfit(p))} {t.accrued}
                   </div>
                 </div>
                 <div className="mt-2 text-[11px] text-subtle">
                   {fill(t.page.planMeta, {
-                    amount: formatUsd(p.amount),
+                    amount: formatBdx(p.amount),
                     pct: Number((p.dailyPct * p.durationDays).toFixed(2)),
                     days: p.durationDays,
                   })}

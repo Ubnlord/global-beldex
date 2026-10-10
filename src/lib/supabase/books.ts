@@ -1,6 +1,7 @@
 import type { Book, ActivePlan, Transaction, TxStatus, TxType } from "@/lib/platform/store";
 import { supabase } from "./client";
 import { usdToBdx } from "@/lib/utils";
+import { isCompleteCloudRefresh } from "./cloud-book-guard";
 
 function num(v: unknown) {
   const n = Number(v);
@@ -33,10 +34,10 @@ export async function pullCloudBook(): Promise<Book | null> {
       .order("created_at", { ascending: false }),
   ]);
 
-  // Treat any failed financial query as a failed refresh. Returning partial data here
-  // could replace cached transactions or investments with empty arrays.
-  if (profileResult.error || txResult.error || investmentsResult.error) return null;
-  const p = profileResult.data;
+  // A missing profile is not a valid zero-balance account. Keep the last known
+  // local book intact if any financial query failed or the profile row is absent.
+  if (!isCompleteCloudRefresh(profileResult, txResult, investmentsResult)) return null;
+  const p = profileResult.data as NonNullable<typeof profileResult.data>;
   const rawTxs = txResult.data ?? [];
   const txs: Transaction[] = rawTxs.map((t: any) => ({
     id: t.id,

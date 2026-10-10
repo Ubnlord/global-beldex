@@ -47,7 +47,7 @@ test("permanent financial safeguard suite is present and non-destructive", () =>
   assert.match(operationsHardening, /p\.total_deposits,coalesce\(d\.amount,0\),p\.total_deposits-coalesce\(d\.amount,0\)/);
   assert.match(operationsHardening, /p\.total_withdrawals,coalesce\(w\.amount,0\),p\.total_withdrawals-coalesce\(w\.amount,0\)/);
   assert.match(operationsHardening, /p\.locked_balance-coalesce\(i\.active_principal,0\)/);
-  assert.match(adminAuditIdentity, /select id\\s+into v_admin_id\\s+from public\.admin_user\\s+where user_id = auth\.uid\(\)/i);
+  assert.match(adminAuditIdentity, /select id\s+into v_admin_id\s+from public\.admin_user\s+where user_id = auth\.uid\(\)/i);
   assert.match(adminAuditIdentity, /alter column admin_id drop not null/i);
   for (const section of ["Transactions", "Users", "Investments", "KYC", "Reconciliation", "Audit log", "Operations"]) {
     assert.match(adminRoute, new RegExp(section));

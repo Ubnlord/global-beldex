@@ -12,7 +12,8 @@ export async function pullCloudBook(): Promise<Book | null> {
   if (!user) return null;
 
   // Accrual is idempotent: PostgreSQL only credits elapsed days not already processed.
-  await supabase.rpc("accrue_user_investments", { p_user_id: null });
+  // Preserve a safe status flag so the UI can warn when the server call fails.
+  const accrualResult = await supabase.rpc("accrue_user_investments", { p_user_id: null });
 
   const [profileResult, txResult, investmentsResult] = await Promise.all([
     supabase
@@ -85,6 +86,7 @@ export async function pullCloudBook(): Promise<Book | null> {
     plans,
     notices: [],
     tickets: [],
+    accrualFailed: Boolean(accrualResult.error),
   };
 }
 

@@ -105,6 +105,7 @@ type PlatformState = {
   plans: ActivePlan[];
   notices: Notice[];
   tickets: Ticket[];
+  accrualFailed: boolean;
   lang: Lang;
   setLang: (lang: Lang) => void;
   notificationSound: boolean;

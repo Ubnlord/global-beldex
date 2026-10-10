@@ -19,6 +19,7 @@ export function useHydratePlatform() {
     let cancelled = false;
     const finish = () => {
       void (async () => {
+        let refreshFailed = false;
         try {
           const s = usePlatform.getState();
           if (s.sessionOnly && sessionStorage.getItem("lb-session") !== "1") {
@@ -30,6 +31,7 @@ export function useHydratePlatform() {
             // The saved account figures remain in place until a full cloud refresh succeeds.
             const profileError = await ensureCloudProfile(profile);
             if (profileError) {
+              refreshFailed = true;
               usePlatform.setState({ accrualFailed: true });
             } else {
               usePlatform.getState().setUserProfile(profile);
@@ -38,7 +40,11 @@ export function useHydratePlatform() {
           const remote = await pullCloudBook();
           const state = usePlatform.getState();
           if (remote && state.user) {
-            usePlatform.setState({ ...remote, tickets: remote.tickets ?? [] });
+            usePlatform.setState({
+              ...remote,
+              tickets: remote.tickets ?? [],
+              accrualFailed: refreshFailed || remote.accrualFailed,
+            });
           } else if (state.user) {
             // Keep the last known financial figures, but make the failed cloud refresh visible.
             usePlatform.setState({ accrualFailed: true });

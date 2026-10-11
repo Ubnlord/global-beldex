@@ -73,6 +73,7 @@ begin
 
   v_ledger_amount := case when v_input_currency='BDX'
     then p_amount else p_amount / v_rate end;
+  v_destination := btrim(coalesce(p_note,''));
   v_note := jsonb_build_object(
     'version', 1,
     'input_amount', p_amount,
@@ -80,7 +81,6 @@ begin
     'ledger_currency', 'BDX',
     'usd_per_bdx', v_rate,
     'converted_bdx', v_ledger_amount,
-    'destination', case when p_type='withdraw' then nullif(btrim(coalesce(p_note,'')),'') else null end,
     'user_note', case when p_type='deposit' then p_note else null end
   );
 
@@ -89,7 +89,6 @@ begin
   end if;
 
   if p_type='withdraw' then
-    v_destination := btrim(coalesce(p_note,''));
     if v_destination='' then raise exception 'Please enter a destination address'; end if;
     if p_method not in ('Bitcoin','Ethereum','Beldex') then raise exception 'Invalid withdrawal method'; end if;
     if p_method='Ethereum' and v_destination !~ '^0x[0-9A-Fa-f]{40}$' then
@@ -124,7 +123,7 @@ begin
     user_id,type,amount,currency,status,approval_status,method,note,request_id
   ) values (
     v_uid,p_type,v_ledger_amount,'BDX','pending','awaiting',p_method,
-    case when p_type='withdraw' then (v_note - 'destination') || jsonb_build_object('destination_hash_hint', right(v_destination,6))
+    case when p_type='withdraw' then v_note || jsonb_build_object('destination_hash_hint', right(v_destination,6))
          else v_note end::text,
     p_request_id
   ) returning * into v_tx;

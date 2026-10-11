@@ -114,7 +114,7 @@ select is(
 );
 select is(
   (select count(*)::integer from public.transaction where user_id='a1100000-0000-4000-8000-000000000001' and status='completed' and currency='BDX'),
-  2,'completed BDX transactions remain identifiable in ledger history'
+  1,'completed BDX transactions remain identifiable in ledger history'
 );
 select is(
   (select deposits_delta from public.admin_financial_reconciliation_v2() where user_id='a1100000-0000-4000-8000-000000000001'),

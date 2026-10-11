@@ -26,7 +26,9 @@ assert.match(migration, /if v_done then[\s\S]*'Investment principal returned'/);
 // Client passes BDX amounts without converting through a market quote.
 assert.match(store, /p_amount: amount/);
 assert.doesNotMatch(store, /const usdAmount = amount \* liveQuote\.beldex\.usd/);
-assert.match(books, /amount: p\.currency === "BDX" \? num\(p\.principal\) : usdToBdx/);
+assert.match(books, /amount: num\(p\.principal\)/);
+assert.doesNotMatch(books, /usdToBdx\(num\(p\.principal\)\)/);
+assert.match(books, /creditedProfit: num\(p\.credited_profit\)/);
 assert.match(books, /currency: p\.currency === "BDX" \? "BDX" : "USD"/);
 assert.match(admin, /investment\.currency === "BDX" \? "BDX" : "USD"/);
 

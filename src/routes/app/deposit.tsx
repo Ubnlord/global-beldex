@@ -177,7 +177,7 @@ function DepositPage() {
                   {isBeldex ? `${formatUsd(BDX_USD_RATE, 6)} per BDX` : `${formatUsd(parseFloat(amount || "0") || 0, 3)} USD`}
                 </div>
               </div>
-              <div className="mt-1 text-[10px] text-subtle">{"{isBeldex ? "Account entries and deposits are denominated in BDX." : "USD-equivalent input is converted to BDX using the fixed platform rate."}"}</div>
+              <div className="mt-1 text-[10px] text-subtle">Account entries and deposits are denominated in BDX.</div>
             </div>
           ) : qty && spot ? (
             <div className="mt-3 rounded-md border border-line bg-surface px-3 py-2.5">

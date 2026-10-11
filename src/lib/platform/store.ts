@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { copy, fill, type Lang } from "./i18n";
 import { planCeiling, type Plan } from "./catalog";
-import { bdxToUsd, uid } from "@/lib/utils";
+import { bdxToUsd, usdToBdx, uid } from "@/lib/utils";
 import { fetchQuotes } from "@/lib/market/live-quotes";
 import { pullCloudBook } from "@/lib/supabase/books";
 import { supabase } from "@/lib/supabase/client";
@@ -244,18 +244,16 @@ export const usePlatform = create<PlatformState>()(
           set({ txs });
         },
 
-        deposit: async (amount, method, requestId, currency = "BDX") => {
-          const isBeldex = method === "BELDEX";
-          const ledgerCurrency = isBeldex ? currency : "USD";
-          const ledgerAmount = amount;
-          const minimum = isBeldex ? (currency === "BDX" ? 4000 : bdxToUsd(4000)) : 300;
-          if (!amount || amount < minimum) return "MIN_DEPOSIT";
+        deposit: async (amount, method, requestId, currency = "USD") => {
+          // USD is accepted only as a deposit input; the account ledger is always BDX.
+          const inputInBdx = currency === "BDX" ? amount : usdToBdx(amount);
+          if (!Number.isFinite(inputInBdx) || inputInBdx < 4000) return "MIN_DEPOSIT";
           const { error } = await supabase.rpc("create_financial_transaction", {
             p_type: "deposit",
-            p_amount: ledgerAmount,
-            p_currency: ledgerCurrency,
+            p_amount: inputInBdx,
+            p_currency: "BDX",
             p_method: method,
-            p_note: null,
+            p_note: JSON.stringify({ inputAmount: amount, inputCurrency: currency, conversionRateUsdPerBdx: bdxToUsd(1) }),
             p_request_id: requestId ? requestId : null,
           });
           if (error) return error.message;
@@ -267,19 +265,17 @@ export const usePlatform = create<PlatformState>()(
           if (!method) return "NEED_METHOD";
           const addressError = validateWithdrawalDestination(method, address);
           if (addressError) return addressError;
-          if (!amount || amount <= 0) return "NEED_AMOUNT";
-          const isBeldex = method === "Beldex";
-          const ledgerCurrency = isBeldex ? currency : "USD";
-          const minimum = isBeldex ? (currency === "BDX" ? 4000 : bdxToUsd(4000)) : 300;
-          if (amount < minimum) return "MIN_WITHDRAWAL";
-          const balance = ledgerCurrency === "BDX" ? get().bdx : get().available;
-          if (amount > balance) return "INSUFFICIENT";
+          if (!Number.isFinite(amount) || amount <= 0) return "NEED_AMOUNT";
+          // USD is an input/display amount only; reserve the BDX-equivalent amount.
+          const bdxAmount = currency === "BDX" ? amount : usdToBdx(amount);
+          if (bdxAmount < 4000) return "MIN_WITHDRAWAL";
+          if (bdxAmount > get().bdx) return "INSUFFICIENT";
           const { error } = await supabase.rpc("create_financial_transaction", {
             p_type: "withdraw",
-            p_amount: amount,
-            p_currency: ledgerCurrency,
+            p_amount: bdxAmount,
+            p_currency: "BDX",
             p_method: method,
-            p_note: address.trim(),
+            p_note: JSON.stringify({ destination: address.trim(), inputAmount: amount, inputCurrency: currency, conversionRateUsdPerBdx: bdxToUsd(1) }),
             p_request_id: requestId ? requestId : null,
           });
           if (error) return error.message;

@@ -49,7 +49,7 @@ select is(
   1,'duplicate request creates one ledger row'
 );
 select throws_ok(
-  $$select public.create_financial_transaction('withdraw',4000,'Beldex','4' || repeat('A',94),'a1100000-0000-4000-8000-000000000101','USD')$$,
+  $select public.create_financial_transaction('withdraw',4000,'Beldex','4' || repeat('A',94),'a1100000-0000-4000-8000-000000000101','USD')$,
   'P0001','Request ID was already used for a different transaction',
   'reusing a request ID with a different currency is rejected'
 );

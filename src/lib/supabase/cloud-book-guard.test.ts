@@ -7,7 +7,7 @@ const profile = {
     bdx_balance: 42,
     locked_bdx_balance: 10,
     total_withdrawals_bdx: 3,
-    referral_earnings: 2,
+    referral_earnings_bdx: 2,
   },
   error: null,
 };

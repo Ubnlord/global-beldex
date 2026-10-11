@@ -25,12 +25,11 @@ function WithdrawPage() {
   const t = copy[lang];
   const { book } = useBeldexQuote();
   const [method, setMethod] = useState("Beldex");
-  const [currency, setCurrency] = useState<"BDX" | "USD">("USD");
+  const currency = "USD" as const;
   const [amount, setAmount] = useState("");
   const [address, setAddress] = useState("");
   const [requestId, setRequestId] = useState<string | null>(null);
   const isBeldex = method === "Beldex";
-  const isBdxCurrency = currency === "BDX";
 
   const submit = async () => {
     const n = parseFloat(amount);

@@ -26,7 +26,6 @@ function DepositPage() {
   const t = copy[lang];
   const { book } = useBeldexQuote();
   const [amount, setAmount] = useState("");
-  const currency = "USD" as const;
   const [method, setMethod] = useState<keyof typeof DEPOSIT_METHODS>("BELDEX");
   const isBeldex = method === "BELDEX";
   const [step, setStep] = useState<"form" | "pay">(() => {
@@ -52,7 +51,7 @@ function DepositPage() {
 
   const goPay = () => {
     const n = parseFloat(amount);
-    const minimum = bdxToUsd(4000);
+    const minimum = isBeldex ? 4000 : bdxToUsd(4000);
     if (!n || n < minimum) {
       toast(t.err.MIN_DEPOSIT);
       return;
@@ -66,7 +65,7 @@ function DepositPage() {
 
   const confirm = async () => {
     const n = parseFloat(amount);
-    const err = await deposit(n, DEPOSIT_METHODS[method].title, requestId ?? crypto.randomUUID(), currency);
+    const err = await deposit(n, DEPOSIT_METHODS[method].title, requestId ?? crypto.randomUUID(), isBeldex ? "BDX" : "USD");
     if (err) {
       toastError(err);
       return;
@@ -93,21 +92,22 @@ function DepositPage() {
 
       {step === "form" ? (
         <div className="mt-6 rounded-lg border border-line bg-elevated p-5">
-          <FieldLabel>Deposit amount (USD)</FieldLabel>
-          <p className="mt-1 text-[11px] text-subtle">USD is only used to enter the deposit amount. Your account balance is credited in BDX.</p>
+          <FieldLabel>{isBeldex ? "Amount to send (BDX)" : "Deposit amount (USD equivalent)"}</FieldLabel>
+          <p className="mt-1 text-[11px] text-subtle">{isBeldex ? "Enter the BDX amount you will transfer to the Beldex address. Your account balance will be credited in BDX." : "Enter the USD-equivalent value for the BTC or ETH deposit. Account balances are denominated in BDX."}</p>
           <FieldLabel><span className="mt-4 block">Amount (USD)</span></FieldLabel>
           <div className="relative mt-2">
             <Input
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               type="number"
-              placeholder="Enter USD amount... Min $293.984"
+              min={isBeldex ? 4000 : bdxToUsd(4000)}
+              step="0.001"
+              placeholder={isBeldex ? "Enter BDX amount... Min 4,000" : "Enter USD-equivalent amount... Min $293.984"}
               className="mt-0 h-14 border-2 border-line-strong bg-surface px-4 text-base font-medium placeholder:text-muted focus:border-accent focus:ring-2 focus:ring-accent/20"
             />
           </div>
           <div className="mt-2 text-[10px] text-subtle">
-            Minimum: {formatUsd(bdxToUsd(4000), 3)} · {formatBdx(4000)} equivalent
-            {isBeldex ? ` · 1 BDX = ${formatUsd(BDX_USD_RATE, 6)}` : ""}
+            {isBeldex ? `Minimum: ${formatBdx(4000)} · approximately ${formatUsd(bdxToUsd(4000), 3)}` : `Minimum: ${formatUsd(bdxToUsd(4000), 3)} equivalent · ${formatBdx(4000)}`}
           </div>
           <div className="mt-5">
             <div className="mb-2 text-[11px] text-muted">{t.payMethod}</div>
@@ -177,7 +177,7 @@ function DepositPage() {
                   {isBeldex ? `${formatUsd(BDX_USD_RATE, 6)} per BDX` : `${formatUsd(parseFloat(amount || "0") || 0, 3)} USD`}
                 </div>
               </div>
-              <div className="mt-1 text-[10px] text-subtle">{"USD deposits are converted to the displayed BDX amount before crediting your account."}</div>
+              <div className="mt-1 text-[10px] text-subtle">{"{isBeldex ? "Account entries and deposits are denominated in BDX." : "USD-equivalent input is converted to BDX using the fixed platform rate."}"}</div>
             </div>
           ) : qty && spot ? (
             <div className="mt-3 rounded-md border border-line bg-surface px-3 py-2.5">

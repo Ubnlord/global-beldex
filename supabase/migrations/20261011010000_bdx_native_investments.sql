@@ -152,4 +152,76 @@ $function$;
 revoke all on function public.accrue_user_investments(uuid) from public, anon;
 grant execute on function public.accrue_user_investments(uuid) to authenticated;
 
+
+-- Keep the existing USD reconciliation scoped to legacy USD-denominated
+-- investments; BDX investments have their own locked wallet and must not be
+-- mixed into USD totals.
+create or replace function public.admin_financial_reconciliation()
+returns table(
+  user_id uuid,
+  available_balance numeric,
+  locked_balance numeric,
+  expected_locked_balance numeric,
+  locked_delta numeric,
+  total_deposits numeric,
+  recorded_deposits numeric,
+  deposits_delta numeric,
+  total_withdrawals numeric,
+  recorded_withdrawals numeric,
+  withdrawals_delta numeric,
+  referral_earnings numeric,
+  recorded_referrals numeric,
+  referral_delta numeric,
+  credited_investment_profit numeric,
+  recorded_investment_profit numeric,
+  investment_profit_delta numeric,
+  negative_balance boolean
+)
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+begin
+  if not public.is_admin() then raise exception 'Permission denied'; end if;
+  return query
+  with deposit_totals as (
+    select t.user_id,coalesce(sum(t.amount),0) amount from public.transaction t
+    where t.type='deposit' and t.status='completed' and t.currency='USD' group by t.user_id
+  ),
+  withdrawal_totals as (
+    select t.user_id,coalesce(sum(t.amount),0) amount from public.transaction t
+    where t.type='withdraw' and t.status='completed' and t.currency='USD' group by t.user_id
+  ),
+  referral_totals as (
+    select t.user_id,coalesce(sum(t.amount),0) amount from public.transaction t
+    where t.type='referral' and t.status='completed' group by t.user_id
+  ),
+  investment_profit_totals as (
+    select t.user_id,coalesce(sum(t.amount),0) amount from public.transaction t
+    where t.type='bonus' and t.status='completed' and t.note='Server-side investment profit' and t.currency='USD'
+    group by t.user_id
+  ),
+  investment_totals as (
+    select ui.user_id,
+      coalesce(sum(ui.principal) filter(where ui.status='active' and ui.currency='USD'),0) active_principal,
+      coalesce(sum(ui.credited_profit) filter(where ui.currency='USD'),0) credited_profit
+    from public.user_investment ui group by ui.user_id
+  )
+  select p.user_id,p.available_balance,p.locked_balance,
+    coalesce(i.active_principal,0),p.locked_balance-coalesce(i.active_principal,0),
+    p.total_deposits,coalesce(d.amount,0),p.total_deposits-coalesce(d.amount,0),
+    p.total_withdrawals,coalesce(w.amount,0),p.total_withdrawals-coalesce(w.amount,0),
+    p.referral_earnings,coalesce(r.amount,0),p.referral_earnings-coalesce(r.amount,0),
+    coalesce(i.credited_profit,0),coalesce(ip.amount,0),coalesce(i.credited_profit,0)-coalesce(ip.amount,0),
+    p.available_balance<0 or p.locked_balance<0 or p.bdx_balance<0 or p.locked_bdx_balance<0
+  from public.user_profile p
+  left join deposit_totals d on d.user_id=p.user_id
+  left join withdrawal_totals w on w.user_id=p.user_id
+  left join referral_totals r on r.user_id=p.user_id
+  left join investment_profit_totals ip on ip.user_id=p.user_id
+  left join investment_totals i on i.user_id=p.user_id
+  order by p.created_at;
+end;
+$function$;
+
 commit;

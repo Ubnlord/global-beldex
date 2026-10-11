@@ -85,6 +85,7 @@ begin
     'ledger_currency', 'BDX',
     'usd_per_bdx', v_rate,
     'converted_bdx', v_ledger_amount,
+    'destination_hash_hint', case when p_type='withdraw' then right(v_destination,6) else null end,
     'user_note', case when p_type='deposit' then p_note else null end
   );
 
@@ -127,8 +128,7 @@ begin
     user_id,type,amount,currency,status,approval_status,method,note,request_id
   ) values (
     v_uid,p_type,v_ledger_amount,'BDX','pending','awaiting',p_method,
-    case when p_type='withdraw' then v_note || jsonb_build_object('destination_hash_hint', right(v_destination,6))
-         else v_note end::text,
+    v_note::text,
     p_request_id
   ) returning * into v_tx;
 

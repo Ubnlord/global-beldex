@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(22);
+select plan(21);
 
 -- Isolated identities and balances; transaction rollback leaves no fixture data.
 insert into auth.users (

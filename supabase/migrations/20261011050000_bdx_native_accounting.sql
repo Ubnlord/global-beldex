@@ -6,7 +6,8 @@ begin;
 -- but all new deposits/withdrawals and future investments are BDX-denominated.
 alter table public.user_profile
   add column if not exists total_deposits_bdx numeric(38,18) not null default 0,
-  add column if not exists total_withdrawals_bdx numeric(38,18) not null default 0;
+  add column if not exists total_withdrawals_bdx numeric(38,18) not null default 0,
+  add column if not exists referral_earnings_bdx numeric(38,18) not null default 0;
 
 comment on column public.user_profile.bdx_balance is
   'Canonical available wallet balance denominated in BDX.';
@@ -16,6 +17,8 @@ comment on column public.user_profile.total_deposits_bdx is
   'Completed deposit volume denominated in BDX; never combine with legacy USD totals.';
 comment on column public.user_profile.total_withdrawals_bdx is
   'Completed withdrawal volume denominated in BDX; never combine with legacy USD totals.';
+comment on column public.user_profile.referral_earnings_bdx is
+  'Referral earnings denominated in BDX; legacy referral_earnings remains untouched for reconciliation.';
 
 -- New deposit and withdrawal requests accept a requested denomination from older
 -- clients, but normalize the ledger amount to BDX in the trusted database RPC.
@@ -308,7 +311,7 @@ begin
   if v_cut <= 0 then return 0; end if;
   update public.user_profile
     set bdx_balance=bdx_balance+v_cut,
-        referral_earnings=referral_earnings+v_cut,
+        referral_earnings_bdx=referral_earnings_bdx+v_cut,
         updated_at=now()
     where user_id=v_ref;
   insert into public.transaction(user_id,type,amount,currency,status,approval_status,method,note)

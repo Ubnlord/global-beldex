@@ -190,6 +190,9 @@ begin
 
   update public.transaction set status='completed',settled_at=now(),updated_at=now()
     where id=p_transaction_id returning * into v_tx;
+  if v_tx.type='deposit' then
+    perform public.credit_referral_for_deposit(v_tx.id);
+  end if;
   insert into public.transaction_audit(transaction_id,admin_id,action,old_values,new_values,reason)
   values(v_tx.id,v_admin.id,'settled',
     jsonb_build_object('status','pending'),

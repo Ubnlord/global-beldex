@@ -2,7 +2,7 @@ name: Financial safeguards
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, feat/bdx-native-accounting]
   push:
     branches: [main]
   workflow_dispatch:
@@ -93,7 +93,7 @@ jobs:
         run: |
           set -euo pipefail
           eval "$(cd .security-test && supabase status -o env)"
-          SUPABASE_TEST_URL="$API_URL"           SUPABASE_TEST_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY"           SUPABASE_TEST_PUBLISHABLE_KEY="$ANON_KEY"           node --test scripts/security-regression.test.mjs
+          SUPABASE_TEST_URL="$API_URL" SUPABASE_TEST_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY" SUPABASE_TEST_PUBLISHABLE_KEY="$ANON_KEY" node --test scripts/security-regression.test.mjs
 
       - name: Stop isolated Supabase
         if: always()

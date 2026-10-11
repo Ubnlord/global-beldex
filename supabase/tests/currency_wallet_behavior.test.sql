@@ -47,6 +47,7 @@ select is(
 select is(
   (select count(*)::integer from public.transaction where user_id='a1100000-0000-4000-8000-000000000001' and request_id='a1100000-0000-4000-8000-000000000101'),
   1,'duplicate request creates one ledger row'
+);
 select throws_ok(
   $$select public.create_financial_transaction('withdraw',4000,'Beldex','4' || repeat('A',94),'a1100000-0000-4000-8000-000000000101','USD')$$,
   'P0001','Request ID was already used for a different transaction',

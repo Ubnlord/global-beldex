@@ -164,6 +164,8 @@ begin
   if v_tx.status='completed' then raise exception 'Transaction already completed'; end if;
   if v_tx.approval_status<>'approved' then raise exception 'Transaction must be approved first'; end if;
   if coalesce(v_tx.currency,'USD') <> 'BDX' then
+    -- Historical USD requests are not converted implicitly; prevent them from
+    -- being miscredited under the new BDX-only ledger. Admin must reconcile them.
     raise exception 'Legacy USD transaction requires manual reconciliation before settlement';
   end if;
 

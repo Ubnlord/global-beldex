@@ -69,7 +69,7 @@ select is(
   1,'rejection writes transaction audit history'
 );
 
--- USD withdrawal reservation and completion leave BDX untouched.
+-- USD-entry withdrawal is normalized to a BDX reservation. The wallet has enough BDX.
 select set_config('request.jwt.claim.sub','a1100000-0000-4000-8000-000000000001',true);
 select public.create_financial_transaction('withdraw',300,'Bank','test destination','a1100000-0000-4000-8000-000000000102','USD');
 select is(

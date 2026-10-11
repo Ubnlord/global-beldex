@@ -81,7 +81,7 @@ select is(
   round(300/(293.984/4000),3),'USD input is converted using the documented platform rate'
 );
 select is(
-  (select bdx_balance from public.user_profile where user_id='a1100000-0000-4000-8000-000000000001'),
+  (select round(bdx_balance,3) from public.user_profile where user_id='a1100000-0000-4000-8000-000000000001'),
   round(10000 - (300/(293.984/4000)),3),'USD input withdrawal reserves its BDX equivalent after the earlier reservation was released'
 );
 
@@ -99,7 +99,7 @@ select is(
   0::numeric,'USD-input deposit does not alter the legacy USD wallet'
 );
 select is(
-  (select bdx_balance from public.user_profile where user_id='a1100000-0000-4000-8000-000000000001'),
+  (select round(bdx_balance,3) from public.user_profile where user_id='a1100000-0000-4000-8000-000000000001'),
   round(10000 - (300/(293.984/4000)) + (50/(293.984/4000)) + 500,3),'USD-input and BDX deposits credit the BDX wallet'
 );
 select is(
@@ -107,7 +107,7 @@ select is(
   0::numeric,'USD-input deposit leaves legacy USD deposit total unchanged'
 );
 select is(
-  (select total_deposits_bdx from public.user_profile where user_id='a1100000-0000-4000-8000-000000000001'),
+  (select round(total_deposits_bdx,3) from public.user_profile where user_id='a1100000-0000-4000-8000-000000000001'),
   round((50/(293.984/4000)) + 500,3),'both new deposit inputs increment BDX-specific totals'
 );
 select is(

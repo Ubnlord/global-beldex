@@ -292,8 +292,10 @@ declare
   v_ref uuid;
   v_cut numeric;
 begin
-  if not public.is_admin() and auth.uid() is not null then
-    raise exception 'Permission denied';
+  if auth.uid() is not null then
+    if not public.is_admin() or not public.admin_has_permission('approve_transactions') then
+      raise exception 'Permission denied';
+    end if;
   end if;
   select * into v_tx from public.transaction where id=p_transaction_id for update;
   if v_tx.id is null then raise exception 'Transaction not found'; end if;

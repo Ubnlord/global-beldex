@@ -159,13 +159,14 @@ function DepositPage() {
         </div>
       ) : (
         <div className="mt-6 rounded-lg border border-line bg-elevated p-5">
-          <div className="text-xs text-muted">{t.sendExactly}</div>
+          <div className="text-xs text-muted">{isBeldex ? "Send exactly (BDX)" : t.sendExactly}</div>
           <div className="text-2xl font-bold tabular text-accent">
-            {formatUsd(parseFloat(amount || "0"), 3)} USD
+            {isBeldex ? formatBdx((parseFloat(amount || "0") || 0) / BDX_USD_RATE) : formatUsd(parseFloat(amount || "0"), 3)}
+            {isBeldex ? " BDX" : " USD"}
           </div>
           <div className="mt-1 text-[11px] text-subtle">
             via {DEPOSIT_METHODS[method].title}
-            {isBeldex ? ` · ${formatBdx((parseFloat(amount || "0") || 0) / BDX_USD_RATE)} will be credited` : spot ? ` · ${formatCoinUsd(spot.usd)}` : ""}
+            {isBeldex ? ` · Account credit: ${formatBdx((parseFloat(amount || "0") || 0) / BDX_USD_RATE)} BDX` : spot ? ` · ${formatCoinUsd(spot.usd)}` : ""}
           </div>
           {isBeldex ? (
             <div className="mt-3 rounded-md border border-accent/30 bg-accent/5 px-3 py-2.5">
@@ -173,7 +174,7 @@ function DepositPage() {
               <div className="mt-1 flex items-end justify-between gap-3">
                 <div className="text-lg font-bold tabular text-fg">{`${formatBdx((parseFloat(amount || "0") || 0) / BDX_USD_RATE)} credited`}</div>
                 <div className="text-right text-sm font-semibold tabular text-accent">
-                  {formatUsd(parseFloat(amount || "0") || 0, 3)} USD
+                  {isBeldex ? `${formatUsd(BDX_USD_RATE, 6)} per BDX` : `${formatUsd(parseFloat(amount || "0") || 0, 3)} USD`}
                 </div>
               </div>
               <div className="mt-1 text-[10px] text-subtle">{"USD deposits are converted to the displayed BDX amount before crediting your account."}</div>

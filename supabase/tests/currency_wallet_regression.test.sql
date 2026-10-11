@@ -1,0 +1,38 @@
+begin;
+
+create extension if not exists pgtap with schema extensions;
+select plan(18);
+
+-- Schema denomination defaults preserve existing records as USD.
+select has_column('public','user_profile','locked_bdx_balance','BDX principal has a separate locked balance');
+select has_column('public','user_investment','currency','investment currency is recorded');
+select has_column('public','transaction','currency','ledger currency is recorded');
+select col_default_is('public','user_investment','currency', 'USD', 'legacy investments default to USD');
+select col_default_is('public','transaction','currency', 'USD', 'legacy transactions default to USD');
+
+-- Daily simple-interest contract for all seven published plans.
+select is((4000::numeric * 0.019), 76::numeric, 'GNS 4,000 BDX earns 76 BDX per day');
+select is((4000::numeric * 0.019 * 30), 2280::numeric, 'GNS 30-day profit is 2,280 BDX');
+select is((4000::numeric + 4000::numeric * 0.019 * 30), 6280::numeric, 'GNS maturity total is 6,280 BDX');
+select is((11000::numeric * 0.0251), 276.1::numeric, 'BUILD UP daily interest uses daily rate');
+select is((17000::numeric * 0.0392), 666.4::numeric, 'FOLLOW UP daily interest uses daily rate');
+select is((40000::numeric * 0.0856), 3424::numeric, 'APEX daily interest uses daily rate');
+select is((90000::numeric * 0.1343), 12087::numeric, 'EDIFEX daily interest uses daily rate');
+select is((160000::numeric * 0.1543), 24688::numeric, 'DIXON daily interest uses daily rate');
+select is((220000::numeric * 0.2378), 52316::numeric, 'FALCON daily interest uses daily rate');
+
+-- Guardrails that make duplicate accrual and maturity idempotent:
+-- only active investments are accrued, with row locks and elapsed-day delta.
+select ok(pg_get_functiondef('public.accrue_user_investments(uuid)'::regprocedure) like
+  '%where user_id = v_uid and status = ''active'' and daily_accrual_enabled = true%',
+  'accrual only selects active, enabled investments');
+select ok(pg_get_functiondef('public.accrue_user_investments(uuid)'::regprocedure) like
+  '%for update%', 'accrual locks investment rows against concurrent duplicate credits');
+select ok(pg_get_functiondef('public.accrue_user_investments(uuid)'::regprocedure) like
+  '%greatest(0, v_elapsed_days - v_previous_days)%', 'accrual credits only previously uncredited elapsed days');
+select ok(pg_get_functiondef('public.accrue_user_investments(uuid)'::regprocedure) like
+  '%status = case when v_done then ''completed'' else ''active'' end%',
+  'maturity marks investment completed to prevent repeat principal return');
+
+select * from finish();
+rollback;

@@ -54,7 +54,10 @@ jobs:
 
       - name: Start isolated Supabase
         working-directory: .security-test
-        run: supabase start
+        # The regression suite needs Postgres, Auth, PostgREST, and the local
+        # Edge Runtime. Skip optional UI/observability containers to reduce
+        # image pulls and avoid transient public ECR throttling on hosted CI.
+        run: supabase start --exclude studio,logflare,vector,analytics,mailpit,imgproxy
 
       - name: Apply repository migrations
         working-directory: .security-test

@@ -173,10 +173,14 @@ function InvestmentMetrics({ plan, bdxUsdRate }: { plan: import("@/lib/platform/
     ? "Completed"
     : nextRun.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
 
+  const isUsd = plan.currency === "USD";
+  const formatNative = (value: number) => isUsd ? formatUsd(value) : formatBdx(value);
+  const formatUsdEquivalent = (value: number) => isUsd ? "" : ` · ${formatUsd(value * bdxUsdRate, 3)} USD`;
+
   const metrics = [
-    { label: "Today's Interest", value: `+${formatBdx(dailyInterest)} · ${formatUsd(dailyInterest * bdxUsdRate, 3)}` },
-    { label: "Total Interest Earned (Credited)", value: `+${formatBdx(totalInterest)} · ${formatUsd(totalInterest * bdxUsdRate, 3)}` },
-    { label: "Pending Interest (Estimate)", value: `~${formatBdx(pendingEstimate)} · ${formatUsd(pendingEstimate * bdxUsdRate, 3)}` },
+    { label: "Today's Interest", value: `+${formatNative(dailyInterest)}${formatUsdEquivalent(dailyInterest)}` },
+    { label: "Total Interest Earned (Credited)", value: `+${formatNative(totalInterest)}${formatUsdEquivalent(totalInterest)}` },
+    { label: "Pending Interest (Estimate)", value: `~${formatNative(pendingEstimate)}${formatUsdEquivalent(pendingEstimate)}` },
     { label: "Next Interest", value: nextInterest },
     { label: "Days Remaining", value: String(daysRemaining) },
   ];
@@ -186,8 +190,8 @@ function InvestmentMetrics({ plan, bdxUsdRate }: { plan: import("@/lib/platform/
       <div className="flex items-center justify-between gap-3">
         <div>
           <div className="text-[11px] font-bold tracking-widest text-accent">{plan.name}</div>
-          <div className="mt-1 text-sm font-semibold">{formatBdx(plan.amount)} principal</div>
-          <div className="mt-0.5 text-xs text-subtle">≈ {formatUsd(plan.amount * bdxUsdRate, 3)} USD</div>
+          <div className="mt-1 text-sm font-semibold">{formatNative(plan.amount)} principal</div>
+          {!isUsd && <div className="mt-0.5 text-xs text-subtle">≈ {formatUsd(plan.amount * bdxUsdRate, 3)} USD</div>}
         </div>
         <span className="rounded-full border border-line px-2 py-1 text-[10px] font-semibold uppercase text-subtle">
           {plan.status}

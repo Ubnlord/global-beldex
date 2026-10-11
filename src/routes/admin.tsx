@@ -30,6 +30,7 @@ type Tx = {
   user_id: string;
   type: string;
   amount: string | number;
+  currency?: "BDX" | "USD";
   status: string;
   approval_status: string;
   method: string | null;
@@ -47,6 +48,8 @@ type UserProfile = {
   kyc_status: string | null;
   available_balance: string | number;
   locked_balance: string | number;
+  bdx_balance: string | number;
+  locked_bdx_balance: string | number;
   total_deposits: string | number;
   total_withdrawals: string | number;
   referral_earnings: string | number;
@@ -61,6 +64,7 @@ type Investment = {
   user_id: string;
   plan_id: string | null;
   principal: string | number;
+  currency?: "BDX" | "USD";
   daily_rate: string | number;
   duration_days: number;
   started_at: string;
@@ -100,6 +104,19 @@ type ReconciliationRow = {
   credited_investment_profit: string | number;
   recorded_investment_profit: string | number;
   investment_profit_delta: string | number;
+  bdx_balance: string | number;
+  locked_bdx_balance: string | number;
+  expected_locked_bdx_balance: string | number;
+  locked_bdx_delta: string | number;
+  total_deposits_bdx: string | number;
+  recorded_deposits_bdx: string | number;
+  deposits_bdx_delta: string | number;
+  total_withdrawals_bdx: string | number;
+  recorded_withdrawals_bdx: string | number;
+  withdrawals_bdx_delta: string | number;
+  credited_investment_profit_bdx: string | number;
+  recorded_investment_profit_bdx: string | number;
+  investment_profit_bdx_delta: string | number;
   negative_balance: boolean;
 };
 
@@ -179,7 +196,7 @@ export function AdminPage({ initialTab = "dashboard", transactionType }: { initi
   async function loadTransactions() {
     const { data, error: txError } = await supabase
       .from("transaction")
-      .select("id,user_id,type,amount,status,approval_status,method,note,created_at")
+      .select("id,user_id,type,amount,currency,status,approval_status,method,note,created_at")
       .order("created_at", { ascending: false })
       .limit(500);
     if (txError) setError(txError.message);
@@ -187,7 +204,7 @@ export function AdminPage({ initialTab = "dashboard", transactionType }: { initi
   }
 
   async function loadUsers(search = "") {
-    const { data, error: userError } = await supabase.rpc("admin_search_users", {
+    const { data, error: userError } = await supabase.rpc("admin_search_users_bdx", {
       p_query: search.trim(),
       p_limit: 100,
     });
@@ -207,7 +224,7 @@ export function AdminPage({ initialTab = "dashboard", transactionType }: { initi
 
   async function loadReconciliation() {
     setReconLoading(true);
-    const { data, error: reconError } = await supabase.rpc("admin_financial_reconciliation");
+    const { data, error: reconError } = await supabase.rpc("admin_financial_reconciliation_v2");
     if (reconError) setError(reconError.message);
     else setReconciliation((data ?? []) as ReconciliationRow[]);
     setReconLoading(false);
@@ -231,7 +248,7 @@ export function AdminPage({ initialTab = "dashboard", transactionType }: { initi
     setError("");
     const { data, error: investmentError } = await supabase
       .from("user_investment")
-      .select("id,user_id,plan_id,principal,daily_rate,duration_days,started_at,last_accrual_at,credited_profit,status,completed_at,daily_accrual_enabled")
+      .select("id,user_id,plan_id,principal,currency,daily_rate,duration_days,started_at,last_accrual_at,credited_profit,status,completed_at,daily_accrual_enabled")
       .eq("user_id", userId)
       .order("created_at", { ascending: false });
 
@@ -364,7 +381,11 @@ export function AdminPage({ initialTab = "dashboard", transactionType }: { initi
           !deltaOk(row.deposits_delta) ||
           !deltaOk(row.withdrawals_delta) ||
           !deltaOk(row.referral_delta) ||
-          !deltaOk(row.investment_profit_delta),
+          !deltaOk(row.investment_profit_delta) ||
+          !deltaOk(row.locked_bdx_delta) ||
+          !deltaOk(row.deposits_bdx_delta) ||
+          !deltaOk(row.withdrawals_bdx_delta) ||
+          !deltaOk(row.investment_profit_bdx_delta),
       ),
     [reconciliation],
   );
@@ -492,7 +513,7 @@ export function AdminPage({ initialTab = "dashboard", transactionType }: { initi
                             <span className="font-semibold capitalize text-fg">{tx.type}</span>
                             <Status value={tx.approval_status} />
                             <Status value={tx.status} />
-                            <span className="text-lg font-semibold text-fg">{money(tx.amount)}</span>
+                            <span className="text-lg font-semibold text-fg">{money(tx.amount)} {tx.currency === "BDX" ? "BDX" : "USD"}</span>
                           </div>
                           <p className="mt-1 text-sm text-muted">{tx.method || "No method"} · {new Date(tx.created_at).toLocaleString()}</p>
                           <p className="mt-1 break-all text-xs text-subtle">User: {tx.user_id} · Transaction: {tx.id}</p>
@@ -603,7 +624,7 @@ function UserList({ users, onOpen }: { users: UserProfile[]; onOpen: (id: string
               <div className="mt-1 break-all text-[11px] text-subtle">{user.user_id}</div>
             </button>
             <div className="flex flex-wrap items-center gap-3">
-              <div><div className="text-[10px] uppercase tracking-wide text-muted">Balance</div><div className="font-semibold text-fg">{money(user.available_balance)}</div></div>
+              <div><div className="text-[10px] uppercase tracking-wide text-muted">USD balance</div><div className="font-semibold text-fg">{money(user.available_balance)}</div></div>
               <Status value={user.blocked ? "blocked" : user.kyc_status || "pending"} />
               <button type="button" onClick={() => onOpen(user.user_id)} className="inline-flex items-center gap-2 rounded-xl border border-line px-3 py-2 text-sm text-fg hover:bg-elevated"><Eye size={15} /> Manage</button>
             </div>
@@ -621,7 +642,7 @@ function InvestmentQueue({ users, onOpen }: { users: UserProfile[]; onOpen: (id:
         <div key={user.user_id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
           <div>
             <div className="font-semibold text-fg">{user.fullname || user.username || "Unnamed user"}</div>
-            <div className="mt-1 text-xs text-muted">{user.email || "No email"} · Locked {money(user.locked_balance)} · Available {money(user.available_balance)}</div>
+            <div className="mt-1 text-xs text-muted">{user.email || "No email"} · USD locked {money(user.locked_balance)} · USD available {money(user.available_balance)} · BDX locked {money(user.locked_bdx_balance)} BDX · BDX available {money(user.bdx_balance)} BDX</div>
           </div>
           <button type="button" onClick={() => onOpen(user.user_id)} className="inline-flex items-center justify-center gap-2 rounded-xl border border-line px-3 py-2 text-sm text-fg hover:bg-elevated"><TrendingUp size={15} /> Open investments</button>
         </div>
@@ -662,11 +683,11 @@ function ReconciliationPanel({ rows, loading, problems, onRun }: { rows: Reconci
             <div className="mt-1 text-xs opacity-80">{problems ? "No automatic repair was attempted." : "All tested deltas are zero and no negative balances were reported."}</div>
           </div>
           <div className="mt-4 overflow-x-auto rounded-xl border border-line">
-            <table className="min-w-[980px] w-full text-left text-xs">
-              <thead className="bg-elevated text-muted"><tr><th className="p-3">User</th><th className="p-3">Available</th><th className="p-3">Locked Δ</th><th className="p-3">Deposits Δ</th><th className="p-3">Withdrawals Δ</th><th className="p-3">Referrals Δ</th><th className="p-3">Profit Δ</th><th className="p-3">Status</th></tr></thead>
+            <table className="min-w-[1500px] w-full text-left text-xs">
+              <thead className="bg-elevated text-muted"><tr><th className="p-3">User</th><th className="p-3">Available</th><th className="p-3">Locked Δ</th><th className="p-3">Deposits Δ</th><th className="p-3">Withdrawals Δ</th><th className="p-3">Referrals Δ</th><th className="p-3">Profit Δ (USD)</th><th className="p-3">BDX available</th><th className="p-3">BDX locked Δ</th><th className="p-3">BDX deposits Δ</th><th className="p-3">BDX withdrawals Δ</th><th className="p-3">BDX profit Δ</th><th className="p-3">Status</th></tr></thead>
               <tbody className="divide-y divide-line">{rows.map((row) => {
-                const bad = row.negative_balance || !deltaOk(row.locked_delta) || !deltaOk(row.deposits_delta) || !deltaOk(row.withdrawals_delta) || !deltaOk(row.referral_delta) || !deltaOk(row.investment_profit_delta);
-                return <tr key={row.user_id}><td className="p-3 font-mono text-[10px]">{row.user_id}</td><td className="p-3">{money(row.available_balance)}</td><td className="p-3">{money(row.locked_delta)}</td><td className="p-3">{money(row.deposits_delta)}</td><td className="p-3">{money(row.withdrawals_delta)}</td><td className="p-3">{money(row.referral_delta)}</td><td className="p-3">{money(row.investment_profit_delta)}</td><td className="p-3"><Status value={bad ? "review" : "ok"} /></td></tr>;
+                const bad = row.negative_balance || !deltaOk(row.locked_delta) || !deltaOk(row.deposits_delta) || !deltaOk(row.withdrawals_delta) || !deltaOk(row.referral_delta) || !deltaOk(row.investment_profit_delta) || !deltaOk(row.locked_bdx_delta) || !deltaOk(row.deposits_bdx_delta) || !deltaOk(row.withdrawals_bdx_delta) || !deltaOk(row.investment_profit_bdx_delta);
+                return <tr key={row.user_id}><td className="p-3 font-mono text-[10px]">{row.user_id}</td><td className="p-3">{money(row.available_balance)}</td><td className="p-3">{money(row.locked_delta)}</td><td className="p-3">{money(row.deposits_delta)}</td><td className="p-3">{money(row.withdrawals_delta)}</td><td className="p-3">{money(row.referral_delta)}</td><td className="p-3">{money(row.investment_profit_delta)}</td><td className="p-3">{money(row.bdx_balance)} BDX</td><td className="p-3">{money(row.locked_bdx_delta)} BDX</td><td className="p-3">{money(row.deposits_bdx_delta)} BDX</td><td className="p-3">{money(row.withdrawals_bdx_delta)} BDX</td><td className="p-3">{money(row.investment_profit_bdx_delta)} BDX</td><td className="p-3"><Status value={bad ? "review" : "ok"} /></td></tr>;
               })}</tbody>
             </table>
           </div>
@@ -728,10 +749,12 @@ function UserModal({ user, investments, txs, canUsers, canInvestments, busy, blo
         </div>
 
         <div className="mt-5 grid gap-3 sm:grid-cols-4">
-          <MiniStat label="Available" value={money(user.available_balance)} />
-          <MiniStat label="Locked" value={money(user.locked_balance)} />
-          <MiniStat label="Deposits" value={money(user.total_deposits)} />
-          <MiniStat label="Withdrawals" value={money(user.total_withdrawals)} />
+          <MiniStat label="USD available" value={money(user.available_balance)} />
+          <MiniStat label="USD locked" value={money(user.locked_balance)} />
+          <MiniStat label="BDX available" value={`${money(user.bdx_balance)} BDX`} />
+          <MiniStat label="BDX locked" value={`${money(user.locked_bdx_balance)} BDX`} />
+          <MiniStat label="USD deposits" value={money(user.total_deposits)} />
+          <MiniStat label="USD withdrawals" value={money(user.total_withdrawals)} />
         </div>
 
         <div className="mt-5 rounded-2xl border border-line bg-surface p-4">
@@ -750,7 +773,7 @@ function UserModal({ user, investments, txs, canUsers, canInvestments, busy, blo
           {investments.length === 0 ? <EmptyState text="No investments found for this user." /> : investments.map((investment) => (
             <div key={investment.id} className="rounded-2xl border border-line bg-surface p-4">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                <div><div className="flex flex-wrap items-center gap-2"><span className="font-semibold text-fg">{investment.plan_id || "Investment plan"}</span><Status value={investment.status} /><Status value={investment.daily_accrual_enabled ? "accrual on" : "accrual off"} /></div><div className="mt-2 grid gap-2 text-sm text-muted sm:grid-cols-3"><span>Principal: <b className="text-fg">{money(investment.principal)}</b></span><span>Daily rate: <b className="text-fg">{percent(investment.daily_rate)}</b></span><span>Profit credited: <b className="text-fg">{money(investment.credited_profit)}</b></span></div><div className="mt-1 text-xs text-subtle">{investment.duration_days} days · Started {new Date(investment.started_at).toLocaleDateString()} · Last accrual {new Date(investment.last_accrual_at).toLocaleString()}</div></div>
+                <div><div className="flex flex-wrap items-center gap-2"><span className="font-semibold text-fg">{investment.plan_id || "Investment plan"}</span><Status value={investment.status} /><Status value={investment.daily_accrual_enabled ? "accrual on" : "accrual off"} /></div><div className="mt-2 grid gap-2 text-sm text-muted sm:grid-cols-3"><span>Principal: <b className="text-fg">{money(investment.principal)} {investment.currency === "BDX" ? "BDX" : "USD"}</b></span><span>Daily rate: <b className="text-fg">{percent(investment.daily_rate)}</b></span><span>Profit credited: <b className="text-fg">{money(investment.credited_profit)} {investment.currency === "BDX" ? "BDX" : "USD"}</b></span></div><div className="mt-1 text-xs text-subtle">{investment.duration_days} days · Started {new Date(investment.started_at).toLocaleDateString()} · Last accrual {new Date(investment.last_accrual_at).toLocaleString()}</div></div>
                 <div className="flex flex-wrap gap-2">
                   <input aria-label="Daily rate percent" type="number" min="0" step="0.01" value={rateDrafts[investment.id] ?? String(Number(investment.daily_rate) * 100)} onChange={(event) => setRateDrafts((current) => ({ ...current, [investment.id]: event.target.value }))} disabled={!canInvestments} className="w-28 rounded-xl border border-line bg-panel px-3 py-2 text-sm text-fg outline-none disabled:opacity-60" />
                   <button type="button" disabled={!canInvestments || busy === `investment:${investment.id}`} onClick={() => { const value = Number(rateDrafts[investment.id]); if (!Number.isFinite(value) || value < 0) return; void onUpdateInvestment(investment.id, value); }} className="rounded-xl border border-line px-3 py-2 text-sm font-medium text-fg hover:bg-elevated disabled:opacity-60">Save rate %</button>

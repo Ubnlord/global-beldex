@@ -25,6 +25,7 @@ export type Transaction = {
   id: string;
   type: TxType;
   amount: number;
+  currency?: "BDX" | "USD";
   status: TxStatus;
   date: string;
   method: string;
@@ -48,6 +49,7 @@ export type ActivePlan = {
   planId: string;
   name: string;
   amount: number;
+  currency?: "BDX" | "USD";
   dailyPct: number;
   startedAt: number;
   durationDays: number;
@@ -218,7 +220,7 @@ export const usePlatform = create<PlatformState>()(
 
           const { data, error } = await supabase
             .from("transaction")
-            .select("id,type,amount,status,method,note,created_at")
+            .select("id,type,amount,currency,status,method,note,created_at")
             .eq("user_id", user.id)
             .order("created_at", { ascending: false });
 
@@ -228,6 +230,7 @@ export const usePlatform = create<PlatformState>()(
             id: t.id,
             type: t.type as TxType,
             amount: Number.isFinite(Number(t.amount)) ? Number(t.amount) : 0,
+            currency: t.currency === "BDX" ? "BDX" : "USD",
             status: (t.status === "completed"
               ? "completed"
               : t.status === "failed"
@@ -243,11 +246,14 @@ export const usePlatform = create<PlatformState>()(
 
         deposit: async (amount, method, requestId, currency = "BDX") => {
           const isBeldex = method === "BELDEX";
-          const usdAmount = isBeldex && currency === "BDX" ? bdxToUsd(amount) : amount;
-          if (!amount || (isBeldex ? usdAmount < bdxToUsd(4000) : usdAmount < 300)) return "MIN_DEPOSIT";
+          const ledgerCurrency = isBeldex ? currency : "USD";
+          const ledgerAmount = amount;
+          const minimum = isBeldex ? (currency === "BDX" ? 4000 : bdxToUsd(4000)) : 300;
+          if (!amount || amount < minimum) return "MIN_DEPOSIT";
           const { error } = await supabase.rpc("create_financial_transaction", {
             p_type: "deposit",
-            p_amount: usdAmount,
+            p_amount: ledgerAmount,
+            p_currency: ledgerCurrency,
             p_method: method,
             p_note: null,
             p_request_id: requestId ? requestId : null,
@@ -262,12 +268,16 @@ export const usePlatform = create<PlatformState>()(
           const addressError = validateWithdrawalDestination(method, address);
           if (addressError) return addressError;
           if (!amount || amount <= 0) return "NEED_AMOUNT";
-          const usdAmount = method === "Beldex" && currency === "BDX" ? bdxToUsd(amount) : amount;
-          if (usdAmount < (method === "Beldex" ? bdxToUsd(4000) : 300)) return "MIN_WITHDRAWAL";
-          if (usdAmount > get().available) return "INSUFFICIENT";
+          const isBeldex = method === "Beldex";
+          const ledgerCurrency = isBeldex ? currency : "USD";
+          const minimum = isBeldex ? (currency === "BDX" ? 4000 : bdxToUsd(4000)) : 300;
+          if (amount < minimum) return "MIN_WITHDRAWAL";
+          const balance = ledgerCurrency === "BDX" ? get().bdx : get().available;
+          if (amount > balance) return "INSUFFICIENT";
           const { error } = await supabase.rpc("create_financial_transaction", {
             p_type: "withdraw",
-            p_amount: usdAmount,
+            p_amount: amount,
+            p_currency: ledgerCurrency,
             p_method: method,
             p_note: address.trim(),
             p_request_id: requestId ? requestId : null,
@@ -281,15 +291,11 @@ export const usePlatform = create<PlatformState>()(
           if (amount < plan.min) return "MIN_PLAN|" + plan.name + "|" + plan.min.toLocaleString();
           const cap = planCeiling(plan);
           if (cap != null && amount > cap) return "MAX_PLAN|" + plan.name + "|" + cap.toLocaleString();
-          // Plan amounts are entered/displayed in BDX, but the server ledger is USD-denominated.
-          // Convert exactly once at the RPC boundary: 4,000 BDX => $293.984 USD.
-          // Use the protected live BDX/USD market quote at purchase time.
-          // The fixed conversion is only the emergency fallback if all feeds are unavailable.
-          const liveQuote = await fetchQuotes();
-          const usdAmount = amount * liveQuote.beldex.usd;
+          // Investment plans are BDX-native: send the entered BDX amount unchanged.
+          // PostgreSQL locks/debits bdx_balance and stores the principal as BDX.
           const { error } = await supabase.rpc("buy_investment_plan", {
             p_plan_id: plan.id,
-            p_amount: usdAmount,
+            p_amount: amount,
           });
           if (error) return error.message;
           const remote = await pullCloudBook();

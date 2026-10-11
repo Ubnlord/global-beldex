@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(21);
+select plan(22);
 
 -- Isolated identities and balances; transaction rollback leaves no fixture data.
 insert into auth.users (
@@ -52,6 +52,12 @@ select throws_ok(
   $$select public.create_financial_transaction('withdraw',4000,'Beldex','4' || repeat('A',94),'a1100000-0000-4000-8000-000000000101','USD')$$,
   'P0001','Request ID was already used for a different transaction',
   'reusing a request ID with a different currency is rejected'
+);
+
+select throws_ok(
+  $select public.create_financial_transaction('withdraw',4000,null,'4' || repeat('A',94),'a1100000-0000-4000-8000-000000000199','BDX')$,
+  'P0001','Invalid withdrawal method',
+  'withdrawal RPC rejects a missing method'
 );
 
 -- Rejecting a pending withdrawal releases its reservation in the same currency.

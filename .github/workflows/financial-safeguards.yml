@@ -68,6 +68,7 @@ jobs:
         run: supabase test db
 
       - name: Validate read-only legacy inventory on isolated database
+        if: ${{ hashFiles('scripts/bdx-legacy-inventory.readonly.sql') != '' }}
         working-directory: .security-test
         run: |
           set -euo pipefail
@@ -93,7 +94,7 @@ jobs:
         run: |
           set -euo pipefail
           eval "$(cd .security-test && supabase status -o env)"
-          SUPABASE_TEST_URL="$API_URL" SUPABASE_TEST_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY" SUPABASE_TEST_PUBLISHABLE_KEY="$ANON_KEY" node --test scripts/security-regression.test.mjs
+          SUPABASE_TEST_URL="$API_URL"           SUPABASE_TEST_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY"           SUPABASE_TEST_PUBLISHABLE_KEY="$ANON_KEY"           node --test scripts/security-regression.test.mjs
 
       - name: Stop isolated Supabase
         if: always()

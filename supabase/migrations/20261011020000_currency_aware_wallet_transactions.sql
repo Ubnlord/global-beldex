@@ -6,9 +6,9 @@ begin;
 create or replace function public.create_financial_transaction(
   p_type text,
   p_amount numeric,
-  p_method text default null,
-  p_note text default null,
-  p_request_id uuid default null,
+  p_method text,
+  p_note text,
+  p_request_id uuid,
   p_currency text
 )
 returns public.transaction

@@ -121,7 +121,7 @@ test("security migration exposes only the intended swap executor", { skip: !url 
       const { data: auditRows, error: auditError } = await admin.from("admin_action_audit")
         .select("action,reason,user_id")
         .eq("user_id", users.normal.id)
-        .eq("action", "set_user_block")
+        .eq("action", "user_blocked")
         .eq("reason", "security regression test");
       assert.ifError(auditError);
       assert.ok((auditRows?.length ?? 0) >= 1, "authorized admin action did not create an audit record");

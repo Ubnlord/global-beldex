@@ -160,9 +160,9 @@ test("security migration exposes only the intended swap executor", { skip: !url 
       const client = await clientFor(users.blocked);
       const { error } = await client.rpc("create_financial_transaction", {
         p_type: "withdraw",
-        p_amount: 100,
-        p_method: "security-test",
-        p_note: null,
+        p_amount: 300,
+        p_method: "Ethereum",
+        p_note: "0x1111111111111111111111111111111111111111",
         p_request_id: randomUUID(),
       });
       assert.ok(error, "blocked user unexpectedly created a withdrawal");

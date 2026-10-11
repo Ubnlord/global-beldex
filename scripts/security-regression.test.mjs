@@ -71,6 +71,24 @@ test("security migration exposes only the intended swap executor", { skip: !url 
       return client;
     };
 
+    await step("legacy five-argument transaction RPC is denied to authenticated users", async () => {
+      const client = await clientFor(users.normal);
+      const { error } = await client.rpc("create_financial_transaction", {
+        p_type: "deposit",
+        p_amount: 10,
+        p_method: "security-test-legacy",
+        p_note: null,
+        p_request_id: randomUUID(),
+      });
+      assert.ok(error, "authenticated user unexpectedly executed the legacy five-argument transaction RPC");
+    });
+
+    await step("legacy reconciliation RPC is denied to authenticated users", async () => {
+      const client = await clientFor(users.normal);
+      const { error } = await client.rpc("admin_financial_reconciliation");
+      assert.ok(error, "ordinary user unexpectedly executed legacy reconciliation RPC");
+    });
+
     await step("ordinary user cannot execute admin search", async () => {
       const client = await clientFor(users.normal);
       const { error } = await client.rpc("admin_search_users", { p_query: "", p_limit: 10 });
@@ -99,6 +117,14 @@ test("security migration exposes only the intended swap executor", { skip: !url 
         .update({ blocked: false })
         .eq("user_id", users.normal.id);
       assert.ifError(restoreError);
+
+      const { data: auditRows, error: auditError } = await admin.from("admin_action_audit")
+        .select("action,reason,user_id")
+        .eq("user_id", users.normal.id)
+        .eq("action", "set_user_block")
+        .eq("reason", "security regression test");
+      assert.ifError(auditError);
+      assert.ok((auditRows?.length ?? 0) >= 1, "authorized admin action did not create an audit record");
     });
 
     await step("blocked user cannot create a deposit", async () => {
@@ -120,6 +146,14 @@ test("security migration exposes only the intended swap executor", { skip: !url 
         p_amount: 4000,
       });
       assert.ok(error, "blocked user unexpectedly purchased an investment");
+    });
+
+    await step("blocked user cannot accrue investment earnings", async () => {
+      const client = await clientFor(users.blocked);
+      const { error } = await client.rpc("accrue_user_investments", {
+        p_user_id: users.blocked.id,
+      });
+      assert.ok(error, "blocked user unexpectedly accrued investment earnings");
     });
 
     await step("blocked user cannot create a withdrawal", async () => {
@@ -253,6 +287,13 @@ test("security migration exposes only the intended swap executor", { skip: !url 
       assert.ifError(approvedByAdmin.error);
       assert.equal(approvedByAdmin.data?.approval_status, "approved");
       assert.equal(approvedByAdmin.data?.status, "pending");
+
+      const { data: approvalAuditRows, error: approvalAuditError } = await admin.from("transaction_audit")
+        .select("action,reason,transaction_id")
+        .eq("transaction_id", created.data.id)
+        .eq("action", "approved");
+      assert.ifError(approvalAuditError);
+      assert.ok((approvalAuditRows?.length ?? 0) >= 1, "approved transaction did not create a transaction audit record");
 
       const doubleApprove = await adminClient.rpc("admin_approve_transaction", {
         p_transaction_id: created.data.id,

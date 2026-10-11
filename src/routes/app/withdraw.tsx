@@ -13,7 +13,7 @@ import { usePlatform } from "@/lib/platform/store";
 import { BDX_USD_RATE, bdxToUsd, formatBdx, formatUsd } from "@/lib/utils";
 import { validateWithdrawalDestination } from "@/lib/financial/withdrawal-address";
 
-const MIN_WITHDRAWAL = 300;
+const MIN_WITHDRAWAL = 300; // Legacy reference for reporting only; current wallet minimum is converted to BDX.
 
 export const Route = createFileRoute("/app/withdraw")({ component: WithdrawPage });
 
@@ -41,7 +41,7 @@ function WithdrawPage() {
       toastError("Amount must be greater than zero");
       return;
     }
-    const minimum = isBdxCurrency ? 4000 : bdxToUsd(4000);
+    const minimum = bdxToUsd(4000);
     if (n < minimum) {
       toastError(`Minimum withdrawal is ${formatUsd(bdxToUsd(4000), 3)} (4,000 BDX equivalent)`);
       return;

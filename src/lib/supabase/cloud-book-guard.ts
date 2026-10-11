@@ -4,10 +4,9 @@ type QueryResult = {
 };
 
 const requiredBalanceFields = [
-  "available_balance",
-  "locked_balance",
-  "total_withdrawals",
   "bdx_balance",
+  "locked_bdx_balance",
+  "total_withdrawals_bdx",
   "referral_earnings",
 ] as const;
 

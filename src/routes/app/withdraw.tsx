@@ -13,7 +13,7 @@ import { usePlatform } from "@/lib/platform/store";
 import { BDX_USD_RATE, bdxToUsd, formatBdx, formatUsd } from "@/lib/utils";
 import { validateWithdrawalDestination } from "@/lib/financial/withdrawal-address";
 
-const MIN_WITHDRAWAL = 300; // Legacy reference for reporting only; current wallet minimum is converted to BDX.
+const MIN_WITHDRAWAL = 300;
 
 export const Route = createFileRoute("/app/withdraw")({ component: WithdrawPage });
 
@@ -88,7 +88,7 @@ function WithdrawPage() {
               <button
                 key={m.id}
                 type="button"
-                onClick={() => { setMethod(m.label); if (m.id !== "BELDEX") setCurrency("USD"); }}
+                onClick={() => setMethod(m.label)}
                 className={
                   active
                     ? "flex items-center justify-between rounded-md border-2 border-accent bg-accent/10 p-3"

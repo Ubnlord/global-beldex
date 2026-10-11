@@ -82,10 +82,10 @@ select is(
 );
 select is(
   (select bdx_balance from public.user_profile where user_id='a1100000-0000-4000-8000-000000000001'),
-  round(10000 - 4000 - (300/(293.984/4000)),3),'USD input withdrawal reserves its BDX equivalent'
+  round(10000 - (300/(293.984/4000)),3),'USD input withdrawal reserves its BDX equivalent after the earlier reservation was released'
 );
 
--- USD and BDX deposits settle to their own wallets and their own totals.
+-- USD input deposits are normalized to BDX ledger amounts; all new credits land in BDX.
 select set_config('request.jwt.claim.sub','a1100000-0000-4000-8000-000000000001',true);
 select public.create_financial_transaction('deposit',50,'Bank',null,'a1100000-0000-4000-8000-000000000103','USD');
 select public.create_financial_transaction('deposit',500,'Beldex',null,'a1100000-0000-4000-8000-000000000104','BDX');
@@ -96,23 +96,23 @@ select public.admin_approve_transaction((select id from public.transaction where
 select public.admin_settle_transaction((select id from public.transaction where request_id='a1100000-0000-4000-8000-000000000104'),'settle BDX deposit');
 select is(
   (select available_balance from public.user_profile where user_id='a1100000-0000-4000-8000-000000000001'),
-  750::numeric,'USD deposit credits only USD wallet'
+  0::numeric,'USD-input deposit does not alter the legacy USD wallet'
 );
 select is(
   (select bdx_balance from public.user_profile where user_id='a1100000-0000-4000-8000-000000000001'),
-  10500::numeric,'BDX deposit credits only BDX wallet'
+  round(10000 - (300/(293.984/4000)) + (50/(293.984/4000)) + 500,3),'USD-input and BDX deposits credit the BDX wallet'
 );
 select is(
   (select total_deposits from public.user_profile where user_id='a1100000-0000-4000-8000-000000000001'),
-  50::numeric,'USD deposit increments legacy USD total'
+  0::numeric,'USD-input deposit leaves legacy USD deposit total unchanged'
 );
 select is(
   (select total_deposits_bdx from public.user_profile where user_id='a1100000-0000-4000-8000-000000000001'),
-  500::numeric,'BDX deposit increments BDX-specific total'
+  round((50/(293.984/4000)) + 500,3),'both new deposit inputs increment BDX-specific totals'
 );
 select is(
   (select count(*)::integer from public.transaction where user_id='a1100000-0000-4000-8000-000000000001' and status='completed' and currency='BDX'),
-  1,'completed BDX transactions remain identifiable in ledger history'
+  2,'completed USD-input and BDX deposits are both identifiable as BDX ledger rows'
 );
 select is(
   (select deposits_delta from public.admin_financial_reconciliation_v2() where user_id='a1100000-0000-4000-8000-000000000001'),

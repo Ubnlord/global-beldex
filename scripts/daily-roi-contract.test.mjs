@@ -16,7 +16,7 @@ const plans = [
 
 for (const plan of plans) {
   assert.match(catalog, new RegExp(`dailyPct: ${plan.rate}\\s*,`), `${plan.id} should use the published percentage as its daily rate`);
-  assert.match(catalog, new RegExp(`${plan.rate}% Daily ROI`), `${plan.id} should identify ROI as daily`);
+  assert.ok(catalog.includes(`${plan.rate.toFixed(2)}% Daily ROI`), `${plan.id} should identify ROI as daily`);
   assert.ok(migration.includes(`when '${plan.id}' then ${plan.rate / 100}`), `${plan.id} database catalog rate should match frontend`);
 }
 

@@ -57,7 +57,7 @@ function PlansPage() {
     <div className="mx-auto max-w-[480px] px-4 pb-[100px] pt-4 md:max-w-[960px]">
       <TickerTape />
       <h2 className="mt-4 text-xl font-bold">{t.plansTitle}</h2>
-      <p className="mt-1 text-xs text-subtle">{fill(t.plansLead, { amount: formatUsd(available) })}</p>
+      <p className="mt-1 text-xs text-subtle">{fill(t.plansLead, { amount: formatBdx(available) })}</p>
       {accrualFailed && (
         <div role="alert" className="mt-4 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-200">
           We couldn't refresh interest from the server. The amounts below show the last saved records; estimated pending interest is not credited to your balance. Please refresh later or contact support if this continues.

@@ -4,11 +4,10 @@ type QueryResult = {
 };
 
 const requiredBalanceFields = [
-  "available_balance",
-  "locked_balance",
-  "total_withdrawals",
   "bdx_balance",
-  "referral_earnings",
+  "locked_bdx_balance",
+  "total_withdrawals_bdx",
+  "referral_earnings_bdx",
 ] as const;
 
 function isRecord(value: unknown): value is Record<string, unknown> {

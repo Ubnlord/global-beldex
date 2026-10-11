@@ -22,7 +22,7 @@ export async function pullCloudBook(options: { skipAccrual?: boolean } = {}): Pr
   const [profileResult, txResult, investmentsResult] = await Promise.all([
     supabase
       .from("user_profile")
-      .select("available_balance,locked_balance,locked_bdx_balance,total_withdrawals,bdx_balance,referral_earnings")
+      .select("bdx_balance,locked_bdx_balance,total_withdrawals_bdx,referral_earnings_bdx")
       .eq("user_id", user.id)
       .maybeSingle(),
     supabase
@@ -75,21 +75,21 @@ export async function pullCloudBook(options: { skipAccrual?: boolean } = {}): Pr
   });
 
   const profit = (investmentsResult.data ?? []).reduce(
-    (sum: number, p: any) => sum + (p.currency === "BDX" ? 0 : num(p.credited_profit)),
+    (sum: number, p: any) => sum + (p.currency === "USD" ? 0 : num(p.credited_profit)),
     0,
   );
   const bonus = rawTxs
-    .filter((t: any) => t.type === "bonus" && t.method === "Welcome Bonus")
+    .filter((t: any) => t.type === "bonus" && t.method === "Welcome Bonus" && t.currency === "BDX")
     .reduce((sum: number, t: any) => sum + num(t.amount), 0);
 
   return {
-    available: num(p?.available_balance),
+    available: num(p?.bdx_balance),
     bdx: num(p?.bdx_balance),
-    locked: num(p?.locked_balance),
+    locked: num(p?.locked_bdx_balance),
     profit,
     bonus,
-    referralBonus: num(p?.referral_earnings),
-    withdrawn: num(p?.total_withdrawals),
+    referralBonus: num(p?.referral_earnings_bdx),
+    withdrawn: num(p?.total_withdrawals_bdx),
     txs,
     plans,
     notices: [],

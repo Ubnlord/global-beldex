@@ -80,18 +80,18 @@ function Dashboard() {
         <div className="mt-4 grid grid-cols-2 gap-4">
           <div>
             <div className="text-[11px] text-subtle">{t.available}</div>
-            <div className="text-xl font-bold tabular text-accent">{formatUsd(available)}</div>
+            <div className="text-xl font-bold tabular text-accent">{formatBdx(available)}</div>
           </div>
           <div>
             <div className="text-[11px] text-subtle">{t.locked}</div>
-            <div className="text-xl font-bold tabular text-warn">{formatUsd(locked)}</div>
+            <div className="text-xl font-bold tabular text-warn">{formatBdx(locked)}</div>
           </div>
         </div>
         <div className="mt-5 grid grid-cols-2 gap-3">
-          <Stat icon={TrendingUp} label={t.totalProfit} value={formatUsd(profit, 0)} tone="text-accent" />
-          <Stat icon={Gift} label={t.bonus} value={formatUsd(bonus, 0)} tone="text-warn" />
-          <Stat icon={Users} label={t.referralBonus} value={formatUsd(referralBonus, 0)} tone="text-violet" />
-          <Stat icon={Wallet} label={t.withdrawals} value={formatUsd(withdrawn, 0)} tone="text-rose" />
+          <Stat icon={TrendingUp} label={t.totalProfit} value={formatBdx(profit, 3)} tone="text-accent" />
+          <Stat icon={Gift} label={t.bonus} value={formatBdx(bonus, 3)} tone="text-warn" />
+          <Stat icon={Users} label={t.referralBonus} value={formatBdx(referralBonus, 3)} tone="text-violet" />
+          <Stat icon={Wallet} label={t.withdrawals} value={formatBdx(withdrawn, 3)} tone="text-rose" />
         </div>
         <Button className="mt-5 w-full" onClick={() => navigate({ to: "/app/deposit" })}>
           <ArrowDownToLine size={16} /> {t.investNow}

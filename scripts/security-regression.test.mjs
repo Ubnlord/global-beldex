@@ -71,6 +71,46 @@ test("security migration exposes only the intended swap executor", { skip: !url 
       return client;
     };
 
+    // Seed the isolated wallet through the real deposit lifecycle. This exercises
+    // the intended BDX-denominated request, approval, and settlement RPCs rather
+    // than a legacy USD balance adjustment or a direct balance-table write.
+    const normalClient = await clientFor(users.normal);
+    const seedRequestId = randomUUID();
+    const { data: seedDeposit, error: seedDepositError } = await normalClient.rpc(
+      "create_financial_transaction",
+      {
+        p_type: "deposit",
+        p_amount: 100000,
+        p_method: "security-regression-seed",
+        p_note: "Isolated test wallet funding",
+        p_request_id: seedRequestId,
+        p_currency: "BDX",
+      },
+    );
+    assert.ifError(seedDepositError);
+    assert.ok(seedDeposit?.id, "BDX seed deposit was not created");
+
+    const testAdmin = await clientFor(users.admin);
+    const { error: seedApprovalError } = await testAdmin.rpc("admin_approve_transaction", {
+      p_transaction_id: seedDeposit.id,
+      p_reason: "Approve isolated BDX regression-test funding",
+    });
+    assert.ifError(seedApprovalError);
+    const { error: seedSettlementError } = await testAdmin.rpc("admin_settle_transaction", {
+      p_transaction_id: seedDeposit.id,
+      p_reason: "Settle isolated BDX regression-test funding",
+    });
+    assert.ifError(seedSettlementError);
+
+    const { data: fundedProfile, error: fundedProfileError } = await admin
+      .from("user_profile")
+      .select("bdx_balance")
+      .eq("user_id", users.normal.id)
+      .single();
+    assert.ifError(fundedProfileError);
+    assert.ok(Number(fundedProfile.bdx_balance) >= 100000,
+      "intended deposit lifecycle did not establish the expected BDX balance");
+
     await step("ordinary user cannot execute admin search", async () => {
       const client = await clientFor(users.normal);
       const { error } = await client.rpc("admin_search_users", { p_query: "", p_limit: 10 });
@@ -194,15 +234,41 @@ test("security migration exposes only the intended swap executor", { skip: !url 
       assert.ok(error, "authenticated client unexpectedly executed the service-only swap RPC");
     });
 
+    await step("service-role swap rejects insufficient BDX without changing balances", async () => {
+      const before = await admin.from("user_profile")
+        .select("bdx_balance")
+        .eq("user_id", users.normal.id)
+        .single();
+      assert.ifError(before.error);
+      const beforeBalance = Number(before.data.bdx_balance);
+      const { error } = await admin.rpc("swap_assets", {
+        p_user_id: users.normal.id,
+        p_from: "BDX",
+        p_to: "USD",
+        p_amount: beforeBalance + 1,
+        p_rate: 1,
+      });
+      assert.ok(error, "swap unexpectedly spent more BDX than the wallet held");
+      assert.match(error.message, /Insufficient BDX balance/);
+
+      const after = await admin.from("user_profile")
+        .select("bdx_balance")
+        .eq("user_id", users.normal.id)
+        .single();
+      assert.ifError(after.error);
+      assert.equal(Number(after.data.bdx_balance), beforeBalance,
+        "failed swap changed the canonical BDX balance");
+    });
+
     await step("withdrawal lifecycle is atomic and one-way", async () => {
       const client = await clientFor(users.normal);
       const initial = await admin.from("user_profile")
-        .select("available_balance,total_withdrawals")
+        .select("bdx_balance,total_withdrawals_bdx")
         .eq("user_id", users.normal.id)
         .single();
       assert.ifError(initial.error);
-      const initialBalance = Number(initial.data.available_balance);
-      const initialWithdrawals = Number(initial.data.total_withdrawals || 0);
+      const initialBalance = Number(initial.data.bdx_balance);
+      const initialWithdrawals = Number(initial.data.total_withdrawals_bdx || 0);
 
       const approveRequestId = randomUUID();
       const created = await client.rpc("create_financial_transaction", {
@@ -218,11 +284,11 @@ test("security migration exposes only the intended swap executor", { skip: !url 
       assert.equal(created.data?.approval_status, "awaiting");
 
       const afterCreate = await admin.from("user_profile")
-        .select("available_balance")
+        .select("bdx_balance")
         .eq("user_id", users.normal.id)
         .single();
       assert.ifError(afterCreate.error);
-      assert.equal(Number(afterCreate.data.available_balance), initialBalance - 300);
+      assert.equal(Number(afterCreate.data.bdx_balance), initialBalance - Number(created.data.amount));
 
       const normalApprove = await client.rpc("admin_approve_transaction", {
         p_transaction_id: created.data.id,
@@ -275,12 +341,12 @@ test("security migration exposes only the intended swap executor", { skip: !url 
       assert.ok(doubleSettle.error, "withdrawal was settled twice");
 
       const afterSettlement = await admin.from("user_profile")
-        .select("available_balance,total_withdrawals")
+        .select("bdx_balance,total_withdrawals_bdx")
         .eq("user_id", users.normal.id)
         .single();
       assert.ifError(afterSettlement.error);
-      assert.equal(Number(afterSettlement.data.available_balance), initialBalance - 300);
-      assert.equal(Number(afterSettlement.data.total_withdrawals), initialWithdrawals + 300);
+      assert.equal(Number(afterSettlement.data.bdx_balance), initialBalance - Number(created.data.amount));
+      assert.equal(Number(afterSettlement.data.total_withdrawals_bdx), initialWithdrawals + Number(created.data.amount));
 
       const rejectRequestId = randomUUID();
       const rejectCreated = await client.rpc("create_financial_transaction", {
@@ -294,11 +360,12 @@ test("security migration exposes only the intended swap executor", { skip: !url 
       assert.ok(rejectCreated.data?.id);
 
       const afterSecondCreate = await admin.from("user_profile")
-        .select("available_balance")
+        .select("bdx_balance")
         .eq("user_id", users.normal.id)
         .single();
       assert.ifError(afterSecondCreate.error);
-      assert.equal(Number(afterSecondCreate.data.available_balance), initialBalance - 600);
+      assert.equal(Number(afterSecondCreate.data.bdx_balance),
+        initialBalance - Number(created.data.amount) - Number(rejectCreated.data.amount));
 
       const rejected = await adminClient.rpc("admin_reject_transaction", {
         p_transaction_id: rejectCreated.data.id,
@@ -315,12 +382,12 @@ test("security migration exposes only the intended swap executor", { skip: !url 
       assert.ok(doubleReject.error, "withdrawal was rejected twice");
 
       const afterRejection = await admin.from("user_profile")
-        .select("available_balance,total_withdrawals")
+        .select("bdx_balance,total_withdrawals_bdx")
         .eq("user_id", users.normal.id)
         .single();
       assert.ifError(afterRejection.error);
-      assert.equal(Number(afterRejection.data.available_balance), initialBalance - 300);
-      assert.equal(Number(afterRejection.data.total_withdrawals), initialWithdrawals + 300);
+      assert.equal(Number(afterRejection.data.bdx_balance), initialBalance - Number(created.data.amount));
+      assert.equal(Number(afterRejection.data.total_withdrawals_bdx), initialWithdrawals + Number(created.data.amount));
     });
 
     await step("duplicate request_id is idempotent", async () => {

@@ -10,7 +10,7 @@ import { CoinLogo } from "@/components/market/coin-logo";
 import { WITHDRAW_METHODS } from "@/lib/platform/catalog";
 import { copy } from "@/lib/platform/i18n";
 import { usePlatform } from "@/lib/platform/store";
-import { BDX_USD_RATE, bdxToUsd, formatBdx, formatUsd, usdToBdx } from "@/lib/utils";
+import { BDX_USD_RATE, bdxToUsd, formatBdx, formatUsd } from "@/lib/utils";
 import { validateWithdrawalDestination } from "@/lib/financial/withdrawal-address";
 
 const MIN_WITHDRAWAL = 300;
@@ -19,19 +19,17 @@ export const Route = createFileRoute("/app/withdraw")({ component: WithdrawPage 
 
 function WithdrawPage() {
   const navigate = useNavigate();
-  const available = usePlatform((s) => s.available);
   const bdxAvailable = usePlatform((s) => s.bdx);
   const withdraw = usePlatform((s) => s.withdraw);
   const lang = usePlatform((s) => s.lang);
   const t = copy[lang];
   const { book } = useBeldexQuote();
   const [method, setMethod] = useState("Beldex");
-  const [currency, setCurrency] = useState<"BDX" | "USD">("BDX");
+  const currency = "USD" as const;
   const [amount, setAmount] = useState("");
   const [address, setAddress] = useState("");
   const [requestId, setRequestId] = useState<string | null>(null);
   const isBeldex = method === "Beldex";
-  const isBdxCurrency = currency === "BDX";
 
   const submit = async () => {
     const n = parseFloat(amount);
@@ -43,11 +41,9 @@ function WithdrawPage() {
       toastError("Amount must be greater than zero");
       return;
     }
-    const minimum = isBeldex ? (isBdxCurrency ? 4000 : bdxToUsd(4000)) : MIN_WITHDRAWAL;
+    const minimum = bdxToUsd(4000);
     if (n < minimum) {
-      toastError(isBeldex
-        ? (isBdxCurrency ? `Minimum withdrawal is ${formatBdx(4000)} (${formatUsd(bdxToUsd(4000), 3)})` : `Minimum withdrawal is ${formatUsd(bdxToUsd(4000), 3)} (${formatBdx(4000)} equivalent)`)
-        : `Minimum withdrawal is ${MIN_WITHDRAWAL}`);
+      toastError(`Minimum withdrawal is ${formatUsd(bdxToUsd(4000), 3)} (4,000 BDX equivalent)`);
       return;
     }
     const addressError = validateWithdrawalDestination(method, address);
@@ -92,7 +88,7 @@ function WithdrawPage() {
               <button
                 key={m.id}
                 type="button"
-                onClick={() => { setMethod(m.label); if (m.id !== "BELDEX") setCurrency("USD"); }}
+                onClick={() => setMethod(m.label)}
                 className={
                   active
                     ? "flex items-center justify-between rounded-md border-2 border-accent bg-accent/10 p-3"
@@ -114,34 +110,31 @@ function WithdrawPage() {
           })}
         </div>
 
-        <FieldLabel>Withdrawal currency</FieldLabel>
-        <div className="mt-2 grid grid-cols-2 gap-2 rounded-md border border-line bg-surface p-1">
-          <button type="button" onClick={() => { setCurrency("BDX"); setMethod("Beldex"); }} className={currency === "BDX" ? "rounded-md bg-accent px-3 py-2 text-xs font-semibold text-accent-fg" : "rounded-md px-3 py-2 text-xs text-subtle"}>BDX</button>
-          <button type="button" onClick={() => setCurrency("USD")} className={currency === "USD" ? "rounded-md bg-accent px-3 py-2 text-xs font-semibold text-accent-fg" : "rounded-md px-3 py-2 text-xs text-subtle"}>USD</button>
-        </div>
+        <FieldLabel>Withdrawal amount (USD)</FieldLabel>
+        <p className="mt-1 text-[11px] text-subtle">USD is only used to enter the requested value. The equivalent amount is reserved from your BDX balance.</p>
         <FieldLabel>
-          <span className="mt-4 block">{currency === "BDX" ? "Amount (BDX)" : "Amount (USD)"}</span>
+          <span className="mt-4 block">Amount (USD)</span>
         </FieldLabel>
         <div className="relative mt-2">
-          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-subtle">{currency === "BDX" ? "BDX" : "$"}</span>
+          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-subtle">$</span>
           <Input
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             type="number"
-            min={currency === "BDX" ? 4000 : bdxToUsd(4000)}
-            step={currency === "BDX" ? "0.001" : "0.001"}
-            placeholder={currency === "BDX" ? "Minimum 4,000 BDX" : "Minimum $293.984"}
+            min={bdxToUsd(4000)}
+            step="0.001"
+            placeholder="Minimum $293.984"
             className="mt-0 h-14 border-2 border-line-strong bg-surface px-4 text-base font-medium placeholder:text-muted focus:border-accent focus:ring-2 focus:ring-accent/20"
           />
         </div>
         <div className="mt-2 flex justify-between text-[11px]">
-          <span className="text-subtle">{t.available}: {currency === "BDX" ? `${formatBdx(bdxAvailable)} BDX` : formatUsd(available)} · Min: {isBeldex ? (currency === "BDX" ? `${formatBdx(4000)} (${formatUsd(bdxToUsd(4000), 3)})` : `${formatUsd(bdxToUsd(4000), 3)} (${formatBdx(4000)} equivalent)`) : formatUsd(MIN_WITHDRAWAL)}</span>
-          <button type="button" onClick={() => setAmount((currency === "BDX" ? bdxAvailable : available).toFixed(3))} className="text-accent">
+          <span className="text-subtle">BDX balance: {formatBdx(bdxAvailable)} · USD equivalent: {formatUsd(bdxToUsd(bdxAvailable), 3)} · Minimum: {formatUsd(bdxToUsd(4000), 3)} (4,000 BDX equivalent)</span>
+          <button type="button" onClick={() => setAmount(bdxToUsd(bdxAvailable).toFixed(3))} className="text-accent">
             {t.max}
           </button>
         </div>
         {method && (
-          <CoinEstimate label={method} currency={currency} amount={parseFloat(amount) || 0} usd={isBeldex && currency === "BDX" ? bdxToUsd(parseFloat(amount) || 0) : parseFloat(amount) || 0} book={book} />
+          <CoinEstimate label={method} currency={currency} amount={parseFloat(amount) || 0} usd={parseFloat(amount) || 0} book={book} />
         )}
 
         <FieldLabel>
@@ -203,8 +196,8 @@ function CoinEstimate({
     return (
       <div className="mt-2 rounded-md border border-accent/30 bg-accent/5 px-3 py-2 text-[11px] text-subtle">
         <div>Platform rate: <span className="font-semibold text-fg">{formatUsd(BDX_USD_RATE, 6)} per BDX</span></div>
-        <div className="mt-0.5">{currency === "BDX" ? <>Account value: <span className="font-semibold text-accent">{formatUsd(usd, 3)}</span> for {formatBdx(amount)}</> : <>BDX to send: <span className="font-semibold text-accent">{formatBdx(amount / BDX_USD_RATE)}</span> for {formatUsd(amount, 3)}</>}</div>
-        <div className="mt-0.5 text-[10px]">{currency === "BDX" ? "Your BDX amount is converted to the account USD value." : "Your USD amount is converted to the BDX amount shown before processing."}</div>
+        <div className="mt-0.5">BDX to reserve: <span className="font-semibold text-accent">{formatBdx(usd / BDX_USD_RATE)}</span> for {formatUsd(usd, 3)}</div>
+        <div className="mt-0.5 text-[10px]">The requested USD value is converted to BDX and reserved from your BDX balance.</div>
       </div>
     );
   }

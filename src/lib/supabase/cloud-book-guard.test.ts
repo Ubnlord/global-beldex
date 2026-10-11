@@ -4,11 +4,10 @@ import { isCompleteCloudRefresh } from "./cloud-book-guard.ts";
 
 const profile = {
   data: {
-    available_balance: 42,
-    locked_balance: 10,
-    total_withdrawals: 3,
-    bdx_balance: 5,
-    referral_earnings: 2,
+    bdx_balance: 42,
+    locked_bdx_balance: 10,
+    total_withdrawals_bdx: 3,
+    referral_earnings_bdx: 2,
   },
   error: null,
 };
@@ -29,8 +28,8 @@ test("rejects a cloud refresh when the profile query fails", () => {
 
 test("rejects a cloud refresh when a required balance field is missing or invalid", () => {
   for (const value of [
-    { ...profile.data, available_balance: undefined },
-    { ...profile.data, locked_balance: null },
+    { ...profile.data, bdx_balance: undefined },
+    { ...profile.data, locked_bdx_balance: null },
     { ...profile.data, bdx_balance: "not-a-number" },
   ]) {
     assert.equal(isCompleteCloudRefresh({ data: value, error: null }, transactions, investments), false);
@@ -63,7 +62,7 @@ test("accepts a complete refresh with an existing profile and genuinely empty le
 
 test("accepts numeric strings returned by Postgres numeric columns", () => {
   assert.equal(isCompleteCloudRefresh({
-    data: { ...profile.data, available_balance: "42.00" },
+    data: { ...profile.data, bdx_balance: "42.00" },
     error: null,
   }, transactions, investments), true);
 });

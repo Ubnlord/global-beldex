@@ -2,7 +2,7 @@ name: Financial safeguards
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, feat/bdx-native-accounting]
   push:
     branches: [main]
   workflow_dispatch:
@@ -66,6 +66,14 @@ jobs:
       - name: Run pgTAP safeguards
         working-directory: .security-test
         run: supabase test db
+
+      - name: Validate read-only legacy inventory on isolated database
+        if: ${{ hashFiles('scripts/bdx-legacy-inventory.readonly.sql') != '' }}
+        working-directory: .security-test
+        run: |
+          set -euo pipefail
+          eval "$(supabase status -o env)"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f ../scripts/bdx-legacy-inventory.readonly.sql
 
       - name: Start swap Edge Function locally
         working-directory: .security-test

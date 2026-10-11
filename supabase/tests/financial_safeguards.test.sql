@@ -125,9 +125,8 @@ select function_privs_are('public', 'admin_adjust_balance', array['uuid','numeri
 select function_privs_are('public', 'create_financial_transaction', array['text','numeric','text','text','uuid','text'], 'authenticated', array['EXECUTE'], 'authenticated can create financial requests');
 
 select ok(
-  position('p_type = ''withdraw''' in pg_get_functiondef('public.create_financial_transaction(text,numeric,text,text,uuid,text)'::regprocedure)) > 0
-  and position('4000' in pg_get_functiondef('public.create_financial_transaction(text,numeric,text,text,uuid,text)'::regprocedure)) > 0,
-  'withdrawal RPC enforces the 4,000 BDX-equivalent minimum'
+  position('ifp_type=''withdraw''andv_ledger_amount<4000' in regexp_replace(lower(pg_get_functiondef('public.create_financial_transaction(text,numeric,text,text,uuid,text)'::regprocedure)), '\s+', '', 'g')) > 0,
+  'withdrawal RPC enforces the 4,000 BDX-equivalent minimum only for withdrawals'
 );
 
 select ok(
@@ -175,10 +174,10 @@ select ok(
 );
 
 select ok(
-  position('p_delta = 0' in pg_get_functiondef('public.admin_adjust_balance(uuid,numeric,text)'::regprocedure)) > 0
-  and position('reason is required' in pg_get_functiondef('public.admin_adjust_balance(uuid,numeric,text)'::regprocedure)) > 0
-  and position('v_profile.bdx_balance + p_delta < 0' in pg_get_functiondef('public.admin_adjust_balance(uuid,numeric,text)'::regprocedure)) > 0
-  and position('v_profile.blocked' in pg_get_functiondef('public.admin_adjust_balance(uuid,numeric,text)'::regprocedure)) > 0,
+  position('p_delta=0' in regexp_replace(lower(pg_get_functiondef('public.admin_adjust_balance(uuid,numeric,text)'::regprocedure)), '\s+', '', 'g')) > 0
+  and position('reasonisrequired' in regexp_replace(lower(pg_get_functiondef('public.admin_adjust_balance(uuid,numeric,text)'::regprocedure)), '\s+', '', 'g')) > 0
+  and position('v_profile.bdx_balance+p_delta<0' in regexp_replace(lower(pg_get_functiondef('public.admin_adjust_balance(uuid,numeric,text)'::regprocedure)), '\s+', '', 'g')) > 0
+  and position('v_profile.blocked' in lower(pg_get_functiondef('public.admin_adjust_balance(uuid,numeric,text)'::regprocedure)) > 0,
   'admin_adjust_balance validates delta, reason, blocked status, and nonnegative balance'
 );
 

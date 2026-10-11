@@ -753,8 +753,8 @@ function UserModal({ user, investments, txs, canUsers, canInvestments, busy, blo
           <MiniStat label="USD locked" value={money(user.locked_balance)} />
           <MiniStat label="BDX available" value={`${money(user.bdx_balance)} BDX`} />
           <MiniStat label="BDX locked" value={`${money(user.locked_bdx_balance)} BDX`} />
-          <MiniStat label="Deposits" value={money(user.total_deposits)} />
-          <MiniStat label="Withdrawals" value={money(user.total_withdrawals)} />
+          <MiniStat label="USD deposits" value={money(user.total_deposits)} />
+          <MiniStat label="USD withdrawals" value={money(user.total_withdrawals)} />
         </div>
 
         <div className="mt-5 rounded-2xl border border-line bg-surface p-4">

@@ -96,7 +96,7 @@ select public.admin_approve_transaction((select id from public.transaction where
 select public.admin_settle_transaction((select id from public.transaction where request_id='a1100000-0000-4000-8000-000000000104'),'settle BDX deposit');
 select is(
   (select available_balance from public.user_profile where user_id='a1100000-0000-4000-8000-000000000001'),
-  0::numeric,'USD-input deposit does not alter the legacy USD wallet'
+  1000::numeric,'USD-input deposit does not alter the pre-existing legacy USD wallet balance'
 );
 select is(
   (select round(bdx_balance,3) from public.user_profile where user_id='a1100000-0000-4000-8000-000000000001'),

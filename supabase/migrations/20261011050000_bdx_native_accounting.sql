@@ -22,6 +22,9 @@ comment on column public.user_profile.total_withdrawals_bdx is
 -- The current platform quote is a fixed configuration value already used by the
 -- existing deposit/withdraw UI: 4,000 BDX = 293.984 USD.
 -- Conversion metadata is stored in note for audit; request idempotency is retained.
+-- Retire the older five-argument overload so it cannot continue creating USD-wallet transactions.
+drop function if exists public.create_financial_transaction(text,numeric,text,text,uuid);
+
 create or replace function public.create_financial_transaction(
   p_type text,
   p_amount numeric,

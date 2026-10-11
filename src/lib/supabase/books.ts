@@ -1,6 +1,5 @@
 import type { Book, ActivePlan, Transaction, TxStatus, TxType } from "@/lib/platform/store";
 import { supabase } from "./client";
-import { usdToBdx } from "@/lib/utils";
 import { isCompleteCloudRefresh } from "./cloud-book-guard";
 
 function num(v: unknown) {
@@ -62,7 +61,7 @@ export async function pullCloudBook(options: { skipAccrual?: boolean } = {}): Pr
       id: p.id,
       planId: p.plan_id,
       name: catalog?.name ?? p.plan_id,
-      amount: p.currency === "BDX" ? num(p.principal) : usdToBdx(num(p.principal)),
+      amount: num(p.principal),
       currency: p.currency === "BDX" ? "BDX" : "USD",
       dailyPct: num(p.daily_rate) * 100,
       startedAt: new Date(p.started_at).getTime(),
@@ -70,7 +69,7 @@ export async function pullCloudBook(options: { skipAccrual?: boolean } = {}): Pr
       status: p.status === "completed" ? "completed" : "active",
       color: "#2AF5D4",
       creditedDays: undefined,
-      creditedProfit: p.currency === "BDX" ? num(p.credited_profit) : usdToBdx(num(p.credited_profit)),
+      creditedProfit: num(p.credited_profit),
       lastAccrualAt: p.last_accrual_at ? new Date(p.last_accrual_at).getTime() : undefined,
     };
   });

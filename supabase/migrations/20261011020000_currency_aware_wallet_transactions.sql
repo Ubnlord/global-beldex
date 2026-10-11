@@ -9,7 +9,7 @@ create or replace function public.create_financial_transaction(
   p_method text default null,
   p_note text default null,
   p_request_id uuid default null,
-  p_currency text default 'USD'
+  p_currency text
 )
 returns public.transaction
 language plpgsql security definer

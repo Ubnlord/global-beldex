@@ -246,11 +246,14 @@ export const usePlatform = create<PlatformState>()(
 
         deposit: async (amount, method, requestId, currency = "BDX") => {
           const isBeldex = method === "BELDEX";
-          const usdAmount = isBeldex && currency === "BDX" ? bdxToUsd(amount) : amount;
-          if (!amount || (isBeldex ? usdAmount < bdxToUsd(4000) : usdAmount < 300)) return "MIN_DEPOSIT";
+          const ledgerCurrency = isBeldex ? currency : "USD";
+          const ledgerAmount = amount;
+          const minimum = isBeldex ? (currency === "BDX" ? 4000 : bdxToUsd(4000)) : 300;
+          if (!amount || amount < minimum) return "MIN_DEPOSIT";
           const { error } = await supabase.rpc("create_financial_transaction", {
             p_type: "deposit",
-            p_amount: usdAmount,
+            p_amount: ledgerAmount,
+            p_currency: ledgerCurrency,
             p_method: method,
             p_note: null,
             p_request_id: requestId ? requestId : null,
@@ -265,12 +268,16 @@ export const usePlatform = create<PlatformState>()(
           const addressError = validateWithdrawalDestination(method, address);
           if (addressError) return addressError;
           if (!amount || amount <= 0) return "NEED_AMOUNT";
-          const usdAmount = method === "Beldex" && currency === "BDX" ? bdxToUsd(amount) : amount;
-          if (usdAmount < (method === "Beldex" ? bdxToUsd(4000) : 300)) return "MIN_WITHDRAWAL";
-          if (usdAmount > get().available) return "INSUFFICIENT";
+          const isBeldex = method === "Beldex";
+          const ledgerCurrency = isBeldex ? currency : "USD";
+          const minimum = isBeldex ? (currency === "BDX" ? 4000 : bdxToUsd(4000)) : 300;
+          if (amount < minimum) return "MIN_WITHDRAWAL";
+          const balance = ledgerCurrency === "BDX" ? get().bdx : get().available;
+          if (amount > balance) return "INSUFFICIENT";
           const { error } = await supabase.rpc("create_financial_transaction", {
             p_type: "withdraw",
-            p_amount: usdAmount,
+            p_amount: amount,
+            p_currency: ledgerCurrency,
             p_method: method,
             p_note: address.trim(),
             p_request_id: requestId ? requestId : null,

@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(24);
+select plan(31);
 
 -- Isolated identities and balances; transaction rollback leaves no fixture data.
 insert into auth.users (
@@ -151,6 +151,43 @@ select is(
 select is(
   (select referral_earnings_bdx from public.user_profile where user_id='a1100000-0000-4000-8000-000000000003'),
   round((50/(293.984/4000) + 500)*0.10,18),'referral earnings are recorded in the BDX-specific total'
+);
+
+
+-- Isolated admin-console RPC integration: funding is legacy USD, adjustment is BDX.
+select set_config('request.jwt.claim.sub','a1100000-0000-4000-8000-000000000002',true);
+select is(
+  (public.admin_fund_user('a1100000-0000-4000-8000-000000000001',125,'integration test legacy USD funding')).available_balance,
+  1125::numeric,'admin_fund_user credits the legacy USD wallet'
+);
+select is(
+  (select count(*)::integer from public.admin_action_audit
+   where user_id='a1100000-0000-4000-8000-000000000001' and action='fund_user' and reason='integration test legacy USD funding'),
+  1,'legacy USD funding creates an admin audit record'
+);
+select is(
+  (select currency from public.transaction
+   where user_id='a1100000-0000-4000-8000-000000000001' and method='admin' and note='integration test legacy USD funding'
+   order by created_at desc limit 1),
+  'USD'::text,'admin funding ledger entry is explicitly marked USD'
+);
+select is(
+  (public.admin_adjust_balance('a1100000-0000-4000-8000-000000000001',250,'integration test BDX adjustment')).bdx_balance,
+  round(10000 - (300/(293.984/4000)) + (50/(293.984/4000)) + 500 + 250,18),
+  'admin_adjust_balance changes the BDX wallet only'
+);
+select is(
+  (select available_balance from public.user_profile where user_id='a1100000-0000-4000-8000-000000000001'),
+  1125::numeric,'BDX adjustment leaves legacy USD balance unchanged'
+);
+select is(
+  (select count(*)::integer from public.admin_action_audit
+   where user_id='a1100000-0000-4000-8000-000000000001' and action='adjust_bdx_balance' and reason='integration test BDX adjustment'),
+  1,'BDX adjustment creates an admin audit record'
+);
+select throws_ok(
+  $select public.admin_adjust_balance('a1100000-0000-4000-8000-000000000001',1,'ordinary user must be denied')$,
+  'P0001','Permission denied','ordinary user cannot invoke admin BDX adjustment'
 );
 
 select * from finish();

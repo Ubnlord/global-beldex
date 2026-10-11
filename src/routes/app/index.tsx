@@ -26,7 +26,7 @@ import {
   referralLink,
   usePlatform,
 } from "@/lib/platform/store";
-import { formatBdx, copyText } from "@/lib/utils";
+import { formatBdx, formatUsd, copyText } from "@/lib/utils";
 export const Route = createFileRoute("/app/")({ component: Dashboard });
 
 function Dashboard() {

@@ -4,7 +4,7 @@ import { toast, toastError } from "@/components/layout/toast";
 import { Button } from "@/components/ui/button";
 import { referralLink, usePlatform } from "@/lib/platform/store";
 import { copy } from "@/lib/platform/i18n";
-import { copyText, formatUsd } from "@/lib/utils";
+import { copyText, formatBdx } from "@/lib/utils";
 
 export const Route = createFileRoute("/app/referrals")({ component: ReferralsPage });
 
@@ -22,7 +22,7 @@ function ReferralsPage() {
       <p className="mt-1 text-xs text-subtle">{t.referralLead}</p>
       <div className="mt-6 rounded-lg border border-line bg-elevated p-5">
         <div className="text-[11px] text-muted">{t.referralEarned}</div>
-        <div className="text-2xl font-bold tabular text-accent">{formatUsd(referralBonus)}</div>
+        <div className="text-2xl font-bold tabular text-accent">{formatBdx(referralBonus)}</div>
         <div className="mt-5 text-[13px] font-semibold">{t.yourLink}</div>
         <div className="mt-2 break-all rounded-md border border-line-strong bg-surface px-3 py-3 text-[11px] text-muted">
           {link}

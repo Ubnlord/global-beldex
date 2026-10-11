@@ -81,8 +81,8 @@ select is(
   round(300/(293.984/4000),3),'USD input is converted using the documented platform rate'
 );
 select is(
-  (select available_balance from public.user_profile where user_id='a1100000-0000-4000-8000-000000000001'),
-  1000::numeric,'USD legacy wallet remains unchanged by BDX withdrawal reservation'
+  (select bdx_balance from public.user_profile where user_id='a1100000-0000-4000-8000-000000000001'),
+  round(10000 - 4000 - (300/(293.984/4000)),3),'USD input withdrawal reserves its BDX equivalent'
 );
 
 -- USD and BDX deposits settle to their own wallets and their own totals.

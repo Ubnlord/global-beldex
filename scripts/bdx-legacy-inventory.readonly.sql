@@ -65,8 +65,8 @@ select
   min(created_at) as oldest_created_at,
   max(created_at) as newest_created_at
 from public.transaction
-where coalesce(status, '') in ('pending', 'awaiting')
-   or coalesce(approval_status, '') in ('awaiting', 'approved')
+where (coalesce(status, '') in ('pending', 'awaiting')
+    or coalesce(approval_status, '') in ('awaiting', 'approved'))
   and coalesce(status, '') <> 'completed'
 group by coalesce(currency, 'USD'), type, status, approval_status
 order by 1, 2, 3, 4;

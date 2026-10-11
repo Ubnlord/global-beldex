@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(18);
+select plan(22);
 
 -- Isolated identities and balances; transaction rollback leaves no fixture data.
 insert into auth.users (
@@ -115,6 +115,22 @@ select is(
 select is(
   (select count(*)::integer from public.transaction where user_id='a1100000-0000-4000-8000-000000000001' and status='completed' and currency='BDX'),
   2,'completed BDX transactions remain identifiable in ledger history'
+);
+select is(
+  (select deposits_delta from public.admin_financial_reconciliation_v2() where user_id='a1100000-0000-4000-8000-000000000001'),
+  0::numeric,'USD deposit reconciliation compares USD totals to USD ledger only'
+);
+select is(
+  (select deposits_bdx_delta from public.admin_financial_reconciliation_v2() where user_id='a1100000-0000-4000-8000-000000000001'),
+  0::numeric,'BDX deposit reconciliation compares BDX totals to BDX ledger only'
+);
+select is(
+  (select withdrawals_delta from public.admin_financial_reconciliation_v2() where user_id='a1100000-0000-4000-8000-000000000001'),
+  0::numeric,'USD withdrawal reconciliation remains currency-correct'
+);
+select is(
+  (select withdrawals_bdx_delta from public.admin_financial_reconciliation_v2() where user_id='a1100000-0000-4000-8000-000000000001'),
+  0::numeric,'rejected BDX withdrawal is excluded from completed BDX withdrawal totals'
 );
 
 select * from finish();

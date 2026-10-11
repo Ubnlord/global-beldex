@@ -31,8 +31,8 @@ assert.equal(dailyInterest, 76);
 assert.equal(totalProfit, 2280);
 assert.equal(finalTotal, 6280);
 assert.match(catalog, /amount \* \(plan\.dailyPct \/ 100\) \* plan\.durationDays/);
-assert.match(migration, /where status = 'active'/);
-assert.match(migration, /set daily_rate = case plan_id/);
-assert.match(migration, /does not retroactively recalculate credited profits or/);
+assert.match(migration, /Published ROI values are DAILY simple-interest rates/);
+assert.match(migration, /Existing investment snapshots are intentionally left untouched/);
+assert.doesNotMatch(migration, /update public\\.user_investment/);
 
 console.log("Daily ROI contract passed: GNS 4,000 BDX => 76/day, 2,280 profit, 6,280 maturity total.");

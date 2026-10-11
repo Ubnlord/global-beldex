@@ -44,6 +44,7 @@ declare
   v_rate numeric(38,18) := 293.984 / 4000;
   v_note jsonb;
   v_destination text;
+  v_existing_note jsonb;
 begin
   if v_uid is null then raise exception 'Unauthorized'; end if;
   if p_type not in ('deposit','withdraw') then raise exception 'Invalid transaction type'; end if;
@@ -57,7 +58,13 @@ begin
     if found then
       -- For retries, compare the submitted values/metadata, not the normalized
       -- BDX ledger amount, to avoid accidental duplicate wallet requests.
-      if v_tx.type <> p_type or v_tx.request_id <> p_request_id then
+      v_existing_note := case
+        when coalesce(v_tx.note,'') like '{%' then v_tx.note::jsonb
+        else '{}'::jsonb
+      end;
+      if v_tx.type <> p_type
+        or coalesce(v_existing_note->>'input_amount','') <> p_amount::text
+        or upper(coalesce(v_existing_note->>'input_currency','USD')) <> v_input_currency then
         raise exception 'Request ID was already used for a different transaction';
       end if;
       return v_tx;
@@ -116,7 +123,10 @@ begin
   insert into public.transaction(
     user_id,type,amount,currency,status,approval_status,method,note,request_id
   ) values (
-    v_uid,p_type,v_ledger_amount,'BDX','pending','awaiting',p_method,v_note::text,p_request_id
+    v_uid,p_type,v_ledger_amount,'BDX','pending','awaiting',p_method,
+    case when p_type='withdraw' then (v_note - 'destination') || jsonb_build_object('destination_hash_hint', right(v_destination,6))
+         else v_note end::text,
+    p_request_id
   ) returning * into v_tx;
 
   return v_tx;

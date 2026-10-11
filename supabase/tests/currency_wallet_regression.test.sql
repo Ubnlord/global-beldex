@@ -7,7 +7,7 @@ select plan(18);
 select has_column('public','user_profile','locked_bdx_balance','BDX principal has a separate locked balance');
 select has_column('public','user_investment','currency','investment currency is recorded');
 select has_column('public','transaction','currency','ledger currency is recorded');
-select col_default_is('public','user_investment','currency', '''USD''::text', 'legacy investments default to USD');
+select col_default_is('public','user_investment','currency', 'USD', 'legacy investments default to USD');
 select col_default_is('public','transaction','currency', '''USD''::text', 'legacy transactions default to USD');
 
 -- Daily simple-interest contract for all seven published plans.
@@ -23,14 +23,14 @@ select is((220000::numeric * 0.2378), 52316::numeric, 'FALCON daily interest use
 
 -- Guardrails that make duplicate accrual and maturity idempotent:
 -- only active investments are accrued, with row locks and elapsed-day delta.
-select like(pg_get_functiondef('public.accrue_user_investments(uuid)'::regprocedure),
+select ok(pg_get_functiondef('public.accrue_user_investments(uuid)'::regprocedure) like
   '%where user_id = v_uid and status = ''active'' and daily_accrual_enabled = true%',
   'accrual only selects active, enabled investments');
-select like(pg_get_functiondef('public.accrue_user_investments(uuid)'::regprocedure),
+select ok(pg_get_functiondef('public.accrue_user_investments(uuid)'::regprocedure) like
   '%for update%', 'accrual locks investment rows against concurrent duplicate credits');
-select like(pg_get_functiondef('public.accrue_user_investments(uuid)'::regprocedure),
+select ok(pg_get_functiondef('public.accrue_user_investments(uuid)'::regprocedure) like
   '%greatest(0, v_elapsed_days - v_previous_days)%', 'accrual credits only previously uncredited elapsed days');
-select like(pg_get_functiondef('public.accrue_user_investments(uuid)'::regprocedure),
+select ok(pg_get_functiondef('public.accrue_user_investments(uuid)'::regprocedure) like
   '%status = case when v_done then ''completed'' else ''active'' end%',
   'maturity marks investment completed to prevent repeat principal return');
 

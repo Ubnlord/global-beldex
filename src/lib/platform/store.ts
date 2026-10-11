@@ -245,15 +245,15 @@ export const usePlatform = create<PlatformState>()(
         },
 
         deposit: async (amount, method, requestId, currency = "USD") => {
-          // USD is accepted only as a deposit input; the account ledger is always BDX.
-          const inputInBdx = currency === "BDX" ? amount : usdToBdx(amount);
-          if (!Number.isFinite(inputInBdx) || inputInBdx < 4000) return "MIN_DEPOSIT";
+          // The database is the authority for USD-to-BDX conversion.
+          if (!Number.isFinite(amount) || amount <= 0) return "NEED_AMOUNT";
+          if (currency === "BDX" ? amount < 4000 : amount < bdxToUsd(4000)) return "MIN_DEPOSIT";
           const { error } = await supabase.rpc("create_financial_transaction", {
             p_type: "deposit",
-            p_amount: inputInBdx,
-            p_currency: "BDX",
+            p_amount: amount,
+            p_currency: currency,
             p_method: method,
-            p_note: JSON.stringify({ inputAmount: amount, inputCurrency: currency, conversionRateUsdPerBdx: bdxToUsd(1) }),
+            p_note: null,
             p_request_id: requestId ? requestId : null,
           });
           if (error) return error.message;
@@ -266,16 +266,16 @@ export const usePlatform = create<PlatformState>()(
           const addressError = validateWithdrawalDestination(method, address);
           if (addressError) return addressError;
           if (!Number.isFinite(amount) || amount <= 0) return "NEED_AMOUNT";
-          // USD is an input/display amount only; reserve the BDX-equivalent amount.
+          // The database converts the requested USD amount and atomically reserves BDX.
+          if (currency === "BDX" ? amount < 4000 : amount < bdxToUsd(4000)) return "MIN_WITHDRAWAL";
           const bdxAmount = currency === "BDX" ? amount : usdToBdx(amount);
-          if (bdxAmount < 4000) return "MIN_WITHDRAWAL";
           if (bdxAmount > get().bdx) return "INSUFFICIENT";
           const { error } = await supabase.rpc("create_financial_transaction", {
             p_type: "withdraw",
-            p_amount: bdxAmount,
-            p_currency: "BDX",
+            p_amount: amount,
+            p_currency: currency,
             p_method: method,
-            p_note: JSON.stringify({ destination: address.trim(), inputAmount: amount, inputCurrency: currency, conversionRateUsdPerBdx: bdxToUsd(1) }),
+            p_note: address.trim(),
             p_request_id: requestId ? requestId : null,
           });
           if (error) return error.message;

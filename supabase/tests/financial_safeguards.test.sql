@@ -177,7 +177,7 @@ select ok(
 select ok(
   position('p_delta = 0' in pg_get_functiondef('public.admin_adjust_balance(uuid,numeric,text)'::regprocedure)) > 0
   and position('reason is required' in pg_get_functiondef('public.admin_adjust_balance(uuid,numeric,text)'::regprocedure)) > 0
-  and position('v_profile.available_balance + p_delta < 0' in pg_get_functiondef('public.admin_adjust_balance(uuid,numeric,text)'::regprocedure)) > 0
+  and position('v_profile.bdx_balance + p_delta < 0' in pg_get_functiondef('public.admin_adjust_balance(uuid,numeric,text)'::regprocedure)) > 0
   and position('v_profile.blocked' in pg_get_functiondef('public.admin_adjust_balance(uuid,numeric,text)'::regprocedure)) > 0,
   'admin_adjust_balance validates delta, reason, blocked status, and nonnegative balance'
 );

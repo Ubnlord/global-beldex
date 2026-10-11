@@ -44,6 +44,11 @@ select is(
   (select count(*)::integer from public.transaction where user_id='a1100000-0000-4000-8000-000000000001' and request_id='a1100000-0000-4000-8000-000000000101'),
   1,'duplicate request creates one ledger row'
 );
+select throws_ok(
+  $select public.create_financial_transaction('withdraw',4000,'Beldex','test destination','a1100000-0000-4000-8000-000000000101','USD')$,
+  'P0001','Request ID was already used for a different transaction',
+  'reusing a request ID with a different currency is rejected'
+);
 
 -- Rejecting a pending withdrawal releases its reservation in the same currency.
 select set_config('request.jwt.claim.sub','a1100000-0000-4000-8000-000000000002',true);

@@ -69,26 +69,20 @@ select is(
   1,'rejection writes transaction audit history'
 );
 
--- USD-entry withdrawal is normalized to a BDX reservation. The wallet has enough BDX.
+-- USD-input withdrawal is normalized to BDX and reserves only the BDX wallet.
 select set_config('request.jwt.claim.sub','a1100000-0000-4000-8000-000000000001',true);
-select public.create_financial_transaction('withdraw',300,'Bank','test destination','a1100000-0000-4000-8000-000000000102','USD');
+select public.create_financial_transaction('withdraw',300,'Beldex','4' || repeat('A',94),'a1100000-0000-4000-8000-000000000102','USD');
+select is(
+  (select currency from public.transaction where request_id='a1100000-0000-4000-8000-000000000102'),
+  'BDX'::text,'USD withdrawal input is stored as BDX ledger currency'
+);
+select is(
+  (select round(amount,3) from public.transaction where request_id='a1100000-0000-4000-8000-000000000102'),
+  round(300/(293.984/4000),3),'USD input is converted using the documented platform rate'
+);
 select is(
   (select available_balance from public.user_profile where user_id='a1100000-0000-4000-8000-000000000001'),
-  700::numeric,'USD withdrawal reserves from USD wallet'
-);
-select set_config('request.jwt.claim.sub','a1100000-0000-4000-8000-000000000002',true);
-select public.admin_approve_transaction((select id from public.transaction where request_id='a1100000-0000-4000-8000-000000000102'),'test approval');
-select is(
-  (public.admin_settle_transaction((select id from public.transaction where request_id='a1100000-0000-4000-8000-000000000102'),'test settlement')).status,
-  'completed'::text,'approved USD withdrawal settles'
-);
-select is(
-  (select total_withdrawals from public.user_profile where user_id='a1100000-0000-4000-8000-000000000001'),
-  300::numeric,'USD withdrawal increments USD total'
-);
-select is(
-  (select total_withdrawals_bdx from public.user_profile where user_id='a1100000-0000-4000-8000-000000000001'),
-  0::numeric,'USD withdrawal does not increment BDX total'
+  1000::numeric,'USD legacy wallet remains unchanged by BDX withdrawal reservation'
 );
 
 -- USD and BDX deposits settle to their own wallets and their own totals.

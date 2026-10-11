@@ -54,10 +54,6 @@ function WithdrawPage() {
       toastError(addressError);
       return;
     }
-    if ((isBeldex && isBdxCurrency ? bdxToUsd(n) : n) > available) {
-      toastError("Insufficient balance");
-      return;
-    }
     const id = requestId ?? crypto.randomUUID();
     setRequestId(id);
     const err = await withdraw(n, method, address, id, currency);

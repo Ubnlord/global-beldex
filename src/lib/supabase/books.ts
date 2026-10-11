@@ -79,7 +79,7 @@ export async function pullCloudBook(options: { skipAccrual?: boolean } = {}): Pr
     0,
   );
   const bonus = rawTxs
-    .filter((t: any) => t.type === "bonus" && t.method === "Welcome Bonus")
+    .filter((t: any) => t.type === "bonus" && t.method === "Welcome Bonus" && t.currency === "BDX")
     .reduce((sum: number, t: any) => sum + num(t.amount), 0);
 
   return {

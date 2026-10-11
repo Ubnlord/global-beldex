@@ -135,6 +135,7 @@ test("security migration exposes only the intended swap executor", { skip: !url 
         p_method: "security-test",
         p_note: null,
         p_request_id: randomUUID(),
+        p_currency: "USD",
       });
       assert.ok(error, "blocked user unexpectedly created a financial transaction");
     });
@@ -164,6 +165,7 @@ test("security migration exposes only the intended swap executor", { skip: !url 
         p_method: "Ethereum",
         p_note: "0x1111111111111111111111111111111111111111",
         p_request_id: randomUUID(),
+        p_currency: "USD",
       });
       assert.ok(error, "blocked user unexpectedly created a withdrawal");
     });
@@ -245,6 +247,7 @@ test("security migration exposes only the intended swap executor", { skip: !url 
         p_method: "Ethereum",
         p_note: "0x1111111111111111111111111111111111111111",
         p_request_id: approveRequestId,
+        p_currency: "USD",
       });
       assert.ifError(created.error);
       assert.ok(created.data?.id);
@@ -330,6 +333,7 @@ test("security migration exposes only the intended swap executor", { skip: !url 
         p_method: "Bitcoin",
         p_note: "bc1qaaaaaaaaaaa",
         p_request_id: rejectRequestId,
+        p_currency: "USD",
       });
       assert.ifError(rejectCreated.error);
       assert.ok(rejectCreated.data?.id);
@@ -373,6 +377,7 @@ test("security migration exposes only the intended swap executor", { skip: !url 
         p_method: "security-test",
         p_note: null,
         p_request_id: requestId,
+        p_currency: "USD",
       });
       assert.ifError(first.error);
       assert.ok(first.data?.id);
@@ -383,6 +388,7 @@ test("security migration exposes only the intended swap executor", { skip: !url 
         p_method: "security-test",
         p_note: null,
         p_request_id: requestId,
+        p_currency: "USD",
       });
       assert.ifError(second.error);
       assert.equal(second.data?.id, first.data?.id);

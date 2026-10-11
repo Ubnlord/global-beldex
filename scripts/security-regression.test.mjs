@@ -140,6 +140,27 @@ test("security migration exposes only the intended swap executor", { skip: !url 
       assert.ok(error, "blocked user unexpectedly created a financial transaction");
     });
 
+    await step("currency-aware withdrawal RPC rejects amounts below minimum and malformed destinations", async () => {
+      const client = await clientFor(users.normal);
+      const cases = [
+        { p_amount: 299, p_method: "Ethereum", p_note: "0x1111111111111111111111111111111111111111", label: "below minimum" },
+        { p_amount: 300, p_method: "Ethereum", p_note: "not-an-ethereum-address", label: "invalid Ethereum address" },
+        { p_amount: 300, p_method: "Bitcoin", p_note: "not-a-bitcoin-address", label: "invalid Bitcoin address" },
+        { p_amount: 300, p_method: "Beldex", p_note: "short-address", label: "invalid Beldex address" },
+      ];
+      for (const item of cases) {
+        const { error } = await client.rpc("create_financial_transaction", {
+          p_type: "withdraw",
+          p_amount: item.p_amount,
+          p_method: item.p_method,
+          p_note: item.p_note,
+          p_request_id: randomUUID(),
+          p_currency: "USD",
+        });
+        assert.ok(error, "withdrawal RPC unexpectedly accepted " + item.label);
+      }
+    });
+
     await step("blocked user cannot buy an investment plan", async () => {
       const client = await clientFor(users.blocked);
       const { error } = await client.rpc("buy_investment_plan", {

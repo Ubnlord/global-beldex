@@ -1,0 +1,13 @@
+begin;
+create extension if not exists pgtap with schema extensions;
+select plan(8);
+select function_privs_are('public','create_financial_transaction',array['text','numeric','text','text','uuid'],'authenticated','{}','legacy transaction overload hidden from authenticated');
+select function_privs_are('public','create_financial_transaction',array['text','numeric','text','text','uuid'],'anon','{}','legacy transaction overload hidden from anon');
+select function_privs_are('public','create_financial_transaction',array['text','numeric','text','text','uuid','text'],'authenticated',array['EXECUTE'],'currency-aware transaction RPC remains available');
+select function_privs_are('public','admin_financial_reconciliation',array[]::text[],'authenticated','{}','legacy reconciliation hidden from authenticated');
+select function_privs_are('public','admin_financial_reconciliation',array[]::text[],'anon','{}','legacy reconciliation hidden from anon');
+select function_privs_are('public','admin_financial_reconciliation_v2',array[]::text[],'authenticated',array['EXECUTE'],'current reconciliation RPC remains callable for admin UI');
+select ok(position('if not public.is_admin() then raise exception ''Permission denied''; end if;' in pg_get_functiondef('public.admin_financial_reconciliation_v2()'::regprocedure)) > 0,'current reconciliation RPC enforces admin authorization');
+select ok(position('admin_has_permission(''approve_transactions'')' in pg_get_functiondef('public.admin_adjust_balance(uuid,numeric,text)'::regprocedure)) > 0 and position('v_profile.blocked' in pg_get_functiondef('public.admin_adjust_balance(uuid,numeric,text)'::regprocedure)) > 0 and position('admin_action_audit' in pg_get_functiondef('public.admin_adjust_balance(uuid,numeric,text)'::regprocedure)) > 0,'balance adjustment keeps permission, blocked-target, and audit checks');
+select * from finish();
+rollback;

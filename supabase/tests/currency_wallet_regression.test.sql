@@ -8,7 +8,7 @@ select has_column('public','user_profile','locked_bdx_balance','BDX principal ha
 select has_column('public','user_investment','currency','investment currency is recorded');
 select has_column('public','transaction','currency','ledger currency is recorded');
 select col_default_is('public','user_investment','currency', 'USD', 'legacy investments default to USD');
-select col_default_is('public','transaction','currency', '''USD''::text', 'legacy transactions default to USD');
+select col_default_is('public','transaction','currency', 'USD', 'legacy transactions default to USD');
 
 -- Daily simple-interest contract for all seven published plans.
 select is((4000::numeric * 0.019), 76::numeric, 'GNS 4,000 BDX earns 76 BDX per day');

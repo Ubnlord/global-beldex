@@ -157,7 +157,7 @@ select is(
 -- Isolated admin-console RPC integration: funding is legacy USD, adjustment is BDX.
 select set_config('request.jwt.claim.sub','a1100000-0000-4000-8000-000000000002',true);
 select is(
-  (public.admin_fund_user('a1100000-0000-4000-8000-000000000001',125::numeric,'integration test legacy USD funding')).available_balance,
+  (public.admin_fund_user('a1100000-0000-4000-8000-000000000001'::uuid,125::numeric,'integration test legacy USD funding'::text)).available_balance,
   1125::numeric,'admin_fund_user credits the legacy USD wallet'
 );
 select is(

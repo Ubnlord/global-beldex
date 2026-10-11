@@ -92,7 +92,7 @@ begin
     'user_note', case when p_type='deposit' then p_note else null end
   );
 
-  if v_ledger_amount < 4000 then
+  if p_type='withdraw' and v_ledger_amount < 4000 then
     raise exception 'Minimum % is 4,000 BDX (equivalent to USD at the platform rate)', p_type;
   end if;
 

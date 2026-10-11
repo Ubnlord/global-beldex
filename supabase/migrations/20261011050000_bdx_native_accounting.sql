@@ -98,7 +98,7 @@ begin
 
   if p_type='withdraw' then
     if v_destination='' then raise exception 'Please enter a destination address'; end if;
-    if p_method not in ('Bitcoin','Ethereum','Beldex') then raise exception 'Invalid withdrawal method'; end if;
+    if p_method is null or p_method not in ('Bitcoin','Ethereum','Beldex') then raise exception 'Invalid withdrawal method'; end if;
     if p_method='Ethereum' and v_destination !~ '^0x[0-9A-Fa-f]{40}$' then
       raise exception 'Invalid Ethereum destination address';
     end if;

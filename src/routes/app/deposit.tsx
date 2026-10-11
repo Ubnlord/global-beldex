@@ -94,7 +94,7 @@ function DepositPage() {
         <div className="mt-6 rounded-lg border border-line bg-elevated p-5">
           <FieldLabel>{isBeldex ? "Amount to send (BDX)" : "Deposit amount (USD equivalent)"}</FieldLabel>
           <p className="mt-1 text-[11px] text-subtle">{isBeldex ? "Enter the BDX amount you will transfer to the Beldex address. Your account balance will be credited in BDX." : "Enter the USD-equivalent value for the BTC or ETH deposit. Account balances are denominated in BDX."}</p>
-          <FieldLabel><span className="mt-4 block">Amount (USD)</span></FieldLabel>
+          <FieldLabel><span className="mt-4 block">{isBeldex ? "Amount (BDX)" : "Amount (USD)"}</span></FieldLabel>
           <div className="relative mt-2">
             <Input
               value={amount}

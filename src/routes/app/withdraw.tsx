@@ -20,6 +20,7 @@ export const Route = createFileRoute("/app/withdraw")({ component: WithdrawPage 
 function WithdrawPage() {
   const navigate = useNavigate();
   const available = usePlatform((s) => s.available);
+  const bdxAvailable = usePlatform((s) => s.bdx);
   const withdraw = usePlatform((s) => s.withdraw);
   const lang = usePlatform((s) => s.lang);
   const t = copy[lang];
@@ -134,8 +135,8 @@ function WithdrawPage() {
           />
         </div>
         <div className="mt-2 flex justify-between text-[11px]">
-          <span className="text-subtle">{t.available}: {formatUsd(available)} · Min: {currency === "BDX" ? `${formatBdx(4000)} (${formatUsd(bdxToUsd(4000), 3)})` : `${formatUsd(bdxToUsd(4000), 3)} (${formatBdx(4000)} equivalent)`}</span>
-          <button type="button" onClick={() => setAmount(currency === "BDX" ? usdToBdx(available).toFixed(3) : available.toFixed(3))} className="text-accent">
+          <span className="text-subtle">{t.available}: {currency === "BDX" ? `${formatBdx(bdxAvailable)} BDX` : formatUsd(available)} · Min: {isBeldex ? (currency === "BDX" ? `${formatBdx(4000)} (${formatUsd(bdxToUsd(4000), 3)})` : `${formatUsd(bdxToUsd(4000), 3)} (${formatBdx(4000)} equivalent)`) : formatUsd(MIN_WITHDRAWAL)}</span>
+          <button type="button" onClick={() => setAmount((currency === "BDX" ? bdxAvailable : available).toFixed(3))} className="text-accent">
             {t.max}
           </button>
         </div>

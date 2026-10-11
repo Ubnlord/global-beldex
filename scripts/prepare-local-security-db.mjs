@@ -32,15 +32,33 @@ files.forEach((name, index) => {
   fs.copyFileSync(path.join(sourceMigrations, name), path.join(targetMigrations, migrationName));
 });
 
-const testFile = path.join(root, "supabase/tests/financial_safeguards.test.sql");
-if (!fs.existsSync(testFile)) {
+// The root migrations establish the base production schema. Apply the newer
+// currency-aware Supabase migrations afterward in their canonical timestamp
+// order so the local database suite actually tests the code intended for PR #41.
+const sourceSupabaseMigrations = path.join(root, "supabase", "migrations");
+const supabaseMigrations = fs.readdirSync(sourceSupabaseMigrations)
+  .filter((name) => /^\d{14}_.+\.sql$/.test(name))
+  .sort((a, b) => a.localeCompare(b));
+if (supabaseMigrations.length === 0) {
+  throw new Error("No timestamped Supabase migrations found in supabase/migrations/");
+}
+for (const name of supabaseMigrations) {
+  fs.copyFileSync(path.join(sourceSupabaseMigrations, name), path.join(targetMigrations, name));
+}
+
+// Copy every database regression suite, not just the original safeguards file.
+const sourceTests = path.join(root, "supabase", "tests");
+const testFiles = fs.readdirSync(sourceTests).filter((name) => name.endsWith(".test.sql")).sort();
+if (!testFiles.includes("financial_safeguards.test.sql")) {
   throw new Error("Missing supabase/tests/financial_safeguards.test.sql");
 }
-fs.copyFileSync(testFile, path.join(targetTests, "financial_safeguards.test.sql"));
+for (const name of testFiles) {
+  fs.copyFileSync(path.join(sourceTests, name), path.join(targetTests, name));
+}
 
 const functionSource = path.join(root, "supabase/functions/swap-assets");
 const functionTarget = path.join(targetFunctions, "swap-assets");
 fs.cpSync(functionSource, functionTarget, { recursive: true });
 
-console.log(`Prepared reproducible local Supabase fixture with ${files.length} repository migrations.`);
+console.log(`Prepared reproducible local Supabase fixture with ${files.length} root migrations, ${supabaseMigrations.length} Supabase migrations, and ${testFiles.length} pgTAP suites.`);
 console.log("Source of truth: migrations/ (repository), not production schema.");

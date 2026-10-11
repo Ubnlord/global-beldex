@@ -71,15 +71,45 @@ test("security migration exposes only the intended swap executor", { skip: !url 
       return client;
     };
 
-    // Fund the isolated test wallet through the same audited admin RPC used by
-    // production operations. Do not write canonical BDX balances directly.
+    // Seed the isolated wallet through the real deposit lifecycle. This exercises
+    // the intended BDX-denominated request, approval, and settlement RPCs rather
+    // than a legacy USD balance adjustment or a direct balance-table write.
+    const normalClient = await clientFor(users.normal);
+    const seedRequestId = randomUUID();
+    const { data: seedDeposit, error: seedDepositError } = await normalClient.rpc(
+      "create_financial_transaction",
+      {
+        p_type: "deposit",
+        p_amount: 100000,
+        p_method: "security-regression-seed",
+        p_note: "Isolated test wallet funding",
+        p_request_id: seedRequestId,
+        p_currency: "BDX",
+      },
+    );
+    assert.ifError(seedDepositError);
+    assert.ok(seedDeposit?.id, "BDX seed deposit was not created");
+
     const testAdmin = await clientFor(users.admin);
-    const { error: seedBdxError } = await testAdmin.rpc("admin_adjust_balance", {
-      p_user_id: users.normal.id,
-      p_delta: 50000,
-      p_reason: "Seed isolated security regression BDX balance",
+    const { error: seedApprovalError } = await testAdmin.rpc("admin_approve_transaction", {
+      p_transaction_id: seedDeposit.id,
+      p_reason: "Approve isolated BDX regression-test funding",
     });
-    assert.ifError(seedBdxError);
+    assert.ifError(seedApprovalError);
+    const { error: seedSettlementError } = await testAdmin.rpc("admin_settle_transaction", {
+      p_transaction_id: seedDeposit.id,
+      p_reason: "Settle isolated BDX regression-test funding",
+    });
+    assert.ifError(seedSettlementError);
+
+    const { data: fundedProfile, error: fundedProfileError } = await admin
+      .from("user_profile")
+      .select("bdx_balance")
+      .eq("user_id", users.normal.id)
+      .single();
+    assert.ifError(fundedProfileError);
+    assert.ok(Number(fundedProfile.bdx_balance) >= 100000,
+      "intended deposit lifecycle did not establish the expected BDX balance");
 
     await step("ordinary user cannot execute admin search", async () => {
       const client = await clientFor(users.normal);

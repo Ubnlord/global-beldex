@@ -30,6 +30,7 @@ type Tx = {
   user_id: string;
   type: string;
   amount: string | number;
+  currency?: "BDX" | "USD";
   status: string;
   approval_status: string;
   method: string | null;
@@ -61,6 +62,7 @@ type Investment = {
   user_id: string;
   plan_id: string | null;
   principal: string | number;
+  currency?: "BDX" | "USD";
   daily_rate: string | number;
   duration_days: number;
   started_at: string;
@@ -179,7 +181,7 @@ export function AdminPage({ initialTab = "dashboard", transactionType }: { initi
   async function loadTransactions() {
     const { data, error: txError } = await supabase
       .from("transaction")
-      .select("id,user_id,type,amount,status,approval_status,method,note,created_at")
+      .select("id,user_id,type,amount,currency,status,approval_status,method,note,created_at")
       .order("created_at", { ascending: false })
       .limit(500);
     if (txError) setError(txError.message);
@@ -231,7 +233,7 @@ export function AdminPage({ initialTab = "dashboard", transactionType }: { initi
     setError("");
     const { data, error: investmentError } = await supabase
       .from("user_investment")
-      .select("id,user_id,plan_id,principal,daily_rate,duration_days,started_at,last_accrual_at,credited_profit,status,completed_at,daily_accrual_enabled")
+      .select("id,user_id,plan_id,principal,currency,daily_rate,duration_days,started_at,last_accrual_at,credited_profit,status,completed_at,daily_accrual_enabled")
       .eq("user_id", userId)
       .order("created_at", { ascending: false });
 
@@ -492,7 +494,7 @@ export function AdminPage({ initialTab = "dashboard", transactionType }: { initi
                             <span className="font-semibold capitalize text-fg">{tx.type}</span>
                             <Status value={tx.approval_status} />
                             <Status value={tx.status} />
-                            <span className="text-lg font-semibold text-fg">{money(tx.amount)}</span>
+                            <span className="text-lg font-semibold text-fg">{money(tx.amount)} {tx.currency === "BDX" ? "BDX" : "USD"}</span>
                           </div>
                           <p className="mt-1 text-sm text-muted">{tx.method || "No method"} · {new Date(tx.created_at).toLocaleString()}</p>
                           <p className="mt-1 break-all text-xs text-subtle">User: {tx.user_id} · Transaction: {tx.id}</p>
@@ -603,7 +605,7 @@ function UserList({ users, onOpen }: { users: UserProfile[]; onOpen: (id: string
               <div className="mt-1 break-all text-[11px] text-subtle">{user.user_id}</div>
             </button>
             <div className="flex flex-wrap items-center gap-3">
-              <div><div className="text-[10px] uppercase tracking-wide text-muted">Balance</div><div className="font-semibold text-fg">{money(user.available_balance)}</div></div>
+              <div><div className="text-[10px] uppercase tracking-wide text-muted">USD balance</div><div className="font-semibold text-fg">{money(user.available_balance)}</div></div>
               <Status value={user.blocked ? "blocked" : user.kyc_status || "pending"} />
               <button type="button" onClick={() => onOpen(user.user_id)} className="inline-flex items-center gap-2 rounded-xl border border-line px-3 py-2 text-sm text-fg hover:bg-elevated"><Eye size={15} /> Manage</button>
             </div>
@@ -621,7 +623,7 @@ function InvestmentQueue({ users, onOpen }: { users: UserProfile[]; onOpen: (id:
         <div key={user.user_id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
           <div>
             <div className="font-semibold text-fg">{user.fullname || user.username || "Unnamed user"}</div>
-            <div className="mt-1 text-xs text-muted">{user.email || "No email"} · Locked {money(user.locked_balance)} · Available {money(user.available_balance)}</div>
+            <div className="mt-1 text-xs text-muted">{user.email || "No email"} · USD locked {money(user.locked_balance)} · USD available {money(user.available_balance)}</div>
           </div>
           <button type="button" onClick={() => onOpen(user.user_id)} className="inline-flex items-center justify-center gap-2 rounded-xl border border-line px-3 py-2 text-sm text-fg hover:bg-elevated"><TrendingUp size={15} /> Open investments</button>
         </div>
@@ -728,8 +730,8 @@ function UserModal({ user, investments, txs, canUsers, canInvestments, busy, blo
         </div>
 
         <div className="mt-5 grid gap-3 sm:grid-cols-4">
-          <MiniStat label="Available" value={money(user.available_balance)} />
-          <MiniStat label="Locked" value={money(user.locked_balance)} />
+          <MiniStat label="USD available" value={money(user.available_balance)} />
+          <MiniStat label="USD locked" value={money(user.locked_balance)} />
           <MiniStat label="Deposits" value={money(user.total_deposits)} />
           <MiniStat label="Withdrawals" value={money(user.total_withdrawals)} />
         </div>

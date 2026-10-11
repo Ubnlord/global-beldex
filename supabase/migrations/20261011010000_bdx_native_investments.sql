@@ -224,4 +224,61 @@ begin
 end;
 $function$;
 
+
+-- Currency-aware admin search exposes both wallet balances without combining
+-- BDX with USD-equivalent accounting.
+create or replace function public.admin_search_users_bdx(
+  p_query text default '',
+  p_limit integer default 50
+)
+returns table (
+  user_id uuid,
+  email text,
+  username text,
+  fullname text,
+  phone text,
+  country text,
+  kyc_status text,
+  available_balance numeric,
+  locked_balance numeric,
+  bdx_balance numeric,
+  locked_bdx_balance numeric,
+  total_deposits numeric,
+  total_withdrawals numeric,
+  referral_earnings numeric,
+  blocked boolean,
+  blocked_reason text,
+  blocked_at timestamptz,
+  created_at timestamptz
+)
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+declare
+  v_query text := lower(trim(coalesce(p_query,'')));
+  v_limit integer := greatest(1,least(coalesce(p_limit,50),100));
+begin
+  if not public.is_admin() or not public.admin_has_permission('manage_users') then
+    raise exception 'Permission denied';
+  end if;
+  return query
+  select p.user_id,u.email::text,p.username,p.fullname,p.phone,p.country,p.kyc_status,
+    p.available_balance,p.locked_balance,p.bdx_balance,p.locked_bdx_balance,
+    p.total_deposits,p.total_withdrawals,p.referral_earnings,p.blocked,p.blocked_reason,p.blocked_at,p.created_at
+  from public.user_profile p
+  join auth.users u on u.id=p.user_id
+  where v_query=''
+    or lower(coalesce(u.email,'')) like '%'||v_query||'%'
+    or lower(coalesce(p.username,'')) like '%'||v_query||'%'
+    or lower(coalesce(p.fullname,'')) like '%'||v_query||'%'
+    or lower(coalesce(p.country,'')) like '%'||v_query||'%'
+    or p.user_id::text like '%'||v_query||'%'
+  order by p.created_at desc
+  limit v_limit;
+end;
+$function$;
+revoke all on function public.admin_search_users_bdx(text,integer) from public,anon;
+grant execute on function public.admin_search_users_bdx(text,integer) to authenticated;
+
 commit;

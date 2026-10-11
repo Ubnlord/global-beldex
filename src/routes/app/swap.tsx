@@ -9,18 +9,17 @@ import { Button } from "@/components/ui/button";
 import { FieldLabel, Input } from "@/components/ui/input";
 import { copy, fill } from "@/lib/platform/i18n";
 import { usePlatform } from "@/lib/platform/store";
-import { BDX_USD_RATE, formatBdx, formatUsd, usdToBdx } from "@/lib/utils";
+import { BDX_USD_RATE, formatBdx, formatUsd } from "@/lib/utils";
 
 export const Route = createFileRoute("/app/swap")({ component: SwapPage });
 
 function SwapPage() {
   const bdx = usePlatform((s) => s.bdx);
-  const swap = usePlatform((s) => s.swap);
   const lang = usePlatform((s) => s.lang);
   const t = copy[lang];
   const { usd } = useBeldexQuote();
   const rate = usd && usd > 0 ? usd : BDX_USD_RATE;
-  const [from, setFrom] = useState<"USD" | "BDX">("USD");
+  const [from, setFrom] = useState<"USD" | "BDX">("BDX");
   const [amount, setAmount] = useState("");
   const to = from === "USD" ? "BDX" : "USD";
   const n = parseFloat(amount) || 0;
@@ -28,12 +27,10 @@ function SwapPage() {
     if (!rate) return 0;
     return from === "USD" ? n / rate : n * rate;
   }, [from, n, rate]);
-  const bdxNeeded = from === "BDX" ? n : usdToBdx(n);
-  const hasBdxFunding = bdxNeeded <= bdx;
+  const hasBdxFunding = n <= bdx;
 
   const flip = () => {
-    setFrom(to);
-    setAmount("");
+    toastError("Swaps are temporarily unavailable while BDX-only accounting is being completed.");
   };
 
   const submit = async () => {

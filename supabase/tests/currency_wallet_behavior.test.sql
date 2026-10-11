@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(22);
+select plan(24);
 
 -- Isolated identities and balances; transaction rollback leaves no fixture data.
 insert into auth.users (
@@ -9,12 +9,20 @@ insert into auth.users (
   raw_app_meta_data, raw_user_meta_data, created_at, updated_at
 ) values
   ('a1100000-0000-4000-8000-000000000001','authenticated','authenticated','wallet-behavior-user@example.test','',now(),'{}'::jsonb,'{}'::jsonb,now(),now()),
-  ('a1100000-0000-4000-8000-000000000002','authenticated','authenticated','wallet-behavior-admin@example.test','',now(),'{}'::jsonb,'{}'::jsonb,now(),now())
+  ('a1100000-0000-4000-8000-000000000002','authenticated','authenticated','wallet-behavior-admin@example.test','',now(),'{}'::jsonb,'{}'::jsonb,now(),now()),
+  ('a1100000-0000-4000-8000-000000000003','authenticated','authenticated','wallet-behavior-referrer@example.test','',now(),'{}'::jsonb,'{}'::jsonb,now(),now())
 on conflict (id) do nothing;
 
 insert into public.user_profile(user_id,available_balance,bdx_balance)
 values ('a1100000-0000-4000-8000-000000000001',1000,10000)
 on conflict (user_id) do update set available_balance=1000,bdx_balance=10000;
+
+insert into public.user_profile(user_id,bdx_balance,referral_earnings_bdx)
+values ('a1100000-0000-4000-8000-000000000003',0,0)
+on conflict (user_id) do update set bdx_balance=0,referral_earnings_bdx=0;
+
+update public.user_profile set referred_by_user_id='a1100000-0000-4000-8000-000000000003'
+where user_id='a1100000-0000-4000-8000-000000000001';
 
 insert into public.admin_user(user_id,role,permissions)
 values ('a1100000-0000-4000-8000-000000000002','admin',array['approve_transactions','reject_transactions','manage_users'])
@@ -135,6 +143,14 @@ select is(
 select is(
   (select withdrawals_bdx_delta from public.admin_financial_reconciliation_v2() where user_id='a1100000-0000-4000-8000-000000000001'),
   0::numeric,'rejected BDX withdrawal is excluded from completed BDX withdrawal totals'
+);
+select is(
+  (select bdx_balance from public.user_profile where user_id='a1100000-0000-4000-8000-000000000003'),
+  round((50/(293.984/4000) + 500)*0.10,18),'settled BDX-ledger deposits credit the referrer in BDX'
+);
+select is(
+  (select referral_earnings_bdx from public.user_profile where user_id='a1100000-0000-4000-8000-000000000003'),
+  round((50/(293.984/4000) + 500)*0.10,18),'referral earnings are recorded in the BDX-specific total'
 );
 
 select * from finish();

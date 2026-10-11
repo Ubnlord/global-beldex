@@ -10,7 +10,7 @@ import { CoinLogo } from "@/components/market/coin-logo";
 import { WITHDRAW_METHODS } from "@/lib/platform/catalog";
 import { copy } from "@/lib/platform/i18n";
 import { usePlatform } from "@/lib/platform/store";
-import { BDX_USD_RATE, bdxToUsd, formatBdx, formatUsd, usdToBdx } from "@/lib/utils";
+import { BDX_USD_RATE, bdxToUsd, formatBdx, formatUsd } from "@/lib/utils";
 import { validateWithdrawalDestination } from "@/lib/financial/withdrawal-address";
 
 const MIN_WITHDRAWAL = 300;
@@ -19,7 +19,6 @@ export const Route = createFileRoute("/app/withdraw")({ component: WithdrawPage 
 
 function WithdrawPage() {
   const navigate = useNavigate();
-  const available = usePlatform((s) => s.available);
   const bdxAvailable = usePlatform((s) => s.bdx);
   const withdraw = usePlatform((s) => s.withdraw);
   const lang = usePlatform((s) => s.lang);
@@ -43,11 +42,9 @@ function WithdrawPage() {
       toastError("Amount must be greater than zero");
       return;
     }
-    const minimum = isBeldex ? (isBdxCurrency ? 4000 : bdxToUsd(4000)) : MIN_WITHDRAWAL;
+    const minimum = isBdxCurrency ? 4000 : bdxToUsd(4000);
     if (n < minimum) {
-      toastError(isBeldex
-        ? (isBdxCurrency ? `Minimum withdrawal is ${formatBdx(4000)} (${formatUsd(bdxToUsd(4000), 3)})` : `Minimum withdrawal is ${formatUsd(bdxToUsd(4000), 3)} (${formatBdx(4000)} equivalent)`)
-        : `Minimum withdrawal is ${MIN_WITHDRAWAL}`);
+      toastError(`Minimum withdrawal is ${formatUsd(bdxToUsd(4000), 3)} (4,000 BDX equivalent)`);
       return;
     }
     const addressError = validateWithdrawalDestination(method, address);
@@ -126,7 +123,7 @@ function WithdrawPage() {
             onChange={(e) => setAmount(e.target.value)}
             type="number"
             min={bdxToUsd(4000)}
-            step={currency === "BDX" ? "0.001" : "0.001"}
+            step="0.001"
             placeholder="Minimum $293.984"
             className="mt-0 h-14 border-2 border-line-strong bg-surface px-4 text-base font-medium placeholder:text-muted focus:border-accent focus:ring-2 focus:ring-accent/20"
           />
@@ -200,8 +197,8 @@ function CoinEstimate({
     return (
       <div className="mt-2 rounded-md border border-accent/30 bg-accent/5 px-3 py-2 text-[11px] text-subtle">
         <div>Platform rate: <span className="font-semibold text-fg">{formatUsd(BDX_USD_RATE, 6)} per BDX</span></div>
-        <div className="mt-0.5"><>BDX to reserve: <span className="font-semibold text-accent">{formatBdx(usd / BDX_USD_RATE)}</span> for {formatUsd(usd, 3)}</></div>
-        <div className="mt-0.5 text-[10px]">"The requested USD value is converted to BDX and reserved from your BDX balance."</div>
+        <div className="mt-0.5">BDX to reserve: <span className="font-semibold text-accent">{formatBdx(usd / BDX_USD_RATE)}</span> for {formatUsd(usd, 3)}</div>
+        <div className="mt-0.5 text-[10px]">The requested USD value is converted to BDX and reserved from your BDX balance.</div>
       </div>
     );
   }

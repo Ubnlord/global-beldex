@@ -277,4 +277,44 @@ $function$;
 revoke all on function public.admin_adjust_balance(uuid,numeric,text) from public,anon;
 grant execute on function public.admin_adjust_balance(uuid,numeric,text) to authenticated;
 
+
+-- Referral commission is a BDX-denominated account credit because the referral
+-- earnings tile and all canonical balances are displayed in BDX. The completed
+-- deposit amount is already stored in BDX by create_financial_transaction.
+create or replace function public.credit_referral_for_deposit(p_transaction_id uuid)
+returns numeric
+language plpgsql
+security definer
+set search_path = pg_catalog, public, pg_temp
+as $function$
+declare
+  v_tx public.transaction;
+  v_ref uuid;
+  v_cut numeric;
+begin
+  if not public.is_admin() and auth.uid() is not null then
+    raise exception 'Permission denied';
+  end if;
+  select * into v_tx from public.transaction where id=p_transaction_id for update;
+  if v_tx.id is null then raise exception 'Transaction not found'; end if;
+  if v_tx.type <> 'deposit' or v_tx.status <> 'completed' or coalesce(v_tx.currency,'USD') <> 'BDX' then return 0; end if;
+  select referred_by_user_id into v_ref from public.user_profile where user_id=v_tx.user_id;
+  if v_ref is null then return 0; end if;
+  if exists(select 1 from public.transaction where method='Referral deposit '||v_tx.id::text) then return 0; end if;
+  v_cut := round(v_tx.amount*0.10,18);
+  if v_cut <= 0 then return 0; end if;
+  update public.user_profile
+    set bdx_balance=bdx_balance+v_cut,
+        referral_earnings=referral_earnings+v_cut,
+        updated_at=now()
+    where user_id=v_ref;
+  insert into public.transaction(user_id,type,amount,currency,status,approval_status,method,note)
+  values(v_ref,'referral',v_cut,'BDX','completed','approved','Referral deposit '||v_tx.id::text,'10% referral commission (BDX)');
+  return v_cut;
+end;
+$function$;
+
+revoke all on function public.credit_referral_for_deposit(uuid) from public, anon;
+grant execute on function public.credit_referral_for_deposit(uuid) to authenticated, service_role;
+
 commit;

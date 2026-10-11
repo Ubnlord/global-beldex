@@ -109,7 +109,11 @@ begin
       v_profit := v_inv.principal * v_inv.daily_rate * v_days;
       v_done := v_elapsed_days >= v_inv.duration_days;
       v_principal_return := case when v_done then v_inv.principal else 0 end;
-      v_total := v_total + v_profit;
+      -- Preserve the legacy numeric return value as USD-only; BDX profit is
+      -- credited and ledgered in BDX but must not be summed with USD.
+      if coalesce(v_inv.currency,'USD') = 'USD' then
+        v_total := v_total + v_profit;
+      end if;
 
       if v_inv.currency = 'BDX' then
         update public.user_profile

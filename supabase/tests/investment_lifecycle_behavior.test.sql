@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(15);
+select plan(16);
 
 -- Assert the database catalog contains all seven published daily rates.
 select is((select daily_rate from public.investment_plan_catalog where id='gns'),0.019::numeric,'GNS catalog daily rate');

@@ -300,6 +300,7 @@ begin
   select * into v_tx from public.transaction where id=p_transaction_id for update;
   if v_tx.id is null then raise exception 'Transaction not found'; end if;
   if v_tx.type <> 'deposit' or v_tx.status <> 'completed' or coalesce(v_tx.currency,'USD') <> 'BDX' then return 0; end if;
+  -- A deposit is eligible only once; approval/settlement call sites remain idempotent.
   select referred_by_user_id into v_ref from public.user_profile where user_id=v_tx.user_id;
   if v_ref is null then return 0; end if;
   if exists(select 1 from public.transaction where method='Referral deposit '||v_tx.id::text) then return 0; end if;

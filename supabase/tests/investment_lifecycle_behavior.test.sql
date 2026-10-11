@@ -39,8 +39,8 @@ insert into public.user_investment(
 
 select set_config('request.jwt.claim.sub','a2200000-0000-4000-8000-000000000001',true);
 
-select is(public.accrue_user_investments('a2200000-0000-4000-8000-000000000001'),2::numeric,
-  'first accrual credits one day of interest for both currency types');
+select is(public.accrue_user_investments('a2200000-0000-4000-8000-000000000001'),1::numeric,
+  'legacy numeric accrual return reports USD interest only, without summing BDX');
 select is((select available_balance from public.user_profile where user_id='a2200000-0000-4000-8000-000000000001'),101::numeric,
   'legacy USD maturity returns principal and profit to USD wallet');
 select is((select bdx_balance from public.user_profile where user_id='a2200000-0000-4000-8000-000000000001'),101::numeric,

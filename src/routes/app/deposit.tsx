@@ -26,10 +26,9 @@ function DepositPage() {
   const t = copy[lang];
   const { book } = useBeldexQuote();
   const [amount, setAmount] = useState("");
-  const [currency, setCurrency] = useState<"BDX" | "USD">("USD");
+  const currency = "USD" as const;
   const [method, setMethod] = useState<keyof typeof DEPOSIT_METHODS>("BELDEX");
   const isBeldex = method === "BELDEX";
-  const isBdxCurrency = currency === "BDX";
   const [step, setStep] = useState<"form" | "pay">(() => {
     if (typeof window === "undefined") return "form";
     return new URLSearchParams(window.location.search).get("step") === "pay" ? "pay" : "form";
@@ -53,7 +52,7 @@ function DepositPage() {
 
   const goPay = () => {
     const n = parseFloat(amount);
-    const minimum = isBeldex ? (isBdxCurrency ? 4000 : bdxToUsd(4000)) : 300;
+    const minimum = bdxToUsd(4000);
     if (!n || n < minimum) {
       toast(t.err.MIN_DEPOSIT);
       return;
@@ -140,14 +139,14 @@ function DepositPage() {
               </button>
               <Method
                 active={method === "BTC"}
-                onClick={() => { setMethod("BTC"); setCurrency("USD"); }}
+                onClick={() => setMethod("BTC")}
                 coin="bitcoin"
                 title="Bitcoin"
                 detail="BTC · 1-2 hrs"
               />
               <Method
                 active={method === "ETH"}
-                onClick={() => { setMethod("ETH"); setCurrency("USD"); }}
+                onClick={() => setMethod("ETH")}
                 coin="ethereum"
                 title="Ethereum"
                 detail="ETH · ERC-20"
@@ -174,7 +173,7 @@ function DepositPage() {
               <div className="mt-1 flex items-end justify-between gap-3">
                 <div className="text-lg font-bold tabular text-fg">{`${formatBdx((parseFloat(amount || "0") || 0) / BDX_USD_RATE)} credited`}</div>
                 <div className="text-right text-sm font-semibold tabular text-accent">
-                  {currency === "BDX" ? formatUsd(bdxToUsd(parseFloat(amount || "0")), 3) : formatUsd(parseFloat(amount || "0") || 0, 3)} USD
+                  {formatUsd(parseFloat(amount || "0") || 0, 3)} USD
                 </div>
               </div>
               <div className="mt-1 text-[10px] text-subtle">{"USD deposits are converted to the displayed BDX amount before crediting your account."}</div>

@@ -1,5 +1,5 @@
 import { ArrowDownToLine, ArrowUpFromLine, Gift, LayoutGrid, Repeat, Users } from "lucide-react";
-import { formatBdx, formatUsd } from "@/lib/utils";
+import { formatBdx } from "@/lib/utils";
 import type { Transaction } from "@/lib/platform/store";
 import { copy } from "@/lib/platform/i18n";
 import { usePlatform } from "@/lib/platform/store";
@@ -43,7 +43,7 @@ export function TxRow({ tx }: { tx: Transaction }) {
       <div className="text-right">
         <div className={cn("text-[13px] font-semibold", amountTone)}>
           {sign}
-          {tx.currency === "BDX" ? formatBdx(tx.amount) : formatUsd(tx.amount)}
+          {formatBdx(tx.amount)}
         </div>
         <div
           className={cn(

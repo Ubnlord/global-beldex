@@ -2,7 +2,7 @@ name: Financial safeguards
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, feat/bdx-native-accounting]
   push:
     branches: [main]
   workflow_dispatch:

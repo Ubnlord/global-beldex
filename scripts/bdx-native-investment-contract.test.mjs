@@ -30,4 +30,11 @@ assert.match(books, /amount: p\.currency === "BDX" \? num\(p\.principal\) : usdT
 assert.match(books, /currency: p\.currency === "BDX" \? "BDX" : "USD"/);
 assert.match(admin, /investment\.currency === "BDX" \? "BDX" : "USD"/);
 
+
+assert.match(admin, /admin_search_users_bdx/);
+assert.match(admin, /user\\.locked_bdx_balance/);
+assert.match(migration, /create or replace function public\\.admin_search_users_bdx/);
+assert.match(migration, /p\\.locked_bdx_balance<0/);
+assert.match(migration, /ui\\.currency='USD'/);
+
 console.log("BDX investment accounting contract checks passed.");

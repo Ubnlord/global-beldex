@@ -76,7 +76,7 @@ export async function pullCloudBook(options: { skipAccrual?: boolean } = {}): Pr
   });
 
   const profit = (investmentsResult.data ?? []).reduce(
-    (sum: number, p: any) => sum + num(p.credited_profit),
+    (sum: number, p: any) => sum + (p.currency === "BDX" ? 0 : num(p.credited_profit)),
     0,
   );
   const bonus = rawTxs

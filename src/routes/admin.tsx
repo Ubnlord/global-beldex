@@ -48,6 +48,8 @@ type UserProfile = {
   kyc_status: string | null;
   available_balance: string | number;
   locked_balance: string | number;
+  bdx_balance: string | number;
+  locked_bdx_balance: string | number;
   total_deposits: string | number;
   total_withdrawals: string | number;
   referral_earnings: string | number;
@@ -189,7 +191,7 @@ export function AdminPage({ initialTab = "dashboard", transactionType }: { initi
   }
 
   async function loadUsers(search = "") {
-    const { data, error: userError } = await supabase.rpc("admin_search_users", {
+    const { data, error: userError } = await supabase.rpc("admin_search_users_bdx", {
       p_query: search.trim(),
       p_limit: 100,
     });
@@ -623,7 +625,7 @@ function InvestmentQueue({ users, onOpen }: { users: UserProfile[]; onOpen: (id:
         <div key={user.user_id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
           <div>
             <div className="font-semibold text-fg">{user.fullname || user.username || "Unnamed user"}</div>
-            <div className="mt-1 text-xs text-muted">{user.email || "No email"} · USD locked {money(user.locked_balance)} · USD available {money(user.available_balance)}</div>
+            <div className="mt-1 text-xs text-muted">{user.email || "No email"} · USD locked {money(user.locked_balance)} · USD available {money(user.available_balance)} · BDX locked {money(user.locked_bdx_balance)} BDX · BDX available {money(user.bdx_balance)} BDX</div>
           </div>
           <button type="button" onClick={() => onOpen(user.user_id)} className="inline-flex items-center justify-center gap-2 rounded-xl border border-line px-3 py-2 text-sm text-fg hover:bg-elevated"><TrendingUp size={15} /> Open investments</button>
         </div>
@@ -732,6 +734,8 @@ function UserModal({ user, investments, txs, canUsers, canInvestments, busy, blo
         <div className="mt-5 grid gap-3 sm:grid-cols-4">
           <MiniStat label="USD available" value={money(user.available_balance)} />
           <MiniStat label="USD locked" value={money(user.locked_balance)} />
+          <MiniStat label="BDX available" value={`${money(user.bdx_balance)} BDX`} />
+          <MiniStat label="BDX locked" value={`${money(user.locked_bdx_balance)} BDX`} />
           <MiniStat label="Deposits" value={money(user.total_deposits)} />
           <MiniStat label="Withdrawals" value={money(user.total_withdrawals)} />
         </div>

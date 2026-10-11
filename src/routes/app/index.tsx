@@ -226,12 +226,12 @@ function Dashboard() {
                 <div className="flex items-center justify-between">
                   <div className="text-xs font-bold tracking-widest">{p.name}</div>
                   <div className="text-[11px] text-accent">
-                    +{formatBdx(accruedProfit(p))} {t.accrued}
+                    +{p.currency === "USD" ? formatUsd(accruedProfit(p)) : formatBdx(accruedProfit(p))} {t.accrued}
                   </div>
                 </div>
                 <div className="mt-2 text-[11px] text-subtle">
                   {fill(t.page.planMeta, {
-                    amount: formatBdx(p.amount),
+                    amount: p.currency === "USD" ? formatUsd(p.amount) : formatBdx(p.amount),
                     pct: Number((p.dailyPct * p.durationDays).toFixed(2)),
                     days: p.durationDays,
                   })}

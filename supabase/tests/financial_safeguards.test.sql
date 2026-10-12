@@ -183,11 +183,11 @@ select ok(
 );
 
 select ok(
-  position('p_delta=0' in regexp_replace(lower(pg_get_functiondef('public.admin_adjust_balance(uuid,numeric,text)'::regprocedure)), '\s+', '', 'g')) > 0
-  and position('reasonisrequired' in regexp_replace(lower(pg_get_functiondef('public.admin_adjust_balance(uuid,numeric,text)'::regprocedure)), '\s+', '', 'g')) > 0
-  and position('v_profile.bdx_balance+p_delta<0' in regexp_replace(lower(pg_get_functiondef('public.admin_adjust_balance(uuid,numeric,text)'::regprocedure)), '\s+', '', 'g')) > 0
-  and position('v_profile.blocked' in lower(pg_get_functiondef('public.admin_adjust_balance(uuid,numeric,text)'::regprocedure))) > 0,
-  'admin_adjust_balance validates delta, reason, blocked status, and nonnegative balance'
+  position('p_delta=0' in regexp_replace(lower(pg_get_functiondef('public.admin_adjust_bdx_balance(uuid,numeric,text)'::regprocedure)), '\s+', '', 'g')) > 0
+  and position('reasonisrequired' in regexp_replace(lower(pg_get_functiondef('public.admin_adjust_bdx_balance(uuid,numeric,text)'::regprocedure)), '\s+', '', 'g')) > 0
+  and position('v_profile.bdx_balance+p_delta<0' in regexp_replace(lower(pg_get_functiondef('public.admin_adjust_bdx_balance(uuid,numeric,text)'::regprocedure)), '\s+', '', 'g')) > 0
+  and position('v_profile.blocked' in lower(pg_get_functiondef('public.admin_adjust_bdx_balance(uuid,numeric,text)'::regprocedure))) > 0,
+  'admin_adjust_bdx_balance validates delta, reason, blocked status, and nonnegative BDX balance'
 );
 
 select * from finish();

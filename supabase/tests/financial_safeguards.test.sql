@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(66);
+select plan(71);
 
 -- Schema and RLS baseline.
 select has_table('public', 'user_profile', 'user_profile exists');
@@ -94,6 +94,15 @@ select ok(exists (
 
 -- Critical RPC signatures and security-definer status.
 select has_function('public', 'admin_fund_user', array['uuid','numeric','text','text'], 'admin_fund_user canonical four-argument signature');
+select has_function('public', 'admin_fund_user', array['uuid','numeric','text'], 'legacy three-argument admin_fund_user remains callable');
+select ok(pg_get_function_result('public.admin_fund_user(uuid,numeric,text)'::regprocedure) = 'user_profile',
+  'legacy admin_fund_user preserves user_profile return contract');
+select ok(position('admin_fund_user(p_user_id,p_amount,p_reason,null::text)' in pg_get_functiondef('public.admin_fund_user(uuid,numeric,text)'::regprocedure)) > 0,
+  'legacy admin_fund_user delegates explicitly to four-argument RPC');
+select ok(position('available_balance' in pg_get_functiondef('public.admin_adjust_balance(uuid,numeric,text)'::regprocedure)) > 0
+  and position('bdx_balance' in pg_get_functiondef('public.admin_adjust_balance(uuid,numeric,text)'::regprocedure)) = 0,
+  'legacy admin_adjust_balance remains USD-only');
+select has_function('public', 'admin_adjust_bdx_balance', array['uuid','numeric','text'], 'BDX balance adjustment has explicit separate RPC');
 select has_function('public', 'admin_adjust_balance', array['uuid','numeric','text'], 'admin_adjust_balance signature');
 select has_function('public', 'admin_approve_deposit', array['uuid','text'], 'admin_approve_deposit signature');
 select has_function('public', 'admin_reject_deposit', array['uuid','text'], 'admin_reject_deposit signature');

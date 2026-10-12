@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(47);
+select plan(48);
 
 -- Production compatibility gate: the legacy three-argument funding overload must
 -- be gone so calls with three arguments resolve to the canonical defaulted RPC.
@@ -22,6 +22,10 @@ select ok(
 select ok(
   not has_function_privilege('anon','public.admin_fund_user(uuid,numeric,text,text)','EXECUTE'),
   'anonymous role cannot execute the admin funding RPC'
+);
+select ok(
+  has_function_privilege('service_role','public.admin_fund_user(uuid,numeric,text,text)','EXECUTE'),
+  'service role retains funding RPC access for trusted server workflows'
 );
 
 -- Isolated identities and balances; transaction rollback leaves no fixture data.

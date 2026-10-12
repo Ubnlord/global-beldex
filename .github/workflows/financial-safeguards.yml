@@ -69,7 +69,7 @@ jobs:
           set -euo pipefail
           eval "$(supabase status -o env)"
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f ../scripts/production-schema-compatibility-fixture.sql
-          psql "$DB_URL" -v ON_ERROR_STOP=1 -f ../supabase/migrations/20261011050000_bdx_native_accounting.sql
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f ../scripts/synthetic-accounting-reconciliation.sql
 
       - name: Run pgTAP safeguards against reconstructed production schema
         working-directory: .security-test

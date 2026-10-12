@@ -253,9 +253,58 @@ $function$;
 revoke all on function public.admin_reject_transaction(uuid,text) from public,anon;
 grant execute on function public.admin_reject_transaction(uuid,text) to authenticated;
 
--- Enforce the new accounting unit on internal categories. Existing USD records
--- remain historical; future BDX transaction creation is the app's only path.
+-- Compatibility contract: the separately deployed admin console still labels this
+-- operation USD and calls admin_adjust_balance(uuid,numeric,text). Preserve that
+-- contract; never silently redirect an existing USD-labelled action into BDX.
 create or replace function public.admin_adjust_balance(p_user_id uuid,p_delta numeric,p_reason text)
+returns public.user_profile
+language plpgsql security definer
+set search_path = pg_catalog, public, pg_temp
+as $function$
+declare
+  v_admin public.admin_user;
+  v_profile public.user_profile;
+  v_before numeric;
+  v_type text;
+begin
+  if not public.is_admin() or not public.admin_has_permission('approve_transactions') then
+    raise exception 'Permission denied';
+  end if;
+  if p_delta is null or p_delta=0 then raise exception 'Adjustment must be non-zero'; end if;
+  if coalesce(trim(p_reason),'')='' then raise exception 'Reason is required'; end if;
+  select * into v_admin from public.admin_user where user_id=auth.uid();
+  if v_admin.id is null then raise exception 'Admin access required'; end if;
+  select * into v_profile from public.user_profile where user_id=p_user_id for update;
+  if v_profile.user_id is null then raise exception 'Profile not found'; end if;
+  if v_profile.blocked then raise exception 'Blocked users cannot have balances adjusted'; end if;
+  if p_delta<0 and v_profile.available_balance+p_delta<0 then
+    raise exception 'Adjustment would make USD available balance negative';
+  end if;
+
+  v_before:=v_profile.available_balance;
+  v_type:=case when p_delta>0 then 'bonus' else 'withdraw' end;
+  update public.user_profile set available_balance=available_balance+p_delta,updated_at=now()
+    where user_id=p_user_id returning * into v_profile;
+  insert into public.transaction(
+    user_id,type,amount,currency,status,approval_status,method,note,
+    approved_by,approval_reason,approved_at,settled_at
+  ) values (
+    p_user_id,v_type,abs(p_delta),'USD','completed','approved','admin',p_reason,
+    v_admin.id,p_reason,now(),now()
+  );
+  insert into public.admin_action_audit(admin_id,user_id,action,target_id,old_values,new_values,reason)
+  values(v_admin.id,p_user_id,'adjust_balance',p_user_id,
+    jsonb_build_object('available_balance',v_before),
+    jsonb_build_object('available_balance',v_profile.available_balance),p_reason);
+  return v_profile;
+end;
+$function$;
+revoke all on function public.admin_adjust_balance(uuid,numeric,text) from public,anon;
+grant execute on function public.admin_adjust_balance(uuid,numeric,text) to authenticated,service_role;
+
+-- BDX adjustments have a separate, explicit RPC name so the legacy USD caller
+-- cannot change wallet denomination just because the database function changed.
+create or replace function public.admin_adjust_bdx_balance(p_user_id uuid,p_delta numeric,p_reason text)
 returns public.user_profile
 language plpgsql security definer
 set search_path = pg_catalog, public, pg_temp
@@ -285,8 +334,8 @@ begin
   return v_profile;
 end;
 $function$;
-revoke all on function public.admin_adjust_balance(uuid,numeric,text) from public,anon;
-grant execute on function public.admin_adjust_balance(uuid,numeric,text) to authenticated;
+revoke all on function public.admin_adjust_bdx_balance(uuid,numeric,text) from public,anon;
+grant execute on function public.admin_adjust_bdx_balance(uuid,numeric,text) to authenticated,service_role;
 
 
 -- Keep the admin funding RPC explicitly USD-denominated for legacy wallet funding.
@@ -302,7 +351,7 @@ create or replace function public.admin_fund_user(
   p_user_id uuid,
   p_amount numeric,
   p_reason text,
-  p_reference text default null
+  p_reference text
 )
 returns public.transaction
 language plpgsql security definer
@@ -346,6 +395,30 @@ end;
 $function$;
 revoke all on function public.admin_fund_user(uuid,numeric,text,text) from public,anon;
 grant execute on function public.admin_fund_user(uuid,numeric,text,text) to authenticated, service_role;
+
+-- Keep the deployed admin console's three-argument call and user_profile return
+-- contract. Four arguments are required for the newer transaction-returning RPC,
+-- preventing PostgREST/PostgreSQL ambiguity when the legacy console sends 3 args.
+create or replace function public.admin_fund_user(
+  p_user_id uuid,
+  p_amount numeric,
+  p_reason text
+)
+returns public.user_profile
+language plpgsql security definer
+set search_path = pg_catalog, public, pg_temp
+as $function$
+declare
+  v_profile public.user_profile;
+begin
+  perform public.admin_fund_user(p_user_id,p_amount,p_reason,null::text);
+  select * into v_profile from public.user_profile where user_id=p_user_id;
+  if v_profile.user_id is null then raise exception 'User profile not found'; end if;
+  return v_profile;
+end;
+$function$;
+revoke all on function public.admin_fund_user(uuid,numeric,text) from public,anon;
+grant execute on function public.admin_fund_user(uuid,numeric,text) to authenticated,service_role;
 
 -- Referral commission is a BDX-denominated account credit because the referral
 -- earnings tile and all canonical balances are displayed in BDX. The completed

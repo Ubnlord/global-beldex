@@ -63,12 +63,32 @@ jobs:
         working-directory: .security-test
         run: supabase db reset
 
-      - name: Reconstruct production schema drift and replay accounting migration
+      - name: Reconstruct production schema drift and apply forward compatibility migration
         working-directory: .security-test
         run: |
           set -euo pipefail
           eval "$(supabase status -o env)"
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f ../scripts/production-schema-compatibility-fixture.sql
+          # Apply the forward migration to the reconstructed production shape.
+          # It is intentionally idempotent because fresh reset already applied it.
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f ../supabase/migrations/20261012150000_bdx_referral_compatibility_forward.sql
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f ../supabase/migrations/20261012150000_bdx_referral_compatibility_forward.sql
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -c "DO \$assert\$ BEGIN
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+              WHERE table_schema='public' AND table_name='user_profile'
+                AND column_name='referral_earnings_bdx') THEN
+              RAISE EXCEPTION 'forward migration did not restore referral_earnings_bdx';
+            END IF;
+            IF position('referral_earnings_bdx' in pg_get_functiondef('public.credit_referral_for_deposit(uuid)'::regprocedure)) = 0
+              OR position('BDX' in pg_get_functiondef('public.credit_referral_for_deposit(uuid)'::regprocedure)) = 0 THEN
+              RAISE EXCEPTION 'forward migration did not install BDX referral routine';
+            END IF;
+            IF has_function_privilege('anon','public.credit_referral_for_deposit(uuid)','EXECUTE')
+              OR NOT has_function_privilege('authenticated','public.credit_referral_for_deposit(uuid)','EXECUTE')
+              OR NOT has_function_privilege('service_role','public.credit_referral_for_deposit(uuid)','EXECUTE') THEN
+              RAISE EXCEPTION 'forward migration installed unexpected referral RPC grants';
+            END IF;
+          END \$assert\$;"
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f ../scripts/synthetic-accounting-reconciliation.sql
 
       - name: Run pgTAP safeguards against reconstructed production schema

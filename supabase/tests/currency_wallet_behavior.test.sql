@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(31);
+select plan(39);
 
 -- Isolated identities and balances; transaction rollback leaves no fixture data.
 insert into auth.users (
@@ -63,7 +63,7 @@ select throws_ok(
 );
 
 select throws_ok(
-  $query$select public.create_financial_transaction('withdraw',4000,null,'4' || repeat('A',94),'a1100000-0000-4000-8000-000000000199','BDX')$query$,
+  $$select public.create_financial_transaction('withdraw',4000,null,'4' || repeat('A',94),'a1100000-0000-4000-8000-000000000199','BDX')$$,
   'P0001','Invalid withdrawal method',
   'withdrawal RPC rejects a missing method'
 );
@@ -156,18 +156,24 @@ select is(
 
 -- Isolated admin-console RPC integration: funding is legacy USD, adjustment is BDX.
 select set_config('request.jwt.claim.sub','a1100000-0000-4000-8000-000000000002',true);
+select public.admin_fund_user(
+  'a1100000-0000-4000-8000-000000000001'::uuid,
+  125::numeric,
+  'integration test legacy USD funding'::text,
+  'integration-test-reference'::text
+);
 select is(
-  (public.admin_fund_user('a1100000-0000-4000-8000-000000000001',125::numeric,'integration test legacy USD funding')).available_balance,
+  (select available_balance from public.user_profile where user_id='a1100000-0000-4000-8000-000000000001'),
   1125::numeric,'admin_fund_user credits the legacy USD wallet'
 );
 select is(
   (select count(*)::integer from public.admin_action_audit
-   where user_id='a1100000-0000-4000-8000-000000000001' and action='fund_user' and reason='integration test legacy USD funding'),
+   where user_id='a1100000-0000-4000-8000-000000000001' and action='user_funded' and reason='integration test legacy USD funding'),
   1,'legacy USD funding creates an admin audit record'
 );
 select is(
   (select currency from public.transaction
-   where user_id='a1100000-0000-4000-8000-000000000001' and method='admin' and note='integration test legacy USD funding'
+   where user_id='a1100000-0000-4000-8000-000000000001' and method='Admin funding' and note like 'Admin funding: integration test legacy USD funding%'
    order by created_at desc limit 1),
   'USD'::text,'admin funding ledger entry is explicitly marked USD'
 );
@@ -185,9 +191,61 @@ select is(
    where user_id='a1100000-0000-4000-8000-000000000001' and action='adjust_bdx_balance' and reason='integration test BDX adjustment'),
   1,'BDX adjustment creates an admin audit record'
 );
+select set_config('request.jwt.claim.sub','a1100000-0000-4000-8000-000000000001',true);
 select throws_ok(
-  $select public.admin_adjust_balance('a1100000-0000-4000-8000-000000000001',1,'ordinary user must be denied')$,
+  $$select public.admin_adjust_balance('a1100000-0000-4000-8000-000000000001'::uuid,1::numeric,'ordinary user must be denied'::text)$$,
   'P0001','Permission denied','ordinary user cannot invoke admin BDX adjustment'
+);
+
+-- Blocked users cannot create financial requests; balances and ledger remain unchanged.
+create temporary table blocked_user_balance_before as
+select user_id, available_balance, bdx_balance
+from public.user_profile
+where user_id='a1100000-0000-4000-8000-000000000001';
+update public.user_profile set blocked=true
+where user_id='a1100000-0000-4000-8000-000000000001';
+select set_config('request.jwt.claim.sub','a1100000-0000-4000-8000-000000000001',true);
+select throws_ok(
+  $$select public.create_financial_transaction('deposit',25::numeric,'Bank'::text,null::text,'a1100000-0000-4000-8000-000000000105'::uuid,'USD'::text)$$,
+  'P0001','User account is blocked','blocked user cannot create a financial request'
+);
+select is(
+  (select bdx_balance from public.user_profile where user_id='a1100000-0000-4000-8000-000000000001'),
+  (select bdx_balance from blocked_user_balance_before),
+  'blocked financial request leaves BDX balance unchanged'
+);
+select is(
+  (select available_balance from public.user_profile where user_id='a1100000-0000-4000-8000-000000000001'),
+  (select available_balance from blocked_user_balance_before),
+  'blocked financial request leaves legacy USD balance unchanged'
+);
+select is(
+  (select count(*)::integer from public.transaction where user_id='a1100000-0000-4000-8000-000000000001' and request_id='a1100000-0000-4000-8000-000000000105'),
+  0,'blocked financial request creates no ledger row'
+);
+update public.user_profile set blocked=false
+where user_id='a1100000-0000-4000-8000-000000000001';
+
+-- Approved legacy USD transactions cannot be settled through the BDX-only path.
+insert into public.transaction(user_id,type,amount,status,approval_status,currency,method,note,approved_at)
+values ('a1100000-0000-4000-8000-000000000001','deposit',75,'pending','approved','USD','Bank','legacy USD settlement safeguard fixture',now());
+select set_config('request.jwt.claim.sub','a1100000-0000-4000-8000-000000000002',true);
+select throws_ok(
+  format('select public.admin_settle_transaction(%L::uuid,%L)',(select id from public.transaction where note='legacy USD settlement safeguard fixture'),'test legacy USD settlement denial'),
+  'P0001','Legacy USD transaction requires manual reconciliation before settlement',
+  'approved legacy USD transaction is refused by BDX settlement'
+);
+select is(
+  (select available_balance from public.user_profile where user_id='a1100000-0000-4000-8000-000000000001'),
+  1125::numeric,'legacy USD settlement denial leaves USD balance unchanged'
+);
+select is(
+  (select count(*)::integer from public.transaction_audit where transaction_id=(select id from public.transaction where note='legacy USD settlement safeguard fixture') and action='settled'),
+  0,'denied legacy USD settlement writes no successful settlement audit'
+);
+select is(
+  (select status from public.transaction where note='legacy USD settlement safeguard fixture'),
+  'pending'::text,'denied legacy USD settlement leaves transaction pending'
 );
 
 select * from finish();

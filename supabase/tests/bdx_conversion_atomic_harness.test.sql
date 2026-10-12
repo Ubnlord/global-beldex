@@ -4,7 +4,7 @@ create extension if not exists pgtap with schema extensions;
 -- Fully disposable model harness. All objects are TEMPORARY and the enclosing
 -- transaction is rolled back. This tests transaction semantics only; it does
 -- not install or call a production conversion RPC.
-select plan(20);
+select plan(19);
 
 create temporary table sim_wallet (
   user_id text primary key,

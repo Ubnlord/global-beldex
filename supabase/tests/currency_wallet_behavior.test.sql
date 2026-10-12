@@ -168,12 +168,12 @@ select is(
 );
 select is(
   (select count(*)::integer from public.admin_action_audit
-   where user_id='a1100000-0000-4000-8000-000000000001' and action='fund_user' and reason='integration test legacy USD funding'),
+   where user_id='a1100000-0000-4000-8000-000000000001' and action='user_funded' and reason='integration test legacy USD funding'),
   1,'legacy USD funding creates an admin audit record'
 );
 select is(
   (select currency from public.transaction
-   where user_id='a1100000-0000-4000-8000-000000000001' and method='admin' and note='integration test legacy USD funding'
+   where user_id='a1100000-0000-4000-8000-000000000001' and method='Admin funding' and note like 'Admin funding: integration test legacy USD funding%'
    order by created_at desc limit 1),
   'USD'::text,'admin funding ledger entry is explicitly marked USD'
 );

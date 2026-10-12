@@ -340,7 +340,7 @@ begin
 end;
 $function$;
 revoke all on function public.admin_fund_user(uuid,numeric,text,text) from public,anon;
-grant execute on function public.admin_fund_user(uuid,numeric,text,text) to authenticated;
+grant execute on function public.admin_fund_user(uuid,numeric,text,text) to authenticated, service_role;
 
 -- Referral commission is a BDX-denominated account credit because the referral
 -- earnings tile and all canonical balances are displayed in BDX. The completed

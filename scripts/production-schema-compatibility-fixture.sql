@@ -213,6 +213,27 @@ grant execute on function public.create_financial_transaction(text,numeric,text,
 -- migration may safely drop a stale four-argument variant if one is ever present.
 drop function if exists public.admin_adjust_balance(uuid,numeric,text,text);
 
+-- Capture the relevant production migration-history slice as metadata only.
+-- Do not overwrite the isolated database's actual Supabase migration ledger: that ledger
+-- must remain the repository-reset ledger so CI can still report reproducible migrations.
+-- These rows are observed production version/name pairs; the catalog-only ROI migration
+-- is intentionally absent from the observed production history and must not be inferred applied.
+create temporary table _production_schema_migration_history_fixture (
+  production_version text primary key,
+  production_name text not null,
+  repository_migration text,
+  evidence_class text not null
+) on commit drop;
+
+insert into _production_schema_migration_history_fixture
+  (production_version, production_name, repository_migration, evidence_class)
+values
+  ('20261010053557','correct_gns_daily_interest_rate',null,'observed production history'),
+  ('20261010110000','correct_other_plan_daily_interest',null,'observed production history'),
+  ('20261011054325','20261011010000_bdx_native_investments','20261011010000_bdx_native_investments.sql','version/name drift; match by migration content'),
+  ('20261011054340','20261011030000_currency_reconciliation_v2','20261011030000_currency_reconciliation_v2.sql','version/name drift; match by migration content'),
+  ('20261011054348','20261011040000_currency_schema_recovery_guard','20261011040000_currency_schema_recovery_guard.sql','version/name drift; match by migration content');
+
 -- Fail closed if the reconstructed pre-migration schema drifts from observed production.
 do $assert_production_shape$
 begin
@@ -244,6 +265,23 @@ begin
      or not has_function_privilege('service_role','public.create_financial_transaction(text,numeric,text,text,uuid)','EXECUTE')
      or has_function_privilege('anon','public.create_financial_transaction(text,numeric,text,text,uuid)','EXECUTE') then
     raise exception 'fixture mismatch: legacy transaction RPC grants differ from observed production grants';
+  end if;
+  if (select count(*) from _production_schema_migration_history_fixture) <> 5
+     or not exists (select 1 from _production_schema_migration_history_fixture
+                    where production_version='20261011054348'
+                      and production_name='20261011040000_currency_schema_recovery_guard')
+     or not exists (select 1 from _production_schema_migration_history_fixture
+                    where production_version='20261011054340'
+                      and production_name='20261011030000_currency_reconciliation_v2')
+     or not exists (select 1 from _production_schema_migration_history_fixture
+                    where production_version='20261011054325'
+                      and production_name='20261011010000_bdx_native_investments') then
+    raise exception 'fixture mismatch: relevant production migration-history slice differs from observed version/name pairs';
+  end if;
+  if exists (select 1 from _production_schema_migration_history_fixture
+             where production_version='20261011003000'
+                or production_name='20261011003000_daily_roi_rate_interpretation') then
+    raise exception 'fixture mismatch: catalog-only ROI migration must remain absent from observed production history';
   end if;
   if not exists (
     select 1 from information_schema.columns

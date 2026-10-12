@@ -2,7 +2,7 @@ name: Security build verification
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, feat/bdx-native-accounting]
   push:
     branches: [security/hardening-v1]
   workflow_dispatch:

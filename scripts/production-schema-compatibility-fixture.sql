@@ -31,7 +31,7 @@ begin
   return v_cut;
 end;
 $fixture$;
-revoke all on function public.credit_referral_for_deposit(uuid) from public, anon;
+revoke all on function public.credit_referral_for_deposit(uuid) from public, anon, authenticated, service_role;
 grant execute on function public.credit_referral_for_deposit(uuid) to service_role;
 
 alter table public.user_profile drop column if exists referral_earnings_bdx;
@@ -282,6 +282,16 @@ begin
              where production_version='20261011003000'
                 or production_name='20261011003000_daily_roi_rate_interpretation') then
     raise exception 'fixture mismatch: catalog-only ROI migration must remain absent from observed production history';
+  end if;
+  if not has_function_privilege('authenticated','public.admin_adjust_balance(uuid,numeric,text)','EXECUTE')
+     or not has_function_privilege('service_role','public.admin_adjust_balance(uuid,numeric,text)','EXECUTE')
+     or has_function_privilege('anon','public.admin_adjust_balance(uuid,numeric,text)','EXECUTE') then
+    raise exception 'fixture mismatch: admin_adjust_balance grants differ from observed production grants';
+  end if;
+  if has_function_privilege('authenticated','public.credit_referral_for_deposit(uuid)','EXECUTE')
+     or not has_function_privilege('service_role','public.credit_referral_for_deposit(uuid)','EXECUTE')
+     or has_function_privilege('anon','public.credit_referral_for_deposit(uuid)','EXECUTE') then
+    raise exception 'fixture mismatch: legacy referral RPC grants differ from observed production grants';
   end if;
   if not exists (
     select 1 from information_schema.columns

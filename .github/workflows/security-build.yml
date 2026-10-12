@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [main, feat/bdx-native-accounting, fix/bdx-wallet-regression-gates]
   push:
-    branches: [security/hardening-v1]
+    branches: [security/hardening-v1, fix/preserve-legacy-usd-display]
   workflow_dispatch:
 
 permissions:

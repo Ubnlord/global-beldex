@@ -39,7 +39,8 @@ jobs:
 
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          # Pin the CLI so CI does not need the rate-limited latest-release lookup.
+          version: 2.120.0
 
       - run: npm ci
 

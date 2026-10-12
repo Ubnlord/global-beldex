@@ -2,7 +2,7 @@ name: Financial safeguards
 
 on:
   pull_request:
-    branches: [main, feat/bdx-native-accounting, fix/bdx-wallet-regression-gates]
+    branches: [main, feat/bdx-native-accounting, fix/bdx-wallet-regression-gates, fix/preserve-legacy-usd-display]
   push:
     branches: [main, fix/preserve-legacy-usd-display]
   workflow_dispatch:

@@ -167,7 +167,7 @@ select ok(
 );
 
 select ok(
-  position('p_amount <= 0' in regexp_replace(lower(pg_get_functiondef('public.admin_fund_user(uuid,numeric,text,text)'::regprocedure)), '[[:space:]]+', '', 'g')) > 0
+  position('p_amount<=0' in regexp_replace(lower(pg_get_functiondef('public.admin_fund_user(uuid,numeric,text,text)'::regprocedure)), '[[:space:]]+', '', 'g')) > 0
   and position('v_reasonisnull' in regexp_replace(lower(pg_get_functiondef('public.admin_fund_user(uuid,numeric,text,text)'::regprocedure)), '[[:space:]]+', '', 'g')) > 0
   and position('coalesce(v_old.blocked,false)' in regexp_replace(lower(pg_get_functiondef('public.admin_fund_user(uuid,numeric,text,text)'::regprocedure)), '[[:space:]]+', '', 'g')) > 0,
   'admin_fund_user validates amount, reason, and blocked status'

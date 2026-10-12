@@ -1,9 +1,10 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(17);
+select plan(18);
 
 -- Assert the database catalog contains all seven published daily rates.
 select is((select daily_rate from public.investment_plan_catalog where id='gns'),0.019::numeric,'GNS daily rate equals 1.90% daily ROI');
+select is((select min_amount from public.investment_plan_catalog where id='gns'),4000::numeric,'GNS minimum is stored in BDX for the BDX-native purchase RPC');
 select is((select min_amount * daily_rate from public.investment_plan_catalog where id='gns'),76::numeric,'GNS minimum 4,000 BDX investment earns 76 BDX per full day');
 select is((select daily_rate from public.investment_plan_catalog where id='build'),0.0251::numeric,'BUILD UP daily rate equals 2.51% daily ROI');
 select is((select daily_rate from public.investment_plan_catalog where id='follow'),0.0392::numeric,'FOLLOW UP daily rate equals 3.92% daily ROI');

@@ -193,7 +193,7 @@ select is(
 );
 select set_config('request.jwt.claim.sub','a1100000-0000-4000-8000-000000000001',true);
 select throws_ok(
-  $select public.admin_adjust_balance('a1100000-0000-4000-8000-000000000001'::uuid,1::numeric,'ordinary user must be denied'::text)$,
+  $$select public.admin_adjust_balance('a1100000-0000-4000-8000-000000000001'::uuid,1::numeric,'ordinary user must be denied'::text)$$,
   'P0001','Permission denied','ordinary user cannot invoke admin BDX adjustment'
 );
 

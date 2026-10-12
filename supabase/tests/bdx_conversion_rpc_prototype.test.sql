@@ -5,7 +5,7 @@ create extension if not exists pgtap with schema extensions;
 -- creates no persistent public objects. It deliberately models a one-time
 -- account conversion in temporary tables; production integration is prohibited
 -- until schema mapping, multi-session concurrency, and accounting review pass.
-select plan(17);
+select plan(23);
 
 create temporary table sim_profile (
   user_id text primary key,
@@ -144,7 +144,13 @@ select is(pg_temp.convert_account_once('a0000000-0000-4000-8000-000000000001','a
 select throws_ok($$select pg_temp.convert_account_once('a0000000-0000-4000-8000-000000000002','account-a',0.1,'coingecko',now(),now())$$,'P0001','Account already converted by another run','second run cannot reconvert account');
 select throws_ok($$select pg_temp.convert_account_once('a0000000-0000-4000-8000-000000000003','account-b',0,'coingecko',now(),now())$$,'P0001','Invalid quote','invalid quote is rejected');
 select throws_ok($$select pg_temp.convert_account_once('a0000000-0000-4000-8000-000000000004','account-b',0.1,'coingecko',now()-interval '5 minutes',now()-interval '5 minutes')$$,'P0001','Stale quote','stale quote is rejected');
-select throws_ok($$select pg_temp.convert_account_once('a0000000-0000-4000-8000-000000000005','account-b',0.1,'coingecko',now(),now(),true)$$,'P0001','forced conversion failure','mid-conversion error aborts the statement');
+select throws_ok($select pg_temp.convert_account_once('a0000000-0000-4000-8000-000000000005','account-b',0.1,'coingecko',now(),now(),true)$,'P0001','forced conversion failure','mid-conversion error aborts the statement');
+select is((select available_usd from sim_profile where user_id='account-b'),40::numeric,'failed conversion preserves source USD balance');
+select is((select available_bdx from sim_profile where user_id='account-b'),0::numeric,'failed conversion leaves destination BDX unchanged');
+select is((select count(*)::integer from sim_conversion_run where conversion_id='a0000000-0000-4000-8000-000000000005'),0,'failed conversion leaves no conversion-run marker');
+select is((select count(*)::integer from sim_conversion_map where conversion_id='a0000000-0000-4000-8000-000000000005'),0,'failed conversion leaves no partial audit mapping');
+select is((select sum(source_amount) from sim_conversion_map where conversion_id='a0000000-0000-4000-8000-000000000001'),592.5::numeric,'per-account source mapping reconciles to all converted USD categories');
+select is((select sum(target_amount)*0.1+sum(rounding_remainder) from sim_conversion_map where conversion_id='a0000000-0000-4000-8000-000000000001'),592.5::numeric,'destination BDX value plus recorded rounding remainder reconciles to source USD');
 
 select * from finish();
 rollback;

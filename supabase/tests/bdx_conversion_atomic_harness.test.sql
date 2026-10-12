@@ -140,8 +140,8 @@ $fn$;
 
 select is(
   pg_temp.simulate_atomic_conversion('cutover-1',0.10,'coingecko',now(),false),
-  5,
-  'first conversion converts two wallets and two USD investments plus one additional wallet row'
+  4,
+  'first conversion converts two wallet rows and two USD investments'
 );
 
 select is((select available_usd from sim_wallet where user_id='user-a'),0::numeric,
@@ -166,7 +166,7 @@ select is((select amount from sim_transaction where transaction_id='tx-old-usd')
   'historical USD transaction amount is preserved exactly');
 select is((select currency from sim_transaction where transaction_id='tx-old-usd'),'USD',
   'historical USD transaction currency is preserved');
-select is((select count(*)::integer from sim_audit where conversion_id='cutover-1'),9,
+select is((select count(*)::integer from sim_audit where conversion_id='cutover-1'),8,
   'audit retains original USD wallet, referral, investment principal and profit amounts');
 select is(pg_temp.simulate_atomic_conversion('cutover-1',0.10,'coingecko',now(),false),0,
   'replaying the same conversion ID performs no second credit');

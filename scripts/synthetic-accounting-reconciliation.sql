@@ -277,7 +277,18 @@ $final_reconciliation$;
 \echo 'PASS: synthetic per-account and aggregate USD/BDX equations reconcile after migration and RPC operations'
 \echo 'PASS: historical snapshots preserved; referral replay idempotent; BDX withdrawal isolated; USD funding isolated; unauthorized/blocked funding denied'
 
--- Cleanup only the fabricated records. Workflow database is disposable.
+-- Cleanup only fabricated records and their dependent audit rows. Workflow database is disposable.
+delete from public.admin_action_audit where user_id in (
+ 'a4800000-0000-4000-8000-000000000001',
+ 'a4800000-0000-4000-8000-000000000002',
+ 'a4800000-0000-4000-8000-000000000003'
+);
+delete from public.transaction_audit where transaction_id in (
+ select id from public.transaction where user_id in (
+  'a4800000-0000-4000-8000-000000000001',
+  'a4800000-0000-4000-8000-000000000002'
+ )
+);
 delete from public.transaction where user_id in ('a4800000-0000-4000-8000-000000000001','a4800000-0000-4000-8000-000000000002');
 delete from public.user_investment where user_id='a4800000-0000-4000-8000-000000000001';
 delete from public.admin_user where user_id='a4800000-0000-4000-8000-000000000003';

@@ -63,7 +63,7 @@ select throws_ok(
 );
 
 select throws_ok(
-  $query$select public.create_financial_transaction('withdraw',4000,null,'4' || repeat('A',94),'a1100000-0000-4000-8000-000000000199','BDX')$query$,
+  $select public.create_financial_transaction('withdraw',4000,null,'4' || repeat('A',94),'a1100000-0000-4000-8000-000000000199','BDX')$,
   'P0001','Invalid withdrawal method',
   'withdrawal RPC rejects a missing method'
 );

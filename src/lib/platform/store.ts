@@ -85,6 +85,10 @@ export type Book = {
   bonus: number;
   referralBonus: number;
   withdrawn: number;
+  /** Historical USD wallet values remain separate from the BDX-native wallet. */
+  legacyAvailableUsd: number;
+  legacyLockedUsd: number;
+  legacyProfitUsd: number;
   txs: Transaction[];
   plans: ActivePlan[];
   notices: Notice[];
@@ -104,6 +108,9 @@ type PlatformState = {
   bonus: number;
   referralBonus: number;
   withdrawn: number;
+  legacyAvailableUsd: number;
+  legacyLockedUsd: number;
+  legacyProfitUsd: number;
   txs: Transaction[];
   plans: ActivePlan[];
   notices: Notice[];
@@ -145,6 +152,9 @@ function emptyBook(): Book {
     bonus: 0,
     referralBonus: 0,
     withdrawn: 0,
+    legacyAvailableUsd: 0,
+    legacyLockedUsd: 0,
+    legacyProfitUsd: 0,
     txs: [],
     plans: [],
     notices: [],
@@ -162,6 +172,9 @@ function snapshot(s: Book): Book {
     bonus: s.bonus,
     referralBonus: s.referralBonus,
     withdrawn: s.withdrawn,
+    legacyAvailableUsd: s.legacyAvailableUsd ?? 0,
+    legacyLockedUsd: s.legacyLockedUsd ?? 0,
+    legacyProfitUsd: s.legacyProfitUsd ?? 0,
     txs: s.txs,
     plans: s.plans,
     notices: s.notices,
@@ -376,6 +389,9 @@ export const usePlatform = create<PlatformState>()(
           bonus: p.bonus ?? 0,
           referralBonus: p.referralBonus ?? 0,
           withdrawn: p.withdrawn ?? 0,
+          legacyAvailableUsd: p.legacyAvailableUsd ?? 0,
+          legacyLockedUsd: p.legacyLockedUsd ?? 0,
+          legacyProfitUsd: p.legacyProfitUsd ?? 0,
           txs: p.txs ?? [],
           plans: p.plans ?? [],
           notices: p.notices ?? [],

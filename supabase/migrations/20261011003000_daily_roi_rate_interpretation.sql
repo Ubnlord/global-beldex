@@ -1,19 +1,20 @@
 begin;
 
--- Published ROI values are DAILY simple-interest rates, not total ROI over
--- the investment duration. This changes the plan catalogue used for new
--- purchases. Existing investment snapshots are intentionally left untouched:
--- changing an active rate without first settling its old-rate accrual could
--- apply the new rate to time elapsed before this migration.
+-- Published plan ROI is the total simple-interest return over the plan duration,
+-- not a daily rate. Store the per-day fraction used by accrue_user_investments:
+-- profit = principal * daily_rate * elapsed_days.
+-- Keep existing user_investment.daily_rate snapshots untouched; this catalogue
+-- controls new purchases only. Historical corrections are handled separately by
+-- the earlier rate-correction migrations and must not be replayed here.
 update public.investment_plan_catalog
    set daily_rate = case id
-     when 'gns' then 0.019
-     when 'build' then 0.0251
-     when 'follow' then 0.0392
-     when 'apex' then 0.0856
-     when 'edifex' then 0.1343
-     when 'dixon' then 0.1543
-     when 'falcon' then 0.2378
+     when 'gns' then round(0.019::numeric / 30, 18)
+     when 'build' then round(0.0251::numeric / 60, 18)
+     when 'follow' then round(0.0392::numeric / 60, 18)
+     when 'apex' then round(0.0856::numeric / 365, 18)
+     when 'edifex' then round(0.1343::numeric / 730, 18)
+     when 'dixon' then round(0.1543::numeric / 730, 18)
+     when 'falcon' then round(0.2378::numeric / 1825, 18)
      else daily_rate
    end,
    updated_at = now()

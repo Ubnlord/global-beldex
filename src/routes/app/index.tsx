@@ -34,6 +34,9 @@ function Dashboard() {
   const user = usePlatform((s) => s.user);
   const available = usePlatform((s) => s.available);
   const locked = usePlatform((s) => s.locked);
+  const legacyAvailableUsd = usePlatform((s) => s.legacyAvailableUsd);
+  const legacyLockedUsd = usePlatform((s) => s.legacyLockedUsd);
+  const legacyProfitUsd = usePlatform((s) => s.legacyProfitUsd);
   const profit = usePlatform((s) => s.profit);
   const bonus = usePlatform((s) => s.bonus);
   const referralBonus = usePlatform((s) => s.referralBonus);
@@ -87,6 +90,25 @@ function Dashboard() {
             <div className="text-xl font-bold tabular text-warn">{formatBdx(locked)}</div>
           </div>
         </div>
+        {(legacyAvailableUsd !== 0 || legacyLockedUsd !== 0 || legacyProfitUsd !== 0) && (
+          <div className="mt-4 rounded-md border border-line-strong bg-surface p-3">
+            <div className="text-xs font-semibold text-fg">Historical USD balances (not converted)</div>
+            <div className="mt-2 grid grid-cols-2 gap-3">
+              <div>
+                <div className="text-[10px] text-subtle">Legacy USD available</div>
+                <div className="text-sm font-semibold tabular text-fg">{formatUsd(legacyAvailableUsd)}</div>
+              </div>
+              <div>
+                <div className="text-[10px] text-subtle">Legacy USD locked</div>
+                <div className="text-sm font-semibold tabular text-fg">{formatUsd(legacyLockedUsd)}</div>
+              </div>
+              <div className="col-span-2">
+                <div className="text-[10px] text-subtle">Historical USD investment profit</div>
+                <div className="text-sm font-semibold tabular text-fg">{formatUsd(legacyProfitUsd)}</div>
+              </div>
+            </div>
+          </div>
+        )}
         <div className="mt-5 grid grid-cols-2 gap-3">
           <Stat icon={TrendingUp} label={t.totalProfit} value={formatBdx(profit, 3)} tone="text-accent" />
           <Stat icon={Gift} label={t.bonus} value={formatBdx(bonus, 3)} tone="text-warn" />

@@ -33,6 +33,7 @@ function Dashboard() {
   const navigate = useNavigate();
   const user = usePlatform((s) => s.user);
   const available = usePlatform((s) => s.available);
+  const bdx = usePlatform((s) => s.bdx);
   const locked = usePlatform((s) => s.locked);
   const profit = usePlatform((s) => s.profit);
   const bonus = usePlatform((s) => s.bonus);
@@ -87,11 +88,18 @@ function Dashboard() {
             <div className="text-xl font-bold tabular text-warn">{formatUsd(locked)}</div>
           </div>
         </div>
+        <div className="mt-4 rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-4">
+          <div className="flex items-center gap-2 text-[11px] font-semibold text-emerald-300">
+            <Wallet size={15} /> BDX WALLET
+          </div>
+          <div className="mt-1 text-2xl font-extrabold tabular text-emerald-200">{formatBdx(bdx)} BDX</div>
+          <div className="mt-1 text-[10px] text-subtle">Available BDX balance · BDX investment profits and referral rewards stay in BDX</div>
+        </div>
         <div className="mt-5 grid grid-cols-2 gap-3">
-          <Stat icon={TrendingUp} label={t.totalProfit} value={formatUsd(profit, 0)} tone="text-accent" />
-          <Stat icon={Gift} label={t.bonus} value={formatUsd(bonus, 0)} tone="text-warn" />
-          <Stat icon={Users} label={t.referralBonus} value={formatUsd(referralBonus, 0)} tone="text-violet" />
-          <Stat icon={Wallet} label={t.withdrawals} value={formatUsd(withdrawn, 0)} tone="text-rose" />
+          <Stat icon={TrendingUp} label={t.totalProfit + " (USD)"} value={formatUsd(profit, 0)} tone="text-accent" />
+          <Stat icon={Gift} label={t.bonus + " (USD)"} value={formatUsd(bonus, 0)} tone="text-warn" />
+          <Stat icon={Users} label={t.referralBonus + " (USD)"} value={formatUsd(referralBonus, 0)} tone="text-violet" />
+          <Stat icon={Wallet} label={t.withdrawals + " (USD)"} value={formatUsd(withdrawn, 0)} tone="text-rose" />
         </div>
         <Button className="mt-5 w-full" onClick={() => navigate({ to: "/app/deposit" })}>
           <ArrowDownToLine size={16} /> {t.investNow}

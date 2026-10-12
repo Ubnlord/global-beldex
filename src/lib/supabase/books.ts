@@ -79,7 +79,11 @@ export async function pullCloudBook(options: { skipAccrual?: boolean } = {}): Pr
     0,
   );
   const bonus = rawTxs
-    .filter((t: any) => t.type === "bonus" && t.method === "Welcome Bonus")
+    .filter((t: any) => t.type === "bonus" && t.method === "Welcome Bonus" && t.currency !== "BDX")
+    .reduce((sum: number, t: any) => sum + num(t.amount), 0);
+  // USD and BDX referral earnings stay separate; never sum unlike currencies.
+  const referralBonusUsd = rawTxs
+    .filter((t: any) => t.type === "referral" && t.status === "completed" && t.currency !== "BDX")
     .reduce((sum: number, t: any) => sum + num(t.amount), 0);
 
   return {
@@ -88,7 +92,7 @@ export async function pullCloudBook(options: { skipAccrual?: boolean } = {}): Pr
     locked: num(p?.locked_balance),
     profit,
     bonus,
-    referralBonus: num(p?.referral_earnings),
+    referralBonus: referralBonusUsd,
     withdrawn: num(p?.total_withdrawals),
     txs,
     plans,

@@ -284,6 +284,61 @@ revoke all on function public.admin_adjust_balance(uuid,numeric,text) from publi
 grant execute on function public.admin_adjust_balance(uuid,numeric,text) to authenticated;
 
 
+-- Keep the admin funding RPC explicitly USD-denominated for legacy wallet funding.
+-- The legacy overloads accepted defaulted reference arguments and caused ambiguous
+-- calls; retire them so callers resolve to the canonical accounting functions.
+drop function if exists public.admin_fund_user(uuid,numeric,text,text);
+drop function if exists public.admin_adjust_balance(uuid,numeric,text,text);
+
+create or replace function public.admin_fund_user(
+  p_user_id uuid,
+  p_amount numeric,
+  p_reason text,
+  p_reference text default null
+)
+returns public.transaction
+language plpgsql security definer
+set search_path = pg_catalog, public, pg_temp
+as $function$
+declare
+  v_admin public.admin_user;
+  v_old public.user_profile;
+  v_new public.user_profile;
+  v_tx public.transaction;
+  v_reason text := nullif(trim(coalesce(p_reason,'')),'');
+  v_reference text := nullif(trim(coalesce(p_reference,'')),'');
+begin
+  if not public.is_admin() or not public.admin_has_permission('approve_transactions') then
+    raise exception 'Permission denied';
+  end if;
+  if p_user_id is null or p_amount is null or p_amount <= 0 or v_reason is null then
+    raise exception 'Invalid funding request';
+  end if;
+  select * into v_admin from public.admin_user where user_id=auth.uid();
+  if v_admin.id is null then raise exception 'Admin access required'; end if;
+  select * into v_old from public.user_profile where user_id=p_user_id for update;
+  if v_old.user_id is null then raise exception 'User profile not found'; end if;
+  if coalesce(v_old.blocked,false) then raise exception 'User account is blocked'; end if;
+  update public.user_profile set available_balance=available_balance+p_amount,updated_at=now()
+    where user_id=p_user_id returning * into v_new;
+  insert into public.transaction(
+    user_id,type,amount,currency,status,approval_status,method,note,
+    approved_by,approval_reason,approved_at,settled_at
+  ) values (
+    p_user_id,'bonus',p_amount,'USD','completed','approved','Admin funding',
+    'Admin funding: '||v_reason||case when v_reference is not null then ' | Ref: '||v_reference else '' end,
+    v_admin.id,v_reason,now(),now()
+  ) returning * into v_tx;
+  insert into public.admin_action_audit(admin_id,user_id,action,target_id,old_values,new_values,reason)
+  values(v_admin.id,p_user_id,'user_funded',v_tx.id,
+    jsonb_build_object('available_balance',v_old.available_balance),
+    jsonb_build_object('available_balance',v_new.available_balance,'amount',p_amount),v_reason);
+  return v_tx;
+end;
+$function$;
+revoke all on function public.admin_fund_user(uuid,numeric,text,text) from public,anon;
+grant execute on function public.admin_fund_user(uuid,numeric,text,text) to authenticated;
+
 -- Referral commission is a BDX-denominated account credit because the referral
 -- earnings tile and all canonical balances are displayed in BDX. The completed
 -- deposit amount is already stored in BDX by create_financial_transaction.

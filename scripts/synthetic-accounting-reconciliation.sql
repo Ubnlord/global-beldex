@@ -134,7 +134,7 @@ $preservation$;
 \echo 'PASS: migration replay preserved historical USD/BDX wallets, all 7 ledger rows, and both investment snapshots'
 
 -- Request replay must not create duplicate rows or mutate either wallet before settlement.
-select set_config('request.jwt.claim.sub','a4800000-0000-4000-8000-000000000001',true);
+select set_config('request.jwt.claim.sub','a4800000-0000-4000-8000-000000000001',false);
 select public.create_financial_transaction('deposit',1000,'Beldex',null,'a4800000-0000-4000-8000-000000000101','BDX');
 select public.create_financial_transaction('deposit',1000,'Beldex',null,'a4800000-0000-4000-8000-000000000101','BDX');
 do $request_idempotency$
@@ -150,7 +150,7 @@ end;
 $request_idempotency$;
 
 -- BDX settlement credits only BDX, and referral credit is BDX-only and idempotent.
-select set_config('request.jwt.claim.sub','a4800000-0000-4000-8000-000000000003',true);
+select set_config('request.jwt.claim.sub','a4800000-0000-4000-8000-000000000003',false);
 select public.admin_approve_transaction((select id from public.transaction where request_id='a4800000-0000-4000-8000-000000000101'),'synthetic BDX approval');
 select public.admin_settle_transaction((select id from public.transaction where request_id='a4800000-0000-4000-8000-000000000101'),'synthetic BDX settlement');
 do $referral_currency$
@@ -178,7 +178,7 @@ begin
  if (select available_balance from public.user_profile where user_id='a4800000-0000-4000-8000-000000000001')<>810 then raise exception 'BDX withdrawal changed USD'; end if;
 end;
 $bdx_reservation$;
-select set_config('request.jwt.claim.sub','a4800000-0000-4000-8000-000000000003',true);
+select set_config('request.jwt.claim.sub','a4800000-0000-4000-8000-000000000003',false);
 select public.admin_reject_transaction((select id from public.transaction where request_id='a4800000-0000-4000-8000-000000000102'),'synthetic BDX rejection');
 do $bdx_release$
 begin
@@ -199,7 +199,7 @@ begin
 end;
 $usd_funding$;
 
-select set_config('request.jwt.claim.sub','a4800000-0000-4000-8000-000000000001',true);
+select set_config('request.jwt.claim.sub','a4800000-0000-4000-8000-000000000001',false);
 do $ordinary_user_denial$
 begin
  begin
@@ -212,7 +212,7 @@ begin
 end;
 $ordinary_user_denial$;
 
-select set_config('request.jwt.claim.sub','a4800000-0000-4000-8000-000000000003',true);
+select set_config('request.jwt.claim.sub','a4800000-0000-4000-8000-000000000003',false);
 update public.user_profile set blocked=true where user_id='a4800000-0000-4000-8000-000000000001';
 do $blocked_target_denial$
 begin

@@ -4,7 +4,7 @@ create extension if not exists pgtap with schema extensions;
 -- Fully disposable model harness. All objects are TEMPORARY and the enclosing
 -- transaction is rolled back. This tests transaction semantics only; it does
 -- not install or call a production conversion RPC.
-select plan(18);
+select plan(20);
 
 create temporary table sim_wallet (
   user_id text primary key,
@@ -173,13 +173,20 @@ select is(pg_temp.simulate_atomic_conversion('cutover-1',0.10,'coingecko',now(),
 select is((select available_bdx from sim_wallet where user_id='user-a'),1260::numeric,
   'duplicate execution does not duplicate available BDX credit');
 
+-- A fresh synthetic account ensures the injected exception occurs after real
+-- wallet writes would have happened; the failed SQL statement must roll them back.
+insert into sim_wallet values ('user-c',25.00,15.00,2.00,3.00,4.00,1.00);
+insert into sim_investment values ('inv-fail','user-c','USD','active',10.00,1.00);
+
 select throws_ok(
-  $$select pg_temp.simulate_atomic_conversion('cutover-fail',0.10,'coingecko',now(),true)$$,
+  $select pg_temp.simulate_atomic_conversion('cutover-fail',0.10,'coingecko',now(),true)$,
   'P0001','forced mid-conversion failure',
   'forced failure aborts the conversion statement'
 );
-select is((select available_usd from sim_wallet where user_id='user-b'),0::numeric,
-  'failed conversion leaves unaffected zero USD wallet unchanged');
+select is((select available_usd from sim_wallet where user_id='user-c'),25.00::numeric,
+  'forced failure rolls back the wallet conversion update');
+select is((select currency from sim_investment where investment_id='inv-fail'),'USD',
+  'forced failure leaves later investment conversion unapplied');
 select is((select count(*)::integer from sim_conversion_run where conversion_id='cutover-fail'),0,
   'failed conversion leaves no partial conversion-run marker');
 

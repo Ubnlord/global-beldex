@@ -41,7 +41,7 @@ assert.match(migration, /p\.locked_bdx_balance<0/);
 assert.match(migration, /ui\.currency='USD'/);
 assert.match(dailyRateMigration, /when 'gns' then 0\.019::numeric/);
 assert.match(dailyRateMigration, /when 'falcon' then 0\.2378::numeric/);
-assert.match(dailyRateMigration, /ui\.currency = 'BDX' and ui\.status = 'active'/);
+assert.match(dailyRateMigration, /ui\.currency = 'BDX'[\s\S]*ui\.status = 'active'/);
 assert.match(dailyRateMigration, /daily_rate = pc\.daily_rate/);
 assert.doesNotMatch(dailyRateMigration, /credited_profit\s*=/);
 

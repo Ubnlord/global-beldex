@@ -1,4 +1,4 @@
--- Regression for the catalog-only daily ROI interpretation migration.
+-- Regression for the daily ROI correction, including active BDX investments and untouched USD snapshots.
 -- Execute only in the disposable local Supabase CI database, never against production.
 \set ON_ERROR_STOP on
 

@@ -181,7 +181,8 @@ begin
   end if;
 
   if v_tx.type='deposit' then
-    update public.user_profile      set bdx_balance=bdx_balance+v_tx.amount,
+    update public.user_profile
+      set bdx_balance=bdx_balance+v_tx.amount,
           total_deposits_bdx=total_deposits_bdx+v_tx.amount,
           updated_at=now()
       where user_id=v_tx.user_id;

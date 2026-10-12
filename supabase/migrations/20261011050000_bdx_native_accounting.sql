@@ -285,8 +285,11 @@ grant execute on function public.admin_adjust_balance(uuid,numeric,text) to auth
 
 
 -- Keep the admin funding RPC explicitly USD-denominated for legacy wallet funding.
--- The legacy overloads accepted defaulted reference arguments and caused ambiguous
--- calls; retire them so callers resolve to the canonical accounting functions.
+-- Production has the legacy three-argument overload, while earlier branches also
+-- created a four-argument overload with a default reference. Drop both before
+-- defining the canonical four-argument function, otherwise three-argument calls
+-- can resolve ambiguously or continue invoking the old USD-funding implementation.
+drop function if exists public.admin_fund_user(uuid,numeric,text);
 drop function if exists public.admin_fund_user(uuid,numeric,text,text);
 drop function if exists public.admin_adjust_balance(uuid,numeric,text,text);
 

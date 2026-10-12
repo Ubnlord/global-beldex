@@ -162,14 +162,14 @@ select policies_are('public', 'transaction_audit', array['transaction_audit_sele
 -- Source-level invariants for the two most sensitive admin balance RPCs.
 select ok(
   position('from public.admin_user' in pg_get_functiondef('public.admin_fund_user(uuid,numeric,text,text)'::regprocedure)) > 0
-  and position('v_admin_id' in pg_get_functiondef('public.admin_fund_user(uuid,numeric,text,text)'::regprocedure)) > 0,
+  and position('v_admin.id' in pg_get_functiondef('public.admin_fund_user(uuid,numeric,text,text)'::regprocedure)) > 0,
   'admin_fund_user resolves the audit actor through admin_user.id'
 );
 
 select ok(
-  position('p_amount <= 0' in pg_get_functiondef('public.admin_fund_user(uuid,numeric,text,text)'::regprocedure)) > 0
-  and position('reason is required' in pg_get_functiondef('public.admin_fund_user(uuid,numeric,text,text)'::regprocedure)) > 0
-  and position('v_profile.blocked' in pg_get_functiondef('public.admin_fund_user(uuid,numeric,text,text)'::regprocedure)) > 0,
+  position('p_amount <= 0' in regexp_replace(lower(pg_get_functiondef('public.admin_fund_user(uuid,numeric,text,text)'::regprocedure)), '\\s+', '', 'g')) > 0
+  and position('v_reasonisnull' in regexp_replace(lower(pg_get_functiondef('public.admin_fund_user(uuid,numeric,text,text)'::regprocedure)), '\\s+', '', 'g')) > 0
+  and position('coalesce(v_old.blocked,false)' in regexp_replace(lower(pg_get_functiondef('public.admin_fund_user(uuid,numeric,text,text)'::regprocedure)), '\\s+', '', 'g')) > 0,
   'admin_fund_user validates amount, reason, and blocked status'
 );
 

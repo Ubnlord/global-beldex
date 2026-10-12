@@ -57,13 +57,13 @@ select is(
   1,'duplicate request creates one ledger row'
 );
 select throws_ok(
-  $$select public.create_financial_transaction('withdraw',4000,'Beldex','4' || repeat('A',94),'a1100000-0000-4000-8000-000000000101','USD')$$,
+  $$$select public.create_financial_transaction('withdraw',4000,'Beldex','4' || repeat('A',94),'a1100000-0000-4000-8000-000000000101','USD')$$,
   'P0001','Request ID was already used for a different transaction',
   'reusing a request ID with a different currency is rejected'
 );
 
 select throws_ok(
-  $query$select public.create_financial_transaction('withdraw',4000,null,'4' || repeat('A',94),'a1100000-0000-4000-8000-000000000199','BDX')$query$,
+  $query$$select public.create_financial_transaction('withdraw',4000,null,'4' || repeat('A',94),'a1100000-0000-4000-8000-000000000199','BDX')$query$,
   'P0001','Invalid withdrawal method',
   'withdrawal RPC rejects a missing method'
 );
@@ -192,7 +192,7 @@ select is(
   1,'BDX adjustment creates an admin audit record'
 );
 select throws_ok(
-  $select public.admin_adjust_balance('a1100000-0000-4000-8000-000000000001'::uuid,1::numeric,'ordinary user must be denied'::text)$,
+  $$select public.admin_adjust_balance('a1100000-0000-4000-8000-000000000001'::uuid,1::numeric,'ordinary user must be denied'::text)$$,
   'P0001','Permission denied','ordinary user cannot invoke admin BDX adjustment'
 );
 
@@ -201,7 +201,7 @@ update public.user_profile set blocked=true
 where user_id='a1100000-0000-4000-8000-000000000001';
 select set_config('request.jwt.claim.sub','a1100000-0000-4000-8000-000000000001',true);
 select throws_ok(
-  $select public.create_financial_transaction('deposit',25::numeric,'Bank'::text,null::text,'a1100000-0000-4000-8000-000000000105'::uuid,'USD'::text)$,
+  $$select public.create_financial_transaction('deposit',25::numeric,'Bank'::text,null::text,'a1100000-0000-4000-8000-000000000105'::uuid,'USD'::text)$$,
   'P0001','User account is blocked','blocked user cannot create a financial request'
 );
 select is(

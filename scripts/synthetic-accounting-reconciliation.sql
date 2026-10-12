@@ -171,6 +171,7 @@ end;
 $referral_currency$;
 
 -- BDX withdrawal reserves and then restores only the BDX wallet.
+select set_config('request.jwt.claim.sub','a4800000-0000-4000-8000-000000000001',false);
 select public.create_financial_transaction('withdraw',4000,'Beldex','4'||repeat('A',94),'a4800000-0000-4000-8000-000000000102','BDX');
 do $bdx_reservation$
 begin

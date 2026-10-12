@@ -36,76 +36,225 @@ grant execute on function public.credit_referral_for_deposit(uuid) to service_ro
 
 alter table public.user_profile drop column if exists referral_earnings_bdx;
 
--- Observed production's three-argument legacy funding overload.
+-- Match the observed production three-argument legacy funding overload exactly.
+-- Production does not currently have the four-argument overload; the migration
+-- adds it only after retiring the old entry point.
 drop function if exists public.admin_fund_user(uuid,numeric,text);
-create function public.admin_fund_user(p_user_id uuid,p_amount numeric,p_reason text)
+drop function if exists public.admin_fund_user(uuid,numeric,text,text);
+create function public.admin_fund_user(p_user_id uuid, p_amount numeric, p_reason text)
 returns public.user_profile
-language plpgsql security definer
+language plpgsql
+security definer
 set search_path = pg_catalog, public, pg_temp
 as $fixture$
-declare v_profile public.user_profile;
+declare
+  v_profile public.user_profile;
+  v_admin_id uuid;
+  v_before numeric;
+  v_reason text := nullif(btrim(coalesce(p_reason,'')), '');
 begin
-  if not public.is_admin() or not public.admin_has_permission('approve_transactions') then
-    raise exception 'Permission denied';
+  select id into v_admin_id
+  from public.admin_user
+  where user_id = auth.uid();
+
+  if v_admin_id is null or not public.admin_has_permission('approve_transactions') then
+    raise exception 'not authorized';
   end if;
-  if p_user_id is null or p_amount is null or p_amount <= 0 or nullif(trim(coalesce(p_reason,'')),'') is null then
-    raise exception 'Invalid funding request';
+
+  if p_user_id is null or p_amount is null or p_amount <= 0 then
+    raise exception 'invalid funding request';
   end if;
-  update public.user_profile set available_balance=available_balance+p_amount,updated_at=now()
-    where user_id=p_user_id returning * into v_profile;
-  if v_profile.user_id is null then raise exception 'User profile not found'; end if;
+
+  if v_reason is null then
+    raise exception 'reason is required';
+  end if;
+
+  select * into v_profile
+  from public.user_profile
+  where user_id = p_user_id
+  for update;
+
+  if not found then
+    raise exception 'user profile not found';
+  end if;
+
+  if v_profile.blocked then
+    raise exception 'blocked user cannot receive funding';
+  end if;
+
+  v_before := v_profile.available_balance;
+
+  update public.user_profile
+  set available_balance = available_balance + p_amount,
+      updated_at = now()
+  where user_id = p_user_id
+  returning * into v_profile;
+
+  insert into public.transaction
+    (user_id,type,amount,status,method,note,approved_by,approval_status,approval_reason,approved_at,settled_at,created_at)
+  values
+    (p_user_id,'bonus',p_amount,'completed','admin',v_reason,v_admin_id,'approved',v_reason,now(),now(),now());
+
+  insert into public.admin_action_audit
+    (admin_id,user_id,action,target_id,old_values,new_values,reason,created_at)
+  values
+    (v_admin_id,p_user_id,'fund_user',p_user_id,
+     jsonb_build_object('available_balance',v_before),
+     jsonb_build_object('available_balance',v_profile.available_balance),
+     v_reason,now());
+
   return v_profile;
 end;
 $fixture$;
 revoke all on function public.admin_fund_user(uuid,numeric,text) from public, anon;
-grant execute on function public.admin_fund_user(uuid,numeric,text) to authenticated, service_role;
+grant execute on function public.admin_fund_user(uuid,numeric,text) to authenticated, postgres, service_role;
 
--- Simulate the previously deployed four-argument overload with a defaulted reference.
-drop function if exists public.admin_fund_user(uuid,numeric,text,text);
-create function public.admin_fund_user(p_user_id uuid,p_amount numeric,p_reason text,p_reference text default null)
-returns public.user_profile
-language sql security definer
-set search_path = pg_catalog, public, pg_temp
-as $fixture$
-  update public.user_profile set available_balance=available_balance+p_amount,updated_at=now()
-  where user_id=p_user_id returning *;
-$fixture$;
-revoke all on function public.admin_fund_user(uuid,numeric,text,text) from public, anon;
-grant execute on function public.admin_fund_user(uuid,numeric,text,text) to authenticated, service_role;
-
--- Simulate the legacy five-argument transaction RPC overload. The migration must
--- retire this signature so calls cannot resolve to stale USD-wallet logic.
+-- Preserve the observed legacy five-argument transaction RPC body and grants.
+-- The six-argument currency-aware overload remains present, as in production.
 drop function if exists public.create_financial_transaction(text,numeric,text,text,uuid);
 create function public.create_financial_transaction(
-  p_type text,p_amount numeric,p_method text default null,p_note text default null,p_request_id uuid default null
+  p_type text, p_amount numeric, p_method text default null,
+  p_note text default null, p_request_id uuid default null
 )
 returns public.transaction
-language plpgsql security definer
+language plpgsql
+security definer
 set search_path = pg_catalog, public, pg_temp
 as $fixture$
-declare v_uid uuid := auth.uid(); v_tx public.transaction;
+declare
+  v_tx public.transaction;
+  v_uid uuid := auth.uid();
+  v_address text := btrim(coalesce(p_note, ''));
 begin
   if v_uid is null then raise exception 'Unauthorized'; end if;
+
+  if p_type not in ('deposit','withdraw') then
+    raise exception 'Invalid transaction type';
+  end if;
+
+  if p_amount is null or p_amount <= 0 then
+    raise exception 'Amount must be greater than zero';
+  end if;
+
+  if p_type = 'withdraw' then
+    if p_method = 'Beldex' then
+      if p_amount < 293.984 then
+        raise exception 'Minimum Beldex withdrawal is 4000 BDX (293.984 USD)';
+      end if;
+    elsif p_amount < 300 then
+      raise exception 'Minimum withdrawal is 300';
+    end if;
+
+    if p_method not in ('Bitcoin', 'Ethereum', 'Beldex') then
+      raise exception 'Invalid withdrawal method';
+    end if;
+
+    if v_address = '' then
+      raise exception 'Please enter a destination address';
+    end if;
+
+    if p_method = 'Ethereum' and v_address !~ '^0x[0-9A-Fa-f]{40}$' then
+      raise exception 'Invalid Ethereum destination address';
+    end if;
+
+    if p_method = 'Bitcoin'
+      and v_address !~* '^bc1[ac-hj-np-z02-9]{11,71}$'
+      and v_address !~ '^[13][1-9A-HJ-NP-Za-km-z]{25,34}$'
+    then
+      raise exception 'Invalid Bitcoin destination address';
+    end if;
+
+    if p_method = 'Beldex'
+      and (v_address !~ '^[1-9A-HJ-NP-Za-km-z]+$'
+        or length(v_address) < 90 or length(v_address) > 110)
+    then
+      raise exception 'Invalid Beldex destination address';
+    end if;
+  end if;
+
+  perform public.assert_user_can_transact(v_uid);
+
+  if p_request_id is not null then
+    select * into v_tx
+    from public.transaction
+    where user_id = v_uid and request_id = p_request_id
+    limit 1;
+    if found then return v_tx; end if;
+  end if;
+
+  if p_type = 'withdraw' then
+    update public.user_profile
+    set available_balance = available_balance - p_amount, updated_at = now()
+    where user_id = v_uid and available_balance >= p_amount;
+    if not found then raise exception 'Insufficient balance'; end if;
+  end if;
+
   insert into public.transaction(user_id,type,amount,status,approval_status,method,note,request_id)
-  values(v_uid,p_type,p_amount,'pending','awaiting',p_method,p_note,p_request_id)
+  values (v_uid,p_type,p_amount,'pending','awaiting',p_method,v_address,p_request_id)
   returning * into v_tx;
+
   return v_tx;
+exception
+  when unique_violation then
+    if p_request_id is not null then
+      select * into v_tx
+      from public.transaction
+      where user_id = v_uid and request_id = p_request_id
+      limit 1;
+      if found then return v_tx; end if;
+    end if;
+    raise;
 end;
 $fixture$;
 revoke all on function public.create_financial_transaction(text,numeric,text,text,uuid) from public, anon;
-grant execute on function public.create_financial_transaction(text,numeric,text,text,uuid) to authenticated, service_role;
+grant execute on function public.create_financial_transaction(text,numeric,text,text,uuid) to authenticated, postgres, service_role;
 
--- A historical four-argument adjustment overload existed in earlier schema variants.
+-- Production has the three-argument adjustment function only. The repository
+-- migration may safely drop a stale four-argument variant if one is ever present.
 drop function if exists public.admin_adjust_balance(uuid,numeric,text,text);
-create function public.admin_adjust_balance(p_user_id uuid,p_delta numeric,p_reason text,p_currency text)
-returns public.user_profile
-language sql security definer
-set search_path = pg_catalog, public, pg_temp
-as $fixture$
-  update public.user_profile set available_balance=available_balance+p_delta,updated_at=now()
-  where user_id=p_user_id returning *;
-$fixture$;
-revoke all on function public.admin_adjust_balance(uuid,numeric,text,text) from public, anon;
-grant execute on function public.admin_adjust_balance(uuid,numeric,text,text) to authenticated, service_role;
+
+-- Fail closed if the reconstructed pre-migration schema drifts from observed production.
+do $assert_production_shape$
+begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema='public' and table_name='user_profile'
+      and column_name='referral_earnings_bdx'
+  ) then
+    raise exception 'fixture mismatch: referral_earnings_bdx should be absent before recovery migration';
+  end if;
+  if to_regprocedure('public.admin_fund_user(uuid,numeric,text)') is null
+     or to_regprocedure('public.admin_fund_user(uuid,numeric,text,text)') is not null then
+    raise exception 'fixture mismatch: expected only the production three-argument admin_fund_user overload';
+  end if;
+  if to_regprocedure('public.admin_adjust_balance(uuid,numeric,text)') is null
+     or to_regprocedure('public.admin_adjust_balance(uuid,numeric,text,text)') is not null then
+    raise exception 'fixture mismatch: expected only the production three-argument admin_adjust_balance overload';
+  end if;
+  if to_regprocedure('public.create_financial_transaction(text,numeric,text,text,uuid)') is null
+     or to_regprocedure('public.create_financial_transaction(text,numeric,text,text,uuid,text)') is null then
+    raise exception 'fixture mismatch: expected both observed create_financial_transaction overloads';
+  end if;
+  if not has_function_privilege('authenticated','public.admin_fund_user(uuid,numeric,text)','EXECUTE')
+     or not has_function_privilege('service_role','public.admin_fund_user(uuid,numeric,text)','EXECUTE')
+     or has_function_privilege('anon','public.admin_fund_user(uuid,numeric,text)','EXECUTE') then
+    raise exception 'fixture mismatch: admin_fund_user grants differ from observed production grants';
+  end if;
+  if not has_function_privilege('authenticated','public.create_financial_transaction(text,numeric,text,text,uuid)','EXECUTE')
+     or not has_function_privilege('service_role','public.create_financial_transaction(text,numeric,text,text,uuid)','EXECUTE')
+     or has_function_privilege('anon','public.create_financial_transaction(text,numeric,text,text,uuid)','EXECUTE') then
+    raise exception 'fixture mismatch: legacy transaction RPC grants differ from observed production grants';
+  end if;
+  if not exists (
+    select 1 from information_schema.columns
+    where table_schema='public' and table_name='transaction' and column_name='currency'
+  ) or not exists (
+    select 1 from information_schema.columns
+    where table_schema='public' and table_name='user_investment' and column_name='currency'
+  ) then
+    raise exception 'fixture mismatch: expected observed currency columns on ledger and investments';
+  end if;
+end;
+$assert_production_shape$;
 
 commit;

@@ -1,7 +1,28 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(39);
+select plan(47);
+
+-- Production compatibility gate: the legacy three-argument funding overload must
+-- be gone so calls with three arguments resolve to the canonical defaulted RPC.
+select is(
+  to_regprocedure('public.admin_fund_user(uuid,numeric,text)')::text,
+  null::text,
+  'legacy three-argument admin_fund_user overload is removed'
+);
+select isnt(
+  to_regprocedure('public.admin_fund_user(uuid,numeric,text,text)')::text,
+  null::text,
+  'canonical four-argument admin_fund_user RPC exists'
+);
+select ok(
+  has_function_privilege('authenticated','public.admin_fund_user(uuid,numeric,text,text)','EXECUTE'),
+  'authenticated role has the intended admin RPC grant (function enforces admin permission)'
+);
+select ok(
+  not has_function_privilege('anon','public.admin_fund_user(uuid,numeric,text,text)','EXECUTE'),
+  'anonymous role cannot execute the admin funding RPC'
+);
 
 -- Isolated identities and balances; transaction rollback leaves no fixture data.
 insert into auth.users (
@@ -153,6 +174,36 @@ select is(
   round((50/(293.984/4000) + 500)*0.10,18),'referral earnings are recorded in the BDX-specific total'
 );
 
+-- Replaying the referral-credit RPC for an already-credited BDX deposit must
+-- not duplicate either the referrer wallet credit or the BDX referral counter.
+create temporary table referral_balance_before as
+select bdx_balance, referral_earnings_bdx
+from public.user_profile
+where user_id='a1100000-0000-4000-8000-000000000003';
+select is(
+  public.credit_referral_for_deposit((select id from public.transaction where request_id='a1100000-0000-4000-8000-000000000104')),
+  0::numeric,
+  'referral credit replay for a completed BDX deposit is idempotent'
+);
+select is(
+  (select bdx_balance from public.user_profile where user_id='a1100000-0000-4000-8000-000000000003'),
+  (select bdx_balance from referral_balance_before),
+  'replaying referral credit leaves referrer BDX balance unchanged'
+);
+
+-- Legacy USD deposits are not eligible for BDX referral credit.
+insert into public.transaction(user_id,type,amount,currency,status,approval_status,method,note)
+values ('a1100000-0000-4000-8000-000000000001','deposit',100,'USD','completed','approved','Bank','legacy USD referral exclusion fixture');
+select is(
+  public.credit_referral_for_deposit((select id from public.transaction where note='legacy USD referral exclusion fixture')),
+  0::numeric,
+  'legacy USD deposit does not trigger BDX referral credit'
+);
+select is(
+  (select referral_earnings_bdx from public.user_profile where user_id='a1100000-0000-4000-8000-000000000003'),
+  (select referral_earnings_bdx from referral_balance_before),
+  'legacy USD deposit leaves BDX referral earnings unchanged'
+);
 
 -- Isolated admin-console RPC integration: funding is legacy USD, adjustment is BDX.
 select set_config('request.jwt.claim.sub','a1100000-0000-4000-8000-000000000002',true);

@@ -75,6 +75,13 @@ jobs:
         working-directory: .security-test
         run: supabase test db
 
+      - name: Verify daily-rate catalog correction preserves historical snapshots
+        working-directory: .security-test
+        run: |
+          set -euo pipefail
+          eval "$(supabase status -o env)"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f ../scripts/test-daily-rate-catalog-only.sql
+
       - name: Validate read-only legacy inventory on isolated database
         if: ${{ hashFiles('scripts/bdx-legacy-inventory.readonly.sql') != '' }}
         working-directory: .security-test

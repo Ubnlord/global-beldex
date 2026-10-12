@@ -93,7 +93,7 @@ select ok(exists (
 ), 'plan daily rate cannot be negative');
 
 -- Critical RPC signatures and security-definer status.
-select has_function('public', 'admin_fund_user', array['uuid','numeric','text'], 'admin_fund_user signature');
+select has_function('public', 'admin_fund_user', array['uuid','numeric','text','text'], 'admin_fund_user canonical four-argument signature');
 select has_function('public', 'admin_adjust_balance', array['uuid','numeric','text'], 'admin_adjust_balance signature');
 select has_function('public', 'admin_approve_deposit', array['uuid','text'], 'admin_approve_deposit signature');
 select has_function('public', 'admin_reject_deposit', array['uuid','text'], 'admin_reject_deposit signature');
@@ -101,7 +101,7 @@ select has_function('public', 'admin_approve_withdrawal', array['uuid','text'], 
 select has_function('public', 'admin_reject_withdrawal', array['uuid','text'], 'admin_reject_withdrawal signature');
 select has_function('public', 'admin_manage_investment', array['uuid','numeric','text','text'], 'admin_manage_investment signature');
 
-select is_definer('public', 'admin_fund_user', array['uuid','numeric','text'], 'admin_fund_user is security definer');
+select is_definer('public', 'admin_fund_user', array['uuid','numeric','text','text'], 'admin_fund_user is security definer');
 select is_definer('public', 'admin_adjust_balance', array['uuid','numeric','text'], 'admin_adjust_balance is security definer');
 select is_definer('public', 'admin_approve_deposit', array['uuid','text'], 'admin_approve_deposit is security definer');
 select is_definer('public', 'admin_reject_deposit', array['uuid','text'], 'admin_reject_deposit is security definer');
@@ -110,7 +110,7 @@ select is_definer('public', 'admin_reject_withdrawal', array['uuid','text'], 'ad
 select is_definer('public', 'admin_manage_investment', array['uuid','numeric','text','text'], 'admin_manage_investment is security definer');
 
 -- Financial admin RPC execution is never anonymous.
-select function_privs_are('public', 'admin_fund_user', array['uuid','numeric','text'], 'anon', '{}', 'anon cannot execute admin_fund_user');
+select function_privs_are('public', 'admin_fund_user', array['uuid','numeric','text','text'], 'anon', '{}', 'anon cannot execute admin_fund_user');
 select function_privs_are('public', 'admin_adjust_balance', array['uuid','numeric','text'], 'anon', '{}', 'anon cannot execute admin_adjust_balance');
 select function_privs_are('public', 'admin_approve_deposit', array['uuid','text'], 'anon', '{}', 'anon cannot execute admin_approve_deposit');
 select function_privs_are('public', 'admin_reject_deposit', array['uuid','text'], 'anon', '{}', 'anon cannot execute admin_reject_deposit');
@@ -119,7 +119,7 @@ select function_privs_are('public', 'admin_reject_withdrawal', array['uuid','tex
 select function_privs_are('public', 'admin_manage_investment', array['uuid','numeric','text','text'], 'anon', '{}', 'anon cannot execute admin_manage_investment');
 
 -- Client-facing execution is authenticated-only where intended.
-select function_privs_are('public', 'admin_fund_user', array['uuid','numeric','text'], 'authenticated', array['EXECUTE'], 'authenticated can reach admin_fund_user; function enforces permission');
+select function_privs_are('public', 'admin_fund_user', array['uuid','numeric','text','text'], 'authenticated', array['EXECUTE'], 'authenticated can reach admin_fund_user; function enforces permission');
 select function_privs_are('public', 'admin_adjust_balance', array['uuid','numeric','text'], 'authenticated', array['EXECUTE'], 'authenticated can reach admin_adjust_balance; function enforces permission');
 
 select function_privs_are('public', 'create_financial_transaction', array['text','numeric','text','text','uuid','text'], 'authenticated', array['EXECUTE'], 'authenticated can create financial requests');
@@ -161,15 +161,15 @@ select policies_are('public', 'transaction_audit', array['transaction_audit_sele
 
 -- Source-level invariants for the two most sensitive admin balance RPCs.
 select ok(
-  position('from public.admin_user' in pg_get_functiondef('public.admin_fund_user(uuid,numeric,text)'::regprocedure)) > 0
-  and position('v_admin_id' in pg_get_functiondef('public.admin_fund_user(uuid,numeric,text)'::regprocedure)) > 0,
+  position('from public.admin_user' in pg_get_functiondef('public.admin_fund_user(uuid,numeric,text,text)'::regprocedure)) > 0
+  and position('v_admin_id' in pg_get_functiondef('public.admin_fund_user(uuid,numeric,text,text)'::regprocedure)) > 0,
   'admin_fund_user resolves the audit actor through admin_user.id'
 );
 
 select ok(
-  position('p_amount <= 0' in pg_get_functiondef('public.admin_fund_user(uuid,numeric,text)'::regprocedure)) > 0
-  and position('reason is required' in pg_get_functiondef('public.admin_fund_user(uuid,numeric,text)'::regprocedure)) > 0
-  and position('v_profile.blocked' in pg_get_functiondef('public.admin_fund_user(uuid,numeric,text)'::regprocedure)) > 0,
+  position('p_amount <= 0' in pg_get_functiondef('public.admin_fund_user(uuid,numeric,text,text)'::regprocedure)) > 0
+  and position('reason is required' in pg_get_functiondef('public.admin_fund_user(uuid,numeric,text,text)'::regprocedure)) > 0
+  and position('v_profile.blocked' in pg_get_functiondef('public.admin_fund_user(uuid,numeric,text,text)'::regprocedure)) > 0,
   'admin_fund_user validates amount, reason, and blocked status'
 );
 

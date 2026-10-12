@@ -179,7 +179,7 @@ insert into sim_wallet values ('user-c',25.00,15.00,2.00,3.00,4.00,1.00);
 insert into sim_investment values ('inv-fail','user-c','USD','active',10.00,1.00);
 
 select throws_ok(
-  $select pg_temp.simulate_atomic_conversion('cutover-fail',0.10,'coingecko',now(),true)$,
+  $$select pg_temp.simulate_atomic_conversion('cutover-fail',0.10,'coingecko',now(),true)$$,
   'P0001','forced mid-conversion failure',
   'forced failure aborts the conversion statement'
 );

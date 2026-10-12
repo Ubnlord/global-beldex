@@ -3,13 +3,13 @@ create extension if not exists pgtap with schema extensions;
 select plan(16);
 
 -- Assert the database catalog contains all seven published daily rates.
-select is((select daily_rate from public.investment_plan_catalog where id='gns'),0.019::numeric,'GNS catalog daily rate');
-select is((select daily_rate from public.investment_plan_catalog where id='build'),0.0251::numeric,'BUILD UP catalog daily rate');
-select is((select daily_rate from public.investment_plan_catalog where id='follow'),0.0392::numeric,'FOLLOW UP catalog daily rate');
-select is((select daily_rate from public.investment_plan_catalog where id='apex'),0.0856::numeric,'APEX catalog daily rate');
-select is((select daily_rate from public.investment_plan_catalog where id='edifex'),0.1343::numeric,'EDIFEX catalog daily rate');
-select is((select daily_rate from public.investment_plan_catalog where id='dixon'),0.1543::numeric,'DIXON catalog daily rate');
-select is((select daily_rate from public.investment_plan_catalog where id='falcon'),0.2378::numeric,'FALCON catalog daily rate');
+select is((select daily_rate from public.investment_plan_catalog where id='gns'),round(0.019::numeric / 30,18),'GNS daily rate equals published ROI divided by 30 days');
+select is((select daily_rate from public.investment_plan_catalog where id='build'),round(0.0251::numeric / 60,18),'BUILD UP daily rate equals published ROI divided by 60 days');
+select is((select daily_rate from public.investment_plan_catalog where id='follow'),round(0.0392::numeric / 60,18),'FOLLOW UP daily rate equals published ROI divided by 60 days');
+select is((select daily_rate from public.investment_plan_catalog where id='apex'),round(0.0856::numeric / 365,18),'APEX daily rate equals published ROI divided by 365 days');
+select is((select daily_rate from public.investment_plan_catalog where id='edifex'),round(0.1343::numeric / 730,18),'EDIFEX daily rate equals published ROI divided by 730 days');
+select is((select daily_rate from public.investment_plan_catalog where id='dixon'),round(0.1543::numeric / 730,18),'DIXON daily rate equals published ROI divided by 730 days');
+select is((select daily_rate from public.investment_plan_catalog where id='falcon'),round(0.2378::numeric / 1825,18),'FALCON daily rate equals published ROI divided by 1825 days');
 
 insert into auth.users (
   id, aud, role, email, encrypted_password, email_confirmed_at,

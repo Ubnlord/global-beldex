@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(38);
+select plan(39);
 
 -- Isolated identities and balances; transaction rollback leaves no fixture data.
 insert into auth.users (
@@ -191,12 +191,17 @@ select is(
    where user_id='a1100000-0000-4000-8000-000000000001' and action='adjust_bdx_balance' and reason='integration test BDX adjustment'),
   1,'BDX adjustment creates an admin audit record'
 );
+select set_config('request.jwt.claim.sub','a1100000-0000-4000-8000-000000000001',true);
 select throws_ok(
-  $$select public.admin_adjust_balance('a1100000-0000-4000-8000-000000000001'::uuid,1::numeric,'ordinary user must be denied'::text)$$,
+  $select public.admin_adjust_balance('a1100000-0000-4000-8000-000000000001'::uuid,1::numeric,'ordinary user must be denied'::text)$,
   'P0001','Permission denied','ordinary user cannot invoke admin BDX adjustment'
 );
 
 -- Blocked users cannot create financial requests; balances and ledger remain unchanged.
+create temporary table blocked_user_balance_before as
+select user_id, available_balance, bdx_balance
+from public.user_profile
+where user_id='a1100000-0000-4000-8000-000000000001';
 update public.user_profile set blocked=true
 where user_id='a1100000-0000-4000-8000-000000000001';
 select set_config('request.jwt.claim.sub','a1100000-0000-4000-8000-000000000001',true);
@@ -206,8 +211,13 @@ select throws_ok(
 );
 select is(
   (select bdx_balance from public.user_profile where user_id='a1100000-0000-4000-8000-000000000001'),
-  round(10000 - (300/(293.984/4000)) + (50/(293.984/4000)) + 500 + 250,18),
+  (select bdx_balance from blocked_user_balance_before),
   'blocked financial request leaves BDX balance unchanged'
+);
+select is(
+  (select available_balance from public.user_profile where user_id='a1100000-0000-4000-8000-000000000001'),
+  (select available_balance from blocked_user_balance_before),
+  'blocked financial request leaves legacy USD balance unchanged'
 );
 select is(
   (select count(*)::integer from public.transaction where user_id='a1100000-0000-4000-8000-000000000001' and request_id='a1100000-0000-4000-8000-000000000105'),

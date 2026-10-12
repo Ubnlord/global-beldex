@@ -231,6 +231,7 @@ values
   ('20261010053557','correct_gns_daily_interest_rate',null,'observed production history'),
   ('20261010110000','correct_other_plan_daily_interest',null,'observed production history'),
   ('20261011054325','20261011010000_bdx_native_investments','20261011010000_bdx_native_investments.sql','version/name drift; match by migration content'),
+  ('20261011054333','20261011020000_currency_aware_wallet_transactions','20261011020000_currency_aware_wallet_transactions.sql','version/name drift; match by migration content'),
   ('20261011054340','20261011030000_currency_reconciliation_v2','20261011030000_currency_reconciliation_v2.sql','version/name drift; match by migration content'),
   ('20261011054348','20261011040000_currency_schema_recovery_guard','20261011040000_currency_schema_recovery_guard.sql','version/name drift; match by migration content');
 
@@ -266,10 +267,13 @@ begin
      or has_function_privilege('anon','public.create_financial_transaction(text,numeric,text,text,uuid)','EXECUTE') then
     raise exception 'fixture mismatch: legacy transaction RPC grants differ from observed production grants';
   end if;
-  if (select count(*) from _production_schema_migration_history_fixture) <> 5
+  if (select count(*) from _production_schema_migration_history_fixture) <> 6
      or not exists (select 1 from _production_schema_migration_history_fixture
                     where production_version='20261011054348'
                       and production_name='20261011040000_currency_schema_recovery_guard')
+     or not exists (select 1 from _production_schema_migration_history_fixture
+                    where production_version='20261011054333'
+                      and production_name='20261011020000_currency_aware_wallet_transactions')
      or not exists (select 1 from _production_schema_migration_history_fixture
                     where production_version='20261011054340'
                       and production_name='20261011030000_currency_reconciliation_v2')

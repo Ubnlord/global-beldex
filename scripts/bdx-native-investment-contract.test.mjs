@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 const migration = readFileSync(new URL("../supabase/migrations/20261011010000_bdx_native_investments.sql", import.meta.url), "utf8");
+const dailyRateMigration = readFileSync(new URL("../supabase/migrations/20261012180000_bdx_daily_roi_full_rate.sql", import.meta.url), "utf8");
 const store = readFileSync(new URL("../src/lib/platform/store.ts", import.meta.url), "utf8");
 const books = readFileSync(new URL("../src/lib/supabase/books.ts", import.meta.url), "utf8");
 const admin = readFileSync(new URL("../src/routes/admin.tsx", import.meta.url), "utf8");
@@ -38,5 +39,10 @@ assert.match(admin, /user\.locked_bdx_balance/);
 assert.match(migration, /create or replace function public\.admin_search_users_bdx/);
 assert.match(migration, /p\.locked_bdx_balance<0/);
 assert.match(migration, /ui\.currency='USD'/);
+assert.match(dailyRateMigration, /when 'gns' then 0\.019::numeric/);
+assert.match(dailyRateMigration, /when 'falcon' then 0\.2378::numeric/);
+assert.match(dailyRateMigration, /ui\.currency = 'BDX' and ui\.status = 'active'/);
+assert.match(dailyRateMigration, /daily_rate = pc\.daily_rate/);
+assert.doesNotMatch(dailyRateMigration, /credited_profit\s*=/);
 
 console.log("BDX investment accounting contract checks passed.");

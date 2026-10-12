@@ -29,6 +29,7 @@ export function PlanCard({
         <Line text={`${t.minDepositLabel}: ${plan.min.toLocaleString()} BDX`} />
         <Line text={`${t.maxDepositLabel}: ${planMaxLabel(lang, plan.max)}`} />
         <Line text={`${t.expectedProfit}: ${plan.profit}`} />
+        <Line text={`Daily profit at minimum: ${(plan.min * plan.dailyPct / 100).toLocaleString(undefined, { maximumFractionDigits: 8 })} BDX/day`} />
         <Line text={`${t.duration}: ${plan.duration}`} />
       </div>
       <Button className="mt-4 w-full" onClick={() => onAction(plan)}>

@@ -192,7 +192,7 @@ select is(
   1,'BDX adjustment creates an admin audit record'
 );
 select throws_ok(
-  $select public.admin_adjust_balance('a1100000-0000-4000-8000-000000000001',1,'ordinary user must be denied')$,
+  $select public.admin_adjust_balance('a1100000-0000-4000-8000-000000000001'::uuid,1::numeric,'ordinary user must be denied'::text)$,
   'P0001','Permission denied','ordinary user cannot invoke admin BDX adjustment'
 );
 
@@ -201,7 +201,7 @@ update public.user_profile set blocked=true
 where user_id='a1100000-0000-4000-8000-000000000001';
 select set_config('request.jwt.claim.sub','a1100000-0000-4000-8000-000000000001',true);
 select throws_ok(
-  $select public.create_financial_transaction('deposit',25,'Bank',null,'a1100000-0000-4000-8000-000000000105','USD')$,
+  $select public.create_financial_transaction('deposit',25::numeric,'Bank'::text,null::text,'a1100000-0000-4000-8000-000000000105'::uuid,'USD'::text)$,
   'P0001','User account is blocked','blocked user cannot create a financial request'
 );
 select is(

@@ -67,7 +67,7 @@ try {
     assert.deepEqual(results.map(r => r.rows[0].result).sort(), ["already_converted", "converted"]);
     const state = await admin.query(`select available_usd, available_bdx from ${schema}.account_state where user_id='race-account'`);
     assert.equal(Number(state.rows[0].available_usd), 0, "source USD balance must be zero after conversion");
-    assert.equal(state.rows[0].available_bdx, "1000");
+    assert.equal(Number(state.rows[0].available_bdx), 1000, "destination BDX balance must be credited exactly once");
     const runs = await admin.query(`select count(*)::int as n from ${schema}.conversion_run`);
     const maps = await admin.query(`select count(*)::int as n from ${schema}.audit_map`);
     assert.equal(runs.rows[0].n, 1, "concurrent same-ID attempts must produce one run row");

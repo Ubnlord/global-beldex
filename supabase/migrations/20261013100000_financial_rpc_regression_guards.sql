@@ -4,10 +4,11 @@ begin;
 -- p_currency defaulted, so legacy five-argument callers resolve to that
 -- implementation and receive its request-ID consistency checks.
 drop function if exists public.create_financial_transaction(text,numeric,text,text,uuid);
+drop function if exists public.create_financial_transaction(text,numeric,text,text,uuid,text);
 
 -- Preserve five-argument callers by making the currency-aware overload's
 -- final parameter default to USD after removing the unsafe five-argument body.
-create or replace function public.create_financial_transaction(
+create function public.create_financial_transaction(
   p_type text,
   p_amount numeric,
   p_method text,

@@ -146,20 +146,31 @@ select ok(
   to_regprocedure('public.create_financial_transaction(text,numeric,text,text,uuid)') is null,
   'unsafe five-argument overload is not callable as a distinct function'
 );
+
+-- Create the original six-argument request first. USD input is converted into
+-- BDX ledger units; retries must be compared against the submitted input metadata.
+select ok(
+  (select count(*) = 1 from (
+    select (public.create_financial_transaction('deposit',31,'test','six arg original',
+      'a3100000-0000-4000-8000-000000000098'::uuid,'USD')).id
+  ) created),
+  'six-argument original transaction request is created'
+);
+select ok(
+  (select round(amount,12)=round(31::numeric/(293.984::numeric/4000),12)
+      and currency='BDX'
+      and (note::jsonb->>'input_currency')='USD'
+      and (note::jsonb->>'input_amount')='31'
+   from public.transaction
+   where user_id='a3100000-0000-4000-8000-000000000002'
+     and request_id='a3100000-0000-4000-8000-000000000098'::uuid),
+  'USD input is normalized to BDX ledger amount with original input metadata preserved'
+);
 select throws_ok(
   $exception$select public.create_financial_transaction('withdraw',31,'test','six arg changed type',
     'a3100000-0000-4000-8000-000000000098'::uuid,'USD')$exception$,
   'P0001','Request ID was already used for a different transaction',
-  'six-argument overload rejects a conflicting transaction type retry'
-);
-
--- Six-argument overload must reject conflicting retries independently of the
--- legacy five-argument call (which resolves to this function after migration).
-select is(
-  (public.create_financial_transaction('deposit',31,'test','six arg original',
-    'a3100000-0000-4000-8000-000000000098'::uuid,'USD')).amount,
-  31::numeric,
-  'six-argument transaction request is created'
+  'six-argument overload rejects a conflicting transaction type retry after original request'
 );
 select throws_ok(
   $exception$select public.create_financial_transaction('deposit',32,'test','six arg changed amount',
@@ -175,16 +186,19 @@ select throws_ok(
 );
 
 -- The published plan catalog daily rate is the cap; no arbitrary global rate
--- is introduced. Blocked users may not have investment parameters modified.
+-- is introduced. Restore the admin JWT before testing this authorization-protected RPC.
+select set_config('request.jwt.claim.sub','a3100000-0000-4000-8000-000000000001',true);
 select throws_ok(
   $exception$select public.admin_update_investment('a3100000-0000-4000-8000-000000000011',1.0,true)$exception$,
   'P0001','Daily rate exceeds published plan rate',
   'investment rate cannot exceed its published plan rate'
 );
 
--- Restore the settlement permission after the manage_users-only investment checks.
+-- Restore the settlement permission and admin JWT after the user-originated
+-- transaction tests, so settlement assertions reach state-policy checks.
 update public.admin_user set permissions=array['manage_users','approve_transactions']::text[]
 where user_id='a3100000-0000-4000-8000-000000000001';
+select set_config('request.jwt.claim.sub','a3100000-0000-4000-8000-000000000001',true);
 
 -- Settlement requires a pending source state, even when approval_status is
 -- accidentally/legacy marked approved. These fixtures are isolated.

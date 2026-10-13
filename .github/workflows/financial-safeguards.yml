@@ -88,6 +88,7 @@ jobs:
             END IF;
           END \$assert\$;"
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f ../scripts/synthetic-accounting-reconciliation.sql
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f ../supabase/migrations/20261013100000_financial_rpc_regression_guards.sql
 
       - name: Run pgTAP safeguards against reconstructed production schema
         working-directory: .security-test

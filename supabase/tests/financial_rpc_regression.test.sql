@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(28);
+select plan(30);
 
 -- Disposable rows only. The test suite is run against the isolated local
 -- Supabase database; no production account or transaction is referenced.
@@ -141,6 +141,17 @@ select throws_ok(
   'reused request ID with a different type is rejected'
 );
 
+
+select ok(
+  to_regprocedure('public.create_financial_transaction(text,numeric,text,text,uuid)') is null,
+  'unsafe five-argument overload is not callable as a distinct function'
+);
+select throws_ok(
+  $select public.create_financial_transaction('withdraw',31,'test','six arg changed type',
+    'a3100000-0000-4000-8000-000000000098'::uuid,'USD')$,
+  'P0001','Request ID was already used for a different transaction',
+  'six-argument overload rejects a conflicting transaction type retry'
+);
 
 -- Six-argument overload must reject conflicting retries independently of the
 -- legacy five-argument call (which resolves to this function after migration).

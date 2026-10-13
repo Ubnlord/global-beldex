@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(15);
+select plan(20);
 
 -- Disposable rows only. The test suite is run against the isolated local
 -- Supabase database; no production account or transaction is referenced.
@@ -59,6 +59,56 @@ select is((select bdx_balance from public.user_profile where user_id='a3100000-0
   200::numeric,'BDX principal is debited from BDX available wallet on reactivation');
 select is((select locked_bdx_balance from public.user_profile where user_id='a3100000-0000-4000-8000-000000000002'),
   200::numeric,'BDX principal returns to BDX locked wallet on reactivation');
+
+-- Negative authorization and currency-matched principal safeguards. Each exception
+-- is caught by pgTAP; no production account or data is involved.
+select set_config('request.jwt.claim.sub','a3100000-0000-4000-8000-000000000002',true);
+select throws_ok(
+  $select public.admin_manage_investment('a3100000-0000-4000-8000-000000000011',0.01,'completed','non-admin regression')$,
+  'P0001','not authorized',
+  'ordinary authenticated user cannot manage investments'
+);
+select set_config('request.jwt.claim.sub','a3100000-0000-4000-8000-000000000001',true);
+
+update public.admin_user set permissions=array[]::text[]
+where user_id='a3100000-0000-4000-8000-000000000001';
+select throws_ok(
+  $select public.admin_manage_investment('a3100000-0000-4000-8000-000000000011',0.01,'completed','wrong permission regression')$,
+  'P0001','not authorized',
+  'admin without manage_users permission cannot manage investments'
+);
+update public.admin_user set permissions=array['manage_users']::text[]
+where user_id='a3100000-0000-4000-8000-000000000001';
+
+update public.user_profile set blocked=true
+where user_id='a3100000-0000-4000-8000-000000000002';
+select throws_ok(
+  $select public.admin_manage_investment('a3100000-0000-4000-8000-000000000011',0.01,'completed','blocked account regression')$,
+  'P0001','blocked user cannot have investment managed',
+  'blocked account investment mutation is rejected'
+);
+update public.user_profile set blocked=false
+where user_id='a3100000-0000-4000-8000-000000000002';
+
+update public.user_profile set locked_balance=99
+where user_id='a3100000-0000-4000-8000-000000000002';
+select throws_ok(
+  $select public.admin_manage_investment('a3100000-0000-4000-8000-000000000011',0.01,'completed','insufficient USD lock regression')$,
+  'P0001','locked balance is below investment principal',
+  'USD completion rejects insufficient USD locked balance'
+);
+update public.user_profile set locked_balance=100
+where user_id='a3100000-0000-4000-8000-000000000002';
+
+update public.user_profile set locked_bdx_balance=199
+where user_id='a3100000-0000-4000-8000-000000000002';
+select throws_ok(
+  $select public.admin_manage_investment('a3100000-0000-4000-8000-000000000012',0.01,'completed','insufficient BDX lock regression')$,
+  'P0001','locked balance is below investment principal',
+  'BDX completion rejects insufficient BDX locked balance'
+);
+update public.user_profile set locked_bdx_balance=200
+where user_id='a3100000-0000-4000-8000-000000000002';
 
 -- Legacy five-argument calls now resolve to the currency-aware function because
 -- the unsafe five-argument overload has been dropped and the six-argument RPC

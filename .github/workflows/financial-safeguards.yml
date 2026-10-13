@@ -108,6 +108,13 @@ jobs:
           eval "$(supabase status -o env)"
           DB_URL="$DB_URL" node ../scripts/bdx-conversion-concurrency.test.mjs
 
+      - name: Test concurrent settlement against real RPC
+        working-directory: .security-test
+        run: |
+          set -euo pipefail
+          eval "$(supabase status -o env)"
+          DB_URL="$DB_URL" node ../scripts/financial-settlement-concurrency.test.mjs
+
       - name: Verify daily-rate catalog correction preserves historical snapshots
         working-directory: .security-test
         run: |

@@ -22,14 +22,16 @@ as $function$
 declare
   v_inv public.user_investment;
   v_profile public.user_profile;
-  v_admin uuid := auth.uid();
+  v_admin public.admin_user;
   v_currency text;
   v_old_status text;
 begin
-  if v_admin is null or not public.is_admin()
+  if auth.uid() is null or not public.is_admin()
      or not public.admin_has_permission('manage_users') then
     raise exception 'not authorized';
   end if;
+  select * into v_admin from public.admin_user where user_id = auth.uid();
+  if v_admin.id is null then raise exception 'Admin access required'; end if;
   if p_daily_rate is null or p_daily_rate < 0 then
     raise exception 'invalid daily rate';
   end if;
@@ -114,7 +116,7 @@ begin
   insert into public.admin_action_audit
     (admin_id, user_id, action, target_id, old_values, new_values, reason, created_at)
   values
-    (v_admin, v_inv.user_id, 'manage_investment', v_inv.id,
+    (v_admin.id, v_inv.user_id, 'manage_investment', v_inv.id,
      jsonb_build_object('status', v_old_status, 'currency', v_currency),
      jsonb_build_object('status', v_inv.status, 'daily_rate', v_inv.daily_rate, 'currency', v_currency),
      btrim(p_reason), now());

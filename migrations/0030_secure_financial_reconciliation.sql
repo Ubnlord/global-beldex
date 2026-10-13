@@ -1,7 +1,7 @@
 begin;
 
 -- Financial reconciliation exposes account-level balances and ledger discrepancies.
--- Require both administrator status and the explicit transaction-report permission.
+-- Require both administrator status and the dedicated financial-reconciliation permission.
 -- Keep the existing return contract and currency-separated calculations unchanged.
 
 create or replace function public.admin_financial_reconciliation()
@@ -31,7 +31,7 @@ set search_path = ''
 as $function$
 begin
   if not public.is_admin()
-     or not public.admin_has_permission('view_transactions') then
+     or not public.admin_has_permission('view_financial_reconciliation') then
     raise exception 'Permission denied';
   end if;
 
@@ -139,7 +139,7 @@ set search_path = ''
 as $function$
 begin
   if not public.is_admin()
-     or not public.admin_has_permission('view_transactions') then
+     or not public.admin_has_permission('view_financial_reconciliation') then
     raise exception 'Permission denied';
   end if;
 

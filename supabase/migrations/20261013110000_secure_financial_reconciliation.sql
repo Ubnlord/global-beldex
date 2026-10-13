@@ -131,6 +131,9 @@ returns table(
   credited_investment_profit_bdx numeric,
   recorded_investment_profit_bdx numeric,
   investment_profit_bdx_delta numeric,
+  referral_earnings_bdx numeric,
+  recorded_referrals_bdx numeric,
+  referral_bdx_delta numeric,
   negative_balance boolean
 )
 language plpgsql
@@ -175,6 +178,12 @@ begin
     from public.transaction t
     where t.type='referral' and t.status='completed'
       and coalesce(t.currency,'USD')='USD'
+    group by t.user_id
+  ),
+  r_bdx as (
+    select t.user_id, coalesce(sum(t.amount),0) amount
+    from public.transaction t
+    where t.type='referral' and t.status='completed' and t.currency='BDX'
     group by t.user_id
   ),
   ip_usd as (
@@ -228,6 +237,8 @@ begin
     p.total_withdrawals_bdx-coalesce(w_bdx.amount,0),
     coalesce(inv.profit_bdx,0), coalesce(ip_bdx.amount,0),
     coalesce(inv.profit_bdx,0)-coalesce(ip_bdx.amount,0),
+    p.referral_earnings_bdx, coalesce(r_bdx.amount,0),
+    p.referral_earnings_bdx-coalesce(r_bdx.amount,0),
     p.available_balance<0 or p.locked_balance<0
       or p.bdx_balance<0 or p.locked_bdx_balance<0
   from public.user_profile p
@@ -236,6 +247,7 @@ begin
   left join d_bdx on d_bdx.user_id=p.user_id
   left join w_bdx on w_bdx.user_id=p.user_id
   left join r on r.user_id=p.user_id
+  left join r_bdx on r_bdx.user_id=p.user_id
   left join ip_usd on ip_usd.user_id=p.user_id
   left join ip_bdx on ip_bdx.user_id=p.user_id
   left join inv on inv.user_id=p.user_id

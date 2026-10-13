@@ -285,22 +285,21 @@ where user_id='a1100000-0000-4000-8000-000000000001';
 insert into public.transaction(user_id,type,amount,status,approval_status,currency,method,note,approved_at)
 values ('a1100000-0000-4000-8000-000000000001','deposit',75,'pending','approved','USD','Bank','legacy USD settlement safeguard fixture',now());
 select set_config('request.jwt.claim.sub','a1100000-0000-4000-8000-000000000002',true);
-select throws_ok(
-  format('select public.admin_settle_transaction(%L::uuid,%L)',(select id from public.transaction where note='legacy USD settlement safeguard fixture'),'test legacy USD settlement denial'),
-  'P0001','Legacy USD transaction requires manual reconciliation before settlement',
-  'approved legacy USD transaction is refused by BDX settlement'
+select is(
+  (public.admin_settle_transaction((select id from public.transaction where note='legacy USD settlement safeguard fixture'),'test legacy USD settlement')).status,
+  'completed'::text,'approved pending legacy USD transaction settles through the currency-aware settlement RPC'
 );
 select is(
   (select available_balance from public.user_profile where user_id='a1100000-0000-4000-8000-000000000001'),
-  1125::numeric,'legacy USD settlement denial leaves USD balance unchanged'
+  1200::numeric,'legacy USD settlement credits the USD wallet'
 );
 select is(
   (select count(*)::integer from public.transaction_audit where transaction_id=(select id from public.transaction where note='legacy USD settlement safeguard fixture') and action='settled'),
-  0,'denied legacy USD settlement writes no successful settlement audit'
+  1,'legacy USD settlement writes one settlement audit'
 );
 select is(
   (select status from public.transaction where note='legacy USD settlement safeguard fixture'),
-  'pending'::text,'denied legacy USD settlement leaves transaction pending'
+  'completed'::text,'settled legacy USD transaction is completed'
 );
 
 select * from finish();

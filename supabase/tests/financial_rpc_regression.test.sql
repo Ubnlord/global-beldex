@@ -182,6 +182,10 @@ select throws_ok(
   'investment rate cannot exceed its published plan rate'
 );
 
+-- Restore the settlement permission after the manage_users-only investment checks.
+update public.admin_user set permissions=array['manage_users','approve_transactions']::text[]
+where user_id='a3100000-0000-4000-8000-000000000001';
+
 -- Settlement requires a pending source state, even when approval_status is
 -- accidentally/legacy marked approved. These fixtures are isolated.
 insert into public.transaction(id,user_id,type,amount,currency,status,approval_status,method,note)

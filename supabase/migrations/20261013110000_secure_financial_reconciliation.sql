@@ -99,7 +99,12 @@ begin
 end;
 $function$;
 
-create or replace function public.admin_financial_reconciliation_v2()
+-- PostgreSQL cannot change a TABLE-returning function's OUT row type with
+-- CREATE OR REPLACE. Drop/recreate this RPC inside the same transaction so the
+-- expanded v2 result contract can be installed atomically; restore grants below.
+drop function if exists public.admin_financial_reconciliation_v2();
+
+create function public.admin_financial_reconciliation_v2()
 returns table(
   user_id uuid,
   available_balance numeric,

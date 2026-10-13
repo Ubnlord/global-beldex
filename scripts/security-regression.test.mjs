@@ -71,6 +71,24 @@ test("security migration exposes only the intended swap executor", { skip: !url 
       return client;
     };
 
+    await step("legacy five-argument transaction RPC is denied to authenticated users", async () => {
+      const client = await clientFor(users.normal);
+      const { error } = await client.rpc("create_financial_transaction", {
+        p_type: "deposit",
+        p_amount: 10,
+        p_method: "security-test-legacy",
+        p_note: null,
+        p_request_id: randomUUID(),
+      });
+      assert.ok(error, "authenticated user unexpectedly executed the legacy five-argument transaction RPC");
+    });
+
+    await step("legacy reconciliation RPC is denied to authenticated users", async () => {
+      const client = await clientFor(users.normal);
+      const { error } = await client.rpc("admin_financial_reconciliation");
+      assert.ok(error, "ordinary user unexpectedly executed legacy reconciliation RPC");
+    });
+
     await step("ordinary user cannot execute admin search", async () => {
       const client = await clientFor(users.normal);
       const { error } = await client.rpc("admin_search_users", { p_query: "", p_limit: 10 });
@@ -99,6 +117,14 @@ test("security migration exposes only the intended swap executor", { skip: !url 
         .update({ blocked: false })
         .eq("user_id", users.normal.id);
       assert.ifError(restoreError);
+
+      const { data: auditRows, error: auditError } = await admin.from("admin_action_audit")
+        .select("action,reason,user_id")
+        .eq("user_id", users.normal.id)
+        .eq("action", "user_blocked")
+        .eq("reason", "security regression test");
+      assert.ifError(auditError);
+      assert.ok((auditRows?.length ?? 0) >= 1, "authorized admin action did not create an audit record");
     });
 
     await step("blocked user cannot create a deposit", async () => {
@@ -109,8 +135,30 @@ test("security migration exposes only the intended swap executor", { skip: !url 
         p_method: "security-test",
         p_note: null,
         p_request_id: randomUUID(),
+        p_currency: "USD",
       });
       assert.ok(error, "blocked user unexpectedly created a financial transaction");
+    });
+
+    await step("currency-aware withdrawal RPC rejects amounts below minimum and malformed destinations", async () => {
+      const client = await clientFor(users.normal);
+      const cases = [
+        { p_amount: 299, p_method: "Ethereum", p_note: "0x1111111111111111111111111111111111111111", label: "below minimum" },
+        { p_amount: 300, p_method: "Ethereum", p_note: "not-an-ethereum-address", label: "invalid Ethereum address" },
+        { p_amount: 300, p_method: "Bitcoin", p_note: "not-a-bitcoin-address", label: "invalid Bitcoin address" },
+        { p_amount: 300, p_method: "Beldex", p_note: "short-address", label: "invalid Beldex address" },
+      ];
+      for (const item of cases) {
+        const { error } = await client.rpc("create_financial_transaction", {
+          p_type: "withdraw",
+          p_amount: item.p_amount,
+          p_method: item.p_method,
+          p_note: item.p_note,
+          p_request_id: randomUUID(),
+          p_currency: "USD",
+        });
+        assert.ok(error, "withdrawal RPC unexpectedly accepted " + item.label);
+      }
     });
 
     await step("blocked user cannot buy an investment plan", async () => {
@@ -122,14 +170,23 @@ test("security migration exposes only the intended swap executor", { skip: !url 
       assert.ok(error, "blocked user unexpectedly purchased an investment");
     });
 
+    await step("blocked user cannot accrue investment earnings", async () => {
+      const client = await clientFor(users.blocked);
+      const { error } = await client.rpc("accrue_user_investments", {
+        p_user_id: users.blocked.id,
+      });
+      assert.ok(error, "blocked user unexpectedly accrued investment earnings");
+    });
+
     await step("blocked user cannot create a withdrawal", async () => {
       const client = await clientFor(users.blocked);
       const { error } = await client.rpc("create_financial_transaction", {
         p_type: "withdraw",
-        p_amount: 100,
-        p_method: "security-test",
-        p_note: null,
+        p_amount: 300,
+        p_method: "Ethereum",
+        p_note: "0x1111111111111111111111111111111111111111",
         p_request_id: randomUUID(),
+        p_currency: "USD",
       });
       assert.ok(error, "blocked user unexpectedly created a withdrawal");
     });
@@ -211,6 +268,7 @@ test("security migration exposes only the intended swap executor", { skip: !url 
         p_method: "Ethereum",
         p_note: "0x1111111111111111111111111111111111111111",
         p_request_id: approveRequestId,
+        p_currency: "USD",
       });
       assert.ifError(created.error);
       assert.ok(created.data?.id);
@@ -254,6 +312,13 @@ test("security migration exposes only the intended swap executor", { skip: !url 
       assert.equal(approvedByAdmin.data?.approval_status, "approved");
       assert.equal(approvedByAdmin.data?.status, "pending");
 
+      const { data: approvalAuditRows, error: approvalAuditError } = await admin.from("transaction_audit")
+        .select("action,reason,transaction_id")
+        .eq("transaction_id", created.data.id)
+        .eq("action", "approved");
+      assert.ifError(approvalAuditError);
+      assert.ok((approvalAuditRows?.length ?? 0) >= 1, "approved transaction did not create a transaction audit record");
+
       const doubleApprove = await adminClient.rpc("admin_approve_transaction", {
         p_transaction_id: created.data.id,
         p_reason: "duplicate approval must fail",
@@ -289,6 +354,7 @@ test("security migration exposes only the intended swap executor", { skip: !url 
         p_method: "Bitcoin",
         p_note: "bc1qaaaaaaaaaaa",
         p_request_id: rejectRequestId,
+        p_currency: "USD",
       });
       assert.ifError(rejectCreated.error);
       assert.ok(rejectCreated.data?.id);
@@ -332,6 +398,7 @@ test("security migration exposes only the intended swap executor", { skip: !url 
         p_method: "security-test",
         p_note: null,
         p_request_id: requestId,
+        p_currency: "USD",
       });
       assert.ifError(first.error);
       assert.ok(first.data?.id);
@@ -342,6 +409,7 @@ test("security migration exposes only the intended swap executor", { skip: !url 
         p_method: "security-test",
         p_note: null,
         p_request_id: requestId,
+        p_currency: "USD",
       });
       assert.ifError(second.error);
       assert.equal(second.data?.id, first.data?.id);

@@ -8,6 +8,7 @@ const safeguards = fs.readFileSync(path.join(root, "migrations/0015_admin_audit_
 const auditLock = fs.readFileSync(path.join(root, "migrations/0016_lock_transaction_audit_to_admins.sql"), "utf8");
 const suite = fs.readFileSync(path.join(root, "supabase/tests/financial_safeguards.test.sql"), "utf8");
 const withdrawalMigration = fs.readFileSync(path.join(root, "migrations/0019_withdrawal_address_validation.sql"), "utf8");
+const currencyAwareWithdrawal = fs.readFileSync(path.join(root, "supabase/migrations/20261011060000_restore_currency_aware_withdrawal_validation.sql"), "utf8");
 const withdrawalValidator = fs.readFileSync(path.join(root, "src/lib/financial/withdrawal-address.ts"), "utf8");
 const operationsHardening = fs.readFileSync(path.join(root, "migrations/0020_post_release_operations_hardening.sql"), "utf8");
 const adminAuditIdentity = fs.readFileSync(path.join(root, "migrations/0022_admin_audit_identity_hardening.sql"), "utf8");
@@ -33,12 +34,18 @@ test("permanent financial safeguard suite is present and non-destructive", () =>
     auditLock,
     /drop policy if exists transaction_audit_select_own_or_admin on public\.transaction_audit;/i,
   );
-  assert.match(suite, /select plan\(66\);/);
+  assert.match(suite, /select plan\(67\);/);
   assert.match(suite, /withdrawal RPC enforces the \$300 minimum/i);
   assert.match(withdrawalMigration, /p_method not in \('Bitcoin', 'Ethereum', 'Beldex'\)/i);
   assert.match(withdrawalMigration, /Invalid Ethereum destination address/);
   assert.match(withdrawalMigration, /Invalid Bitcoin destination address/);
   assert.match(withdrawalMigration, /Invalid Beldex destination address/);
+  assert.match(currencyAwareWithdrawal, /p_amount < 300/);
+  assert.match(currencyAwareWithdrawal, /Invalid withdrawal method/);
+  assert.match(currencyAwareWithdrawal, /Invalid Ethereum destination address/);
+  assert.match(currencyAwareWithdrawal, /Invalid Bitcoin destination address/);
+  assert.match(currencyAwareWithdrawal, /Invalid Beldex destination address/);
+  assert.match(currencyAwareWithdrawal, /assert_user_can_transact/);
   assert.match(withdrawalValidator, /0x\[0-9a-fA-F\]\{40\}/);
   assert.match(withdrawalValidator, /Invalid Bitcoin destination address/);
   assert.match(withdrawalValidator, /Invalid Beldex destination address/);

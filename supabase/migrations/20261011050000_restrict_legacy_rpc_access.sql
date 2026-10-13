@@ -1,0 +1,10 @@
+begin;
+revoke execute on function public.create_financial_transaction(text,numeric,text,text,uuid) from public, anon, authenticated;
+grant execute on function public.create_financial_transaction(text,numeric,text,text,uuid) to service_role;
+revoke execute on function public.admin_financial_reconciliation() from public, anon, authenticated;
+grant execute on function public.admin_financial_reconciliation() to service_role;
+revoke execute on function public.create_financial_transaction(text,numeric,text,text,uuid,text) from public, anon;
+grant execute on function public.create_financial_transaction(text,numeric,text,text,uuid,text) to authenticated;
+revoke execute on function public.admin_financial_reconciliation_v2() from public, anon;
+grant execute on function public.admin_financial_reconciliation_v2() to authenticated;
+commit;

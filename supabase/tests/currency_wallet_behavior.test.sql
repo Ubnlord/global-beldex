@@ -50,7 +50,7 @@ update public.user_profile set referred_by_user_id='a1100000-0000-4000-8000-0000
 where user_id='a1100000-0000-4000-8000-000000000001';
 
 insert into public.admin_user(user_id,role,permissions)
-values ('a1100000-0000-4000-8000-000000000002','admin',array['approve_transactions','reject_transactions','manage_users'])
+values ('a1100000-0000-4000-8000-000000000002','admin',array['approve_transactions','reject_transactions','manage_users','view_financial_reconciliation'])
 on conflict (user_id) do update set permissions=excluded.permissions;
 
 -- BDX withdrawal reserves only BDX. Replaying the same request ID returns the

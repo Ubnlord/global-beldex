@@ -64,7 +64,7 @@ select is((select locked_bdx_balance from public.user_profile where user_id='a31
 -- is caught by pgTAP; no production account or data is involved.
 select set_config('request.jwt.claim.sub','a3100000-0000-4000-8000-000000000002',true);
 select throws_ok(
-  $select public.admin_manage_investment('a3100000-0000-4000-8000-000000000011',0.01,'completed','non-admin regression')$,
+  $$select public.admin_manage_investment('a3100000-0000-4000-8000-000000000011',0.01,'completed','non-admin regression')$$,
   'P0001','not authorized',
   'ordinary authenticated user cannot manage investments'
 );
@@ -73,7 +73,7 @@ select set_config('request.jwt.claim.sub','a3100000-0000-4000-8000-000000000001'
 update public.admin_user set permissions=array[]::text[]
 where user_id='a3100000-0000-4000-8000-000000000001';
 select throws_ok(
-  $select public.admin_manage_investment('a3100000-0000-4000-8000-000000000011',0.01,'completed','wrong permission regression')$,
+  $$select public.admin_manage_investment('a3100000-0000-4000-8000-000000000011',0.01,'completed','wrong permission regression')$$,
   'P0001','not authorized',
   'admin without manage_users permission cannot manage investments'
 );
@@ -83,7 +83,7 @@ where user_id='a3100000-0000-4000-8000-000000000001';
 update public.user_profile set blocked=true
 where user_id='a3100000-0000-4000-8000-000000000002';
 select throws_ok(
-  $select public.admin_manage_investment('a3100000-0000-4000-8000-000000000011',0.01,'completed','blocked account regression')$,
+  $$select public.admin_manage_investment('a3100000-0000-4000-8000-000000000011',0.01,'completed','blocked account regression')$$,
   'P0001','blocked user cannot have investment managed',
   'blocked account investment mutation is rejected'
 );
@@ -93,7 +93,7 @@ where user_id='a3100000-0000-4000-8000-000000000002';
 update public.user_profile set locked_balance=99
 where user_id='a3100000-0000-4000-8000-000000000002';
 select throws_ok(
-  $select public.admin_manage_investment('a3100000-0000-4000-8000-000000000011',0.01,'completed','insufficient USD lock regression')$,
+  $$select public.admin_manage_investment('a3100000-0000-4000-8000-000000000011',0.01,'completed','insufficient USD lock regression')$$,
   'P0001','locked balance is below investment principal',
   'USD completion rejects insufficient USD locked balance'
 );
@@ -103,7 +103,7 @@ where user_id='a3100000-0000-4000-8000-000000000002';
 update public.user_profile set locked_bdx_balance=199
 where user_id='a3100000-0000-4000-8000-000000000002';
 select throws_ok(
-  $select public.admin_manage_investment('a3100000-0000-4000-8000-000000000012',0.01,'completed','insufficient BDX lock regression')$,
+  $$select public.admin_manage_investment('a3100000-0000-4000-8000-000000000012',0.01,'completed','insufficient BDX lock regression')$$,
   'P0001','locked balance is below investment principal',
   'BDX completion rejects insufficient BDX locked balance'
 );
@@ -129,13 +129,13 @@ select is(
   'legacy plain-text note retry returns the original matching transaction'
 );
 select throws_ok(
-  $select public.create_financial_transaction('deposit',26,'test','changed amount',
+  $$select public.create_financial_transaction('deposit',26,'test','changed amount',
     'a3100000-0000-4000-8000-000000000099'::uuid)$$,
   'P0001','Request ID was already used for a different transaction',
   'reused request ID with a different amount is rejected'
 );
 select throws_ok(
-  $$select public.create_financial_transaction('withdraw',25,'test','changed type',
+  $$$select public.create_financial_transaction('withdraw',25,'test','changed type',
     'a3100000-0000-4000-8000-000000000099'::uuid)$$,
   'P0001','Request ID was already used for a different transaction',
   'reused request ID with a different type is rejected'

@@ -128,4 +128,138 @@ $function$;
 revoke all on function public.admin_manage_investment(uuid,numeric,text,text) from public, anon;
 grant execute on function public.admin_manage_investment(uuid,numeric,text,text) to authenticated, service_role;
 
+
+-- Settlement must only complete an approved transaction from the pending state.
+-- Policy: blocked accounts cannot receive new deposits, but previously approved
+-- withdrawals may settle (their funds were already reserved); withdrawal refunds
+-- on rejection are allowed so users are not deprived of their reserved funds.
+create or replace function public.admin_settle_transaction(
+  p_transaction_id uuid,
+  p_reason text default null
+)
+returns public.transaction
+language plpgsql
+security definer
+set search_path = pg_catalog, public, pg_temp
+as $function$
+declare
+  v_admin public.admin_user;
+  v_tx public.transaction;
+  v_profile public.user_profile;
+  v_currency text;
+begin
+  if not public.is_admin() or not public.admin_has_permission('approve_transactions') then
+    raise exception 'Permission denied';
+  end if;
+  select * into v_admin from public.admin_user where user_id = auth.uid();
+  if v_admin.id is null then raise exception 'Admin access required'; end if;
+
+  select * into v_tx from public.transaction where id = p_transaction_id for update;
+  if not found then raise exception 'Transaction not found'; end if;
+  if v_tx.type not in ('deposit','withdraw') then
+    raise exception 'Only deposit and withdrawal can be settled';
+  end if;
+  if v_tx.status <> 'pending' then
+    raise exception 'Transaction must be pending to settle';
+  end if;
+  if v_tx.approval_status <> 'approved' then
+    raise exception 'Transaction must be approved first';
+  end if;
+  v_currency := coalesce(v_tx.currency,'USD');
+  if v_currency not in ('USD','BDX') then raise exception 'Unsupported transaction currency'; end if;
+
+  select * into v_profile from public.user_profile where user_id=v_tx.user_id for update;
+  if not found then raise exception 'User profile not found during settlement'; end if;
+  if v_tx.type='deposit' and v_profile.blocked then
+    raise exception 'Blocked account cannot receive a deposit';
+  end if;
+
+  if v_tx.type='deposit' then
+    if v_currency='BDX' then
+      update public.user_profile set bdx_balance=bdx_balance+v_tx.amount,
+        total_deposits_bdx=total_deposits_bdx+v_tx.amount,updated_at=now()
+      where user_id=v_tx.user_id;
+    else
+      update public.user_profile set available_balance=available_balance+v_tx.amount,
+        total_deposits=total_deposits+v_tx.amount,updated_at=now()
+      where user_id=v_tx.user_id;
+    end if;
+  elsif v_currency='BDX' then
+    update public.user_profile set total_withdrawals_bdx=total_withdrawals_bdx+v_tx.amount,updated_at=now()
+    where user_id=v_tx.user_id;
+  else
+    update public.user_profile set total_withdrawals=total_withdrawals+v_tx.amount,updated_at=now()
+    where user_id=v_tx.user_id;
+  end if;
+
+  update public.transaction set status='completed',settled_at=now(),updated_at=now()
+  where id=p_transaction_id returning * into v_tx;
+  if v_tx.type='deposit' then perform public.credit_referral_for_deposit(v_tx.id); end if;
+  insert into public.transaction_audit(transaction_id,admin_id,action,old_values,new_values,reason)
+  values(v_tx.id,v_admin.id,'settled',jsonb_build_object('status','pending'),
+    jsonb_build_object('status',v_tx.status,'currency',v_currency),p_reason);
+  return v_tx;
+end;
+$function$;
+
+revoke all on function public.admin_settle_transaction(uuid,text) from public, anon;
+grant execute on function public.admin_settle_transaction(uuid,text) to authenticated, service_role;
+
+-- An administrator may not raise an investment above its plan's published
+-- catalog rate. This avoids inventing a global rate cap; the plan catalog is
+-- the existing business rule. Unknown plans are rejected for rate changes.
+create or replace function public.admin_update_investment(
+  p_investment_id uuid,
+  p_daily_rate numeric default null,
+  p_daily_accrual_enabled boolean default null
+)
+returns public.user_investment
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+declare
+  v_admin public.admin_user;
+  v_old public.user_investment;
+  v_new public.user_investment;
+  v_max_rate numeric;
+  v_blocked boolean;
+begin
+  if not public.is_admin() or not public.admin_has_permission('manage_users') then
+    raise exception 'Permission denied';
+  end if;
+  select * into v_admin from public.admin_user where user_id=auth.uid();
+  if v_admin.id is null then raise exception 'Admin access required'; end if;
+  select * into v_old from public.user_investment where id=p_investment_id for update;
+  if v_old.id is null then raise exception 'Investment not found'; end if;
+
+  select blocked into v_blocked from public.user_profile where user_id=v_old.user_id for update;
+  if not found then raise exception 'User profile not found'; end if;
+  if v_blocked then raise exception 'Blocked user investment cannot be updated'; end if;
+  if p_daily_rate is not null and p_daily_rate < 0 then raise exception 'Daily rate cannot be negative'; end if;
+
+  if p_daily_rate is not null then
+    select daily_rate into v_max_rate from public.investment_plan_catalog where id=v_old.plan_id and active=true;
+    if not found then raise exception 'No active catalog rate found for investment plan'; end if;
+    if p_daily_rate > v_max_rate then raise exception 'Daily rate exceeds published plan rate'; end if;
+  end if;
+
+  update public.user_investment
+  set daily_rate=coalesce(p_daily_rate,daily_rate),
+      daily_accrual_enabled=coalesce(p_daily_accrual_enabled,daily_accrual_enabled),
+      updated_at=now()
+  where id=p_investment_id returning * into v_new;
+
+  insert into public.admin_action_audit(admin_id,user_id,action,target_id,old_values,new_values,reason,created_at)
+  values(v_admin.id,v_old.user_id,'investment_updated',p_investment_id,
+    jsonb_build_object('daily_rate',v_old.daily_rate,'daily_accrual_enabled',v_old.daily_accrual_enabled),
+    jsonb_build_object('daily_rate',v_new.daily_rate,'daily_accrual_enabled',v_new.daily_accrual_enabled),
+    'Administrator updated investment accrual settings',now());
+  return v_new;
+end;
+$function$;
+
+revoke all on function public.admin_update_investment(uuid,numeric,boolean) from public, anon;
+grant execute on function public.admin_update_investment(uuid,numeric,boolean) to authenticated, service_role;
+
 commit;

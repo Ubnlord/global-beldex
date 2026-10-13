@@ -2,7 +2,7 @@ name: Financial safeguards
 
 on:
   pull_request:
-    branches: [main, feat/bdx-native-accounting, fix/bdx-wallet-regression-gates]
+    branches: [main, feat/bdx-native-accounting, fix/bdx-wallet-regression-gates, fix/preserve-legacy-usd-display]
   push:
     branches: [main, fix/preserve-legacy-usd-display]
   workflow_dispatch:
@@ -69,8 +69,6 @@ jobs:
           set -euo pipefail
           eval "$(supabase status -o env)"
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f ../scripts/production-schema-compatibility-fixture.sql
-          # Apply the forward migration to the reconstructed production shape.
-          # It is intentionally idempotent because fresh reset already applied it.
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f ../supabase/migrations/20261012150000_bdx_referral_compatibility_forward.sql
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f ../supabase/migrations/20261012150000_bdx_referral_compatibility_forward.sql
           psql "$DB_URL" -v ON_ERROR_STOP=1 -c "DO \$assert\$ BEGIN
@@ -90,10 +88,25 @@ jobs:
             END IF;
           END \$assert\$;"
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f ../scripts/synthetic-accounting-reconciliation.sql
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f ../supabase/migrations/20261013100000_financial_rpc_regression_guards.sql
 
       - name: Run pgTAP safeguards against reconstructed production schema
         working-directory: .security-test
         run: supabase test db
+
+      - name: Verify investment-plan limit migration preserves financial records
+        working-directory: .security-test
+        run: |
+          set -euo pipefail
+          eval "$(supabase status -o env)"
+          DB_URL="$DB_URL" node ../scripts/investment-plan-migration-compatibility.test.mjs
+
+      - name: Run concurrent-session conversion and rollback regression
+        working-directory: .security-test
+        run: |
+          set -euo pipefail
+          eval "$(supabase status -o env)"
+          DB_URL="$DB_URL" node ../scripts/bdx-conversion-concurrency.test.mjs
 
       - name: Verify daily-rate catalog correction preserves historical snapshots
         working-directory: .security-test
@@ -129,7 +142,7 @@ jobs:
         run: |
           set -euo pipefail
           eval "$(cd .security-test && supabase status -o env)"
-          SUPABASE_TEST_URL="$API_URL"           SUPABASE_TEST_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY"           SUPABASE_TEST_PUBLISHABLE_KEY="$ANON_KEY"           node --test scripts/security-regression.test.mjs
+          SUPABASE_TEST_URL="$API_URL" SUPABASE_TEST_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY" SUPABASE_TEST_PUBLISHABLE_KEY="$ANON_KEY" node --test scripts/security-regression.test.mjs
 
       - name: Stop isolated Supabase
         if: always()

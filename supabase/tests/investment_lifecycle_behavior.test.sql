@@ -1,9 +1,23 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(17);
+select plan(31);
 
 -- Assert the database catalog contains all seven published daily rates.
 select is((select daily_rate from public.investment_plan_catalog where id='gns'),0.019::numeric,'GNS daily rate equals 1.90% daily ROI');
+select is((select min_amount from public.investment_plan_catalog where id='gns'),4000::numeric,'GNS minimum is stored in BDX for the BDX-native purchase RPC');
+select is((select max_amount from public.investment_plan_catalog where id='gns'),10000::numeric,'GNS maximum is 10,000 BDX');
+select is((select min_amount from public.investment_plan_catalog where id='build'),11000::numeric,'BUILD UP minimum is 11,000 BDX');
+select is((select max_amount from public.investment_plan_catalog where id='build'),16000::numeric,'BUILD UP maximum is 16,000 BDX');
+select is((select min_amount from public.investment_plan_catalog where id='follow'),17000::numeric,'FOLLOW UP minimum is 17,000 BDX');
+select is((select max_amount from public.investment_plan_catalog where id='follow'),30000::numeric,'FOLLOW UP maximum is 30,000 BDX');
+select is((select min_amount from public.investment_plan_catalog where id='apex'),40000::numeric,'APEX minimum is 40,000 BDX');
+select is((select max_amount from public.investment_plan_catalog where id='apex'),80000::numeric,'APEX maximum is 80,000 BDX');
+select is((select min_amount from public.investment_plan_catalog where id='edifex'),90000::numeric,'EDIFEX minimum is 90,000 BDX');
+select is((select max_amount from public.investment_plan_catalog where id='edifex'),150000::numeric,'EDIFEX maximum is 150,000 BDX');
+select is((select min_amount from public.investment_plan_catalog where id='dixon'),160000::numeric,'DIXON minimum is 160,000 BDX');
+select is((select max_amount from public.investment_plan_catalog where id='dixon'),220000::numeric,'DIXON maximum is 220,000 BDX');
+select is((select min_amount from public.investment_plan_catalog where id='falcon'),220000::numeric,'FALCON minimum is 220,000 BDX');
+select is((select max_amount from public.investment_plan_catalog where id='falcon'),1000000::numeric,'FALCON maximum is 1,000,000 BDX');
 select is((select min_amount * daily_rate from public.investment_plan_catalog where id='gns'),76::numeric,'GNS minimum 4,000 BDX investment earns 76 BDX per full day');
 select is((select daily_rate from public.investment_plan_catalog where id='build'),0.0251::numeric,'BUILD UP daily rate equals 2.51% daily ROI');
 select is((select daily_rate from public.investment_plan_catalog where id='follow'),0.0392::numeric,'FOLLOW UP daily rate equals 3.92% daily ROI');

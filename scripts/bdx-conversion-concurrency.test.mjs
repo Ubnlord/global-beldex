@@ -66,7 +66,7 @@ try {
     ]);
     assert.deepEqual(results.map(r => r.rows[0].result).sort(), ["already_converted", "converted"]);
     const state = await admin.query(`select available_usd, available_bdx from ${schema}.account_state where user_id='race-account'`);
-    assert.equal(state.rows[0].available_usd, "0");
+    assert.equal(Number(state.rows[0].available_usd), 0, "source USD balance must be zero after conversion");
     assert.equal(state.rows[0].available_bdx, "1000");
     const runs = await admin.query(`select count(*)::int as n from ${schema}.conversion_run`);
     const maps = await admin.query(`select count(*)::int as n from ${schema}.audit_map`);
@@ -97,8 +97,8 @@ try {
       (select count(*)::int from ${schema}.audit_map where user_id='rollback-account') as maps
     from ${schema}.account_state a where a.user_id='rollback-account'
   `);
-  assert.equal(rolledBack.rows[0].available_usd, "25");
-  assert.equal(rolledBack.rows[0].available_bdx, "0");
+  assert.equal(Number(rolledBack.rows[0].available_usd), 25, "rollback preserves source USD balance");
+  assert.equal(Number(rolledBack.rows[0].available_bdx), 0, "rollback preserves destination BDX balance");
   assert.equal(rolledBack.rows[0].runs, 0, "rollback must remove conversion marker");
   assert.equal(rolledBack.rows[0].maps, 0, "rollback must remove audit mapping");
 

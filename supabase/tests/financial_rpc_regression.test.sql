@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(30);
+select plan(31);
 
 -- Disposable rows only. The test suite is run against the isolated local
 -- Supabase database; no production account or transaction is referenced.

@@ -147,8 +147,8 @@ select ok(
   'unsafe five-argument overload is not callable as a distinct function'
 );
 select throws_ok(
-  $$$select public.create_financial_transaction('withdraw',31,'test','six arg changed type',
-    'a3100000-0000-4000-8000-000000000098'::uuid,'USD')$$$,
+  $select public.create_financial_transaction('withdraw',31,'test','six arg changed type',
+    'a3100000-0000-4000-8000-000000000098'::uuid,'USD')$,
   'P0001','Request ID was already used for a different transaction',
   'six-argument overload rejects a conflicting transaction type retry'
 );
@@ -162,14 +162,14 @@ select is(
   'six-argument transaction request is created'
 );
 select throws_ok(
-  $$$select public.create_financial_transaction('deposit',32,'test','six arg changed amount',
-    'a3100000-0000-4000-8000-000000000098'::uuid,'USD')$$$,
+  $select public.create_financial_transaction('deposit',32,'test','six arg changed amount',
+    'a3100000-0000-4000-8000-000000000098'::uuid,'USD')$,
   'P0001','Request ID was already used for a different transaction',
   'six-argument overload rejects a conflicting amount retry'
 );
 select throws_ok(
-  $$$select public.create_financial_transaction('deposit',31,'test','six arg changed currency',
-    'a3100000-0000-4000-8000-000000000098'::uuid,'BDX')$$$,
+  $select public.create_financial_transaction('deposit',31,'test','six arg changed currency',
+    'a3100000-0000-4000-8000-000000000098'::uuid,'BDX')$,
   'P0001','Request ID was already used for a different transaction',
   'six-argument overload rejects a conflicting currency retry'
 );
@@ -177,7 +177,7 @@ select throws_ok(
 -- The published plan catalog daily rate is the cap; no arbitrary global rate
 -- is introduced. Blocked users may not have investment parameters modified.
 select throws_ok(
-  $$$select public.admin_update_investment('a3100000-0000-4000-8000-000000000011',1.0,true)$$$,
+  $select public.admin_update_investment('a3100000-0000-4000-8000-000000000011',1.0,true)$,
   'P0001','Daily rate exceeds published plan rate',
   'investment rate cannot exceed its published plan rate'
 );
@@ -194,18 +194,18 @@ values
  ('a3100000-0000-4000-8000-000000000052','a3100000-0000-4000-8000-000000000002','deposit',11,'USD','failed','rejected','test','rejected legacy row'),
  ('a3100000-0000-4000-8000-000000000053','a3100000-0000-4000-8000-000000000002','deposit',12,'USD','pending','approved','test','blocked target deposit');
 select throws_ok(
-  $$$select public.admin_settle_transaction('a3100000-0000-4000-8000-000000000051','regression')$$$,
+  $select public.admin_settle_transaction('a3100000-0000-4000-8000-000000000051','regression')$,
   'P0001','Transaction must be pending to settle',
   'failed transaction cannot be settled even if marked approved'
 );
 select throws_ok(
-  $$$select public.admin_settle_transaction('a3100000-0000-4000-8000-000000000052','regression')$$$,
+  $select public.admin_settle_transaction('a3100000-0000-4000-8000-000000000052','regression')$,
   'P0001','Transaction must be pending to settle',
   'rejected transaction cannot be settled'
 );
 update public.user_profile set blocked=true where user_id='a3100000-0000-4000-8000-000000000002';
 select throws_ok(
-  $$$select public.admin_settle_transaction('a3100000-0000-4000-8000-000000000053','regression')$$$,
+  $select public.admin_settle_transaction('a3100000-0000-4000-8000-000000000053','regression')$,
   'P0001','Blocked account cannot receive a deposit',
   'blocked account cannot receive a pending deposit settlement'
 );

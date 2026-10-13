@@ -93,6 +93,13 @@ jobs:
         working-directory: .security-test
         run: supabase test db
 
+      - name: Verify investment-plan limit migration preserves financial records
+        working-directory: .security-test
+        run: |
+          set -euo pipefail
+          eval "$(supabase status -o env)"
+          DB_URL="$DB_URL" node ../scripts/investment-plan-migration-compatibility.test.mjs
+
       - name: Run concurrent-session conversion and rollback regression
         working-directory: .security-test
         run: |

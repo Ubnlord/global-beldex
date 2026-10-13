@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(4);
+select plan(5);
 
 select ok(
   position('admin_has_permission' in
@@ -23,6 +23,16 @@ select ok(
   position('not public.is_admin()' in
     pg_get_functiondef('public.admin_financial_reconciliation()'::regprocedure)) > 0,
   'legacy reconciliation still requires administrator status'
+);
+
+select ok(
+  position('referral_earnings_bdx' in
+    pg_get_functiondef('public.admin_financial_reconciliation_v2()'::regprocedure)) > 0
+  and position('recorded_referrals_bdx' in
+    pg_get_functiondef('public.admin_financial_reconciliation_v2()'::regprocedure)) > 0
+  and position('referral_bdx_delta' in
+    pg_get_functiondef('public.admin_financial_reconciliation_v2()'::regprocedure)) > 0,
+  'currency-aware reconciliation compares BDX referral counter against BDX ledger'
 );
 
 select ok(

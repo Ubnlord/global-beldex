@@ -6,17 +6,17 @@ select plan(4);
 select ok(
   position('admin_has_permission' in
     pg_get_functiondef('public.admin_financial_reconciliation()'::regprocedure)) > 0
-  and position('view_transactions' in
+  and position('view_financial_reconciliation' in
     pg_get_functiondef('public.admin_financial_reconciliation()'::regprocedure)) > 0,
-  'legacy reconciliation requires explicit view_transactions permission'
+  'legacy reconciliation requires explicit view_financial_reconciliation permission'
 );
 
 select ok(
   position('admin_has_permission' in
     pg_get_functiondef('public.admin_financial_reconciliation_v2()'::regprocedure)) > 0
-  and position('view_transactions' in
+  and position('view_financial_reconciliation' in
     pg_get_functiondef('public.admin_financial_reconciliation_v2()'::regprocedure)) > 0,
-  'currency-aware reconciliation requires explicit view_transactions permission'
+  'currency-aware reconciliation requires explicit view_financial_reconciliation permission'
 );
 
 select ok(

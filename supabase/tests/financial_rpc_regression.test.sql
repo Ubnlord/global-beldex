@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(21);
+select plan(28);
 
 -- Disposable rows only. The test suite is run against the isolated local
 -- Supabase database; no production account or transaction is referenced.
@@ -21,8 +21,8 @@ on conflict (user_id) do update set
   available_balance=100,locked_balance=100,bdx_balance=200,locked_bdx_balance=200,blocked=false;
 
 insert into public.admin_user(user_id,role,permissions)
-values ('a3100000-0000-4000-8000-000000000001','admin',array['manage_users']::text[])
-on conflict (user_id) do update set role='admin',permissions=array['manage_users']::text[];
+values ('a3100000-0000-4000-8000-000000000001','admin',array['manage_users','approve_transactions','reject_transactions']::text[])
+on conflict (user_id) do update set role='admin',permissions=array['manage_users','approve_transactions','reject_transactions']::text[];
 
 insert into public.user_investment(id,user_id,plan_id,principal,daily_rate,duration_days,status,currency)
 values
@@ -140,6 +140,61 @@ select throws_ok(
   'P0001','Request ID was already used for a different transaction',
   'reused request ID with a different type is rejected'
 );
+
+
+-- Six-argument overload must reject conflicting retries independently of the
+-- legacy five-argument call (which resolves to this function after migration).
+select is(
+  (public.create_financial_transaction('deposit',31,'test','six arg original',
+    'a3100000-0000-4000-8000-000000000098'::uuid,'USD')).amount,
+  31::numeric,
+  'six-argument transaction request is created'
+);
+select throws_ok(
+  $select public.create_financial_transaction('deposit',32,'test','six arg changed amount',
+    'a3100000-0000-4000-8000-000000000098'::uuid,'USD')$,
+  'P0001','Request ID was already used for a different transaction',
+  'six-argument overload rejects a conflicting amount retry'
+);
+select throws_ok(
+  $select public.create_financial_transaction('deposit',31,'test','six arg changed currency',
+    'a3100000-0000-4000-8000-000000000098'::uuid,'BDX')$,
+  'P0001','Request ID was already used for a different transaction',
+  'six-argument overload rejects a conflicting currency retry'
+);
+
+-- The published plan catalog daily rate is the cap; no arbitrary global rate
+-- is introduced. Blocked users may not have investment parameters modified.
+select throws_ok(
+  $select public.admin_update_investment('a3100000-0000-4000-8000-000000000011',0.02,true)$,
+  'P0001','Daily rate exceeds published plan rate',
+  'investment rate cannot exceed its published plan rate'
+);
+
+-- Settlement requires a pending source state, even when approval_status is
+-- accidentally/legacy marked approved. These fixtures are isolated.
+insert into public.transaction(id,user_id,type,amount,currency,status,approval_status,method,note)
+values
+ ('a3100000-0000-4000-8000-000000000051','a3100000-0000-4000-8000-000000000002','deposit',10,'USD','failed','approved','test','failed approved legacy row'),
+ ('a3100000-0000-4000-8000-000000000052','a3100000-0000-4000-8000-000000000002','deposit',11,'USD','failed','rejected','test','rejected legacy row'),
+ ('a3100000-0000-4000-8000-000000000053','a3100000-0000-4000-8000-000000000002','deposit',12,'USD','pending','approved','test','blocked target deposit');
+select throws_ok(
+  $select public.admin_settle_transaction('a3100000-0000-4000-8000-000000000051','regression')$,
+  'P0001','Transaction must be pending to settle',
+  'failed transaction cannot be settled even if marked approved'
+);
+select throws_ok(
+  $select public.admin_settle_transaction('a3100000-0000-4000-8000-000000000052','regression')$,
+  'P0001','Transaction must be pending to settle',
+  'rejected transaction cannot be settled'
+);
+update public.user_profile set blocked=true where user_id='a3100000-0000-4000-8000-000000000002';
+select throws_ok(
+  $select public.admin_settle_transaction('a3100000-0000-4000-8000-000000000053','regression')$,
+  'P0001','Blocked account cannot receive a deposit',
+  'blocked account cannot receive a pending deposit settlement'
+);
+update public.user_profile set blocked=false where user_id='a3100000-0000-4000-8000-000000000002';
 
 select * from finish();
 rollback;

@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(20);
+select plan(21);
 
 -- Disposable rows only. The test suite is run against the isolated local
 -- Supabase database; no production account or transaction is referenced.
@@ -121,8 +121,15 @@ select ok(
   ) created),
   'five-argument legacy call reaches the currency-aware transaction RPC'
 );
+select is(
+  (public.create_financial_transaction('deposit',25,'legacy-retry','retry with another plain-text note',
+    'a3100000-0000-4000-8000-000000000099'::uuid)).id,
+  (select id from public.transaction where user_id='a3100000-0000-4000-8000-000000000002'
+    and request_id='a3100000-0000-4000-8000-000000000099'::uuid),
+  'legacy plain-text note retry returns the original matching transaction'
+);
 select throws_ok(
-  $$select public.create_financial_transaction('deposit',26,'test','changed amount',
+  $select public.create_financial_transaction('deposit',26,'test','changed amount',
     'a3100000-0000-4000-8000-000000000099'::uuid)$$,
   'P0001','Request ID was already used for a different transaction',
   'reused request ID with a different amount is rejected'

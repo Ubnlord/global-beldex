@@ -8,7 +8,7 @@ if (!connectionString) throw new Error("DB_URL is required; run only against the
 const userId = "a2300000-0000-4000-8000-000000000030";
 const email = "plan-limit-migration-compatibility@example.test";
 const client = new Client({ connectionString });
-const migration = fs.readFileSync("migrations/0030_restore_bdx_investment_plan_limits.sql", "utf8");
+const migration = fs.readFileSync(new URL("../migrations/0030_restore_bdx_investment_plan_limits.sql", import.meta.url), "utf8");
 
 const expected = [
   ["gns", 4000, 10000],

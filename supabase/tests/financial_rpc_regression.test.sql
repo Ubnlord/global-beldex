@@ -135,7 +135,7 @@ select throws_ok(
   'reused request ID with a different amount is rejected'
 );
 select throws_ok(
-  $select public.create_financial_transaction('withdraw',25,'test','changed type',
+  $$select public.create_financial_transaction('withdraw',25,'test','changed type',
     'a3100000-0000-4000-8000-000000000099'::uuid)$$,
   'P0001','Request ID was already used for a different transaction',
   'reused request ID with a different type is rejected'

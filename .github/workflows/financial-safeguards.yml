@@ -46,11 +46,11 @@ jobs:
       - name: Prepare database from repository migrations
         run: |
           set -euo pipefail
-          mkdir -p .security-test
+          # The preparation script recreates .security-test from scratch, so run it
+          # before initializing Supabase. Otherwise it deletes supabase/config.toml.
+          node scripts/prepare-local-security-db.mjs
           cd .security-test
           supabase init --force
-          cd ..
-          node scripts/prepare-local-security-db.mjs
 
       - name: Start isolated Supabase
         working-directory: .security-test

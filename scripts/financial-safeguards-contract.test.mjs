@@ -33,8 +33,8 @@ test("permanent financial safeguard suite is present and non-destructive", () =>
     auditLock,
     /drop policy if exists transaction_audit_select_own_or_admin on public\.transaction_audit;/i,
   );
-  assert.match(suite, /select plan\(75\);/);
-assert.match(suite, /currency-explicit financial request RPC exists/i);
+  assert.match(suite, /select plan\(77\);/);
+  assert.match(suite, /currency-explicit financial request RPC exists/i);
   assert.match(withdrawalMigration, /p_method not in \('Bitcoin', 'Ethereum', 'Beldex'\)/i);
   assert.match(withdrawalMigration, /Invalid Ethereum destination address/);
   assert.match(withdrawalMigration, /Invalid Bitcoin destination address/);

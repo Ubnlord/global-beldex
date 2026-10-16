@@ -45,7 +45,7 @@ select is(
   1,'duplicate request creates one ledger row'
 );
 select throws_ok(
-  $select public.create_financial_transaction('withdraw',4000,'Beldex',repeat('A',95),'a1100000-0000-4000-8000-000000000101','USD')$,
+  $sql$select public.create_financial_transaction('withdraw',4000,'Beldex',repeat('A',95),'a1100000-0000-4000-8000-000000000101','USD')$sql$,
   'P0001','Beldex transactions must be denominated in BDX',
   'reusing a request ID with a different currency is rejected'
 );

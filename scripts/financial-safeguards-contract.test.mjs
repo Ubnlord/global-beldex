@@ -89,7 +89,7 @@ test("admin investment compatibility overloads cannot be ambiguous", () => {
   );
   assert.match(
     migration,
-    /create or replace function public\.admin_manage_investment\(\s*p_investment_id uuid,\s*p_daily_rate numeric,\s*p_daily_accrual_enabled boolean,\s*p_status text,\s*p_reason text\s*\)/,
+    /create or replace function public\.admin_manage_investment\(\s*p_investment_id uuid,\s*p_daily_rate numeric(?: default null)?,\s*p_daily_accrual_enabled boolean(?: default null)?,\s*p_status text(?: default null)?,\s*p_reason text(?: default null)?\s*\)/,
   );
   assert.match(
     migration,

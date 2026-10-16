@@ -82,6 +82,41 @@ test("financial refresh cannot present failed cold-start hydration as verified z
 });
 
 
+
+test("published plan ROI is divided across the full term without rewriting active investments", () => {
+  const initialRateMigration = fs.readFileSync(
+    path.join(root, "supabase/migrations/20261011003000_daily_roi_rate_interpretation.sql"),
+    "utf8",
+  );
+  const forwardRateMigration = fs.readFileSync(
+    path.join(root, "supabase/migrations/20261016092000_correct_plan_catalog_total_roi_rates.sql"),
+    "utf8",
+  );
+  for (const migration of [initialRateMigration, forwardRateMigration]) {
+    for (const plan of [
+      ["gns", "0.019", "30"],
+      ["build", "0.0251", "60"],
+      ["follow", "0.0392", "60"],
+      ["apex", "0.0856", "365"],
+      ["edifex", "0.1343", "730"],
+      ["dixon", "0.1543", "730"],
+      ["falcon", "0.2378", "1825"],
+    ]) {
+      assert.match(
+        migration,
+        new RegExp("when '" + plan[0] + "' then " + plan[1] + "::numeric / duration_days"),
+        plan[0] + " daily rate must be full-term ROI divided by duration",
+      );
+    }
+    assert.doesNotMatch(
+      migration,
+      /update\\s+public\\.user_investment|update\\s+public\\.user_profile|update\\s+public\\.transaction/i,
+      "ROI catalogue correction must not rewrite active investments, balances, or ledger rows",
+    );
+  }
+  assert.match(forwardRateMigration, /raise exception 'Plan catalogue daily rates do not equal full-term ROI divided by duration'/);
+});
+
 test("admin investment compatibility overloads cannot be ambiguous", () => {
   const migration = fs.readFileSync(
     path.join(root, "supabase/migrations/20261016091000_bdx_admin_controls_and_reconciliation.sql"),

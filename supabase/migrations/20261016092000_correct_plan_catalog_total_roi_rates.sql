@@ -1,18 +1,18 @@
 begin;
 
--- Forward correction for environments where the older BDX plan migration
--- already wrote full-term ROI percentages as daily rates. This updates only
--- the catalogue used for new investments. Existing user_investment.daily_rate
--- snapshots, credited profits, balances, and ledger rows are not rewritten.
+-- Forward correction to enforce the published plan-card policy: ROI is a
+-- daily simple-interest rate. This updates only the catalogue for new
+-- investments. Existing investment snapshots, credited profits, balances,
+-- and ledger rows are not rewritten.
 update public.investment_plan_catalog
    set daily_rate = case id
-     when 'gns' then 0.019::numeric / duration_days
-     when 'build' then 0.0251::numeric / duration_days
-     when 'follow' then 0.0392::numeric / duration_days
-     when 'apex' then 0.0856::numeric / duration_days
-     when 'edifex' then 0.1343::numeric / duration_days
-     when 'dixon' then 0.1543::numeric / duration_days
-     when 'falcon' then 0.2378::numeric / duration_days
+     when 'gns' then 0.019::numeric
+     when 'build' then 0.0251::numeric
+     when 'follow' then 0.0392::numeric
+     when 'apex' then 0.0856::numeric
+     when 'edifex' then 0.1343::numeric
+     when 'dixon' then 0.1543::numeric
+     when 'falcon' then 0.2378::numeric
      else daily_rate
    end,
    updated_at = now()
@@ -36,7 +36,7 @@ begin
         when 'falcon' then 0.2378::numeric / p.duration_days
       end) > 0.000000000000000001
   ) then
-    raise exception 'Plan catalogue daily rates do not equal full-term ROI divided by duration';
+    raise exception 'Plan catalogue daily rates do not match published daily ROI';
   end if;
 end;
 $assert_catalog_rates$;

@@ -10,7 +10,7 @@ import { CoinLogo } from "@/components/market/coin-logo";
 import { WITHDRAW_METHODS } from "@/lib/platform/catalog";
 import { copy } from "@/lib/platform/i18n";
 import { usePlatform } from "@/lib/platform/store";
-import { BDX_USD_RATE, bdxToUsd, formatBdx, formatUsd, usdToBdx } from "@/lib/utils";
+import { formatBdx, formatUsd } from "@/lib/utils";
 import { validateWithdrawalDestination } from "@/lib/financial/withdrawal-address";
 
 const MIN_WITHDRAWAL = 300;
@@ -43,11 +43,11 @@ function WithdrawPage() {
       toastError("Amount must be greater than zero");
       return;
     }
-    const minimum = isBeldex ? (isBdxCurrency ? 4000 : bdxToUsd(4000)) : MIN_WITHDRAWAL;
+    const minimum = isBeldex ? 4000 : MIN_WITHDRAWAL;
     if (n < minimum) {
       toastError(isBeldex
-        ? (isBdxCurrency ? `Minimum withdrawal is ${formatBdx(4000)} (${formatUsd(bdxToUsd(4000), 3)})` : `Minimum withdrawal is ${formatUsd(bdxToUsd(4000), 3)} (${formatBdx(4000)} equivalent)`)
-        : `Minimum withdrawal is ${MIN_WITHDRAWAL}`);
+        ? `Minimum withdrawal is ${formatBdx(4000)} BDX`
+        : `Minimum withdrawal is ${MIN_WITHDRAWAL} USD`);
       return;
     }
     const addressError = validateWithdrawalDestination(method, address);
@@ -57,7 +57,7 @@ function WithdrawPage() {
     }
     const id = requestId ?? crypto.randomUUID();
     setRequestId(id);
-    const err = await withdraw(n, method, address, id, currency);
+    const err = await withdraw(n, method, address, id, isBeldex ? "BDX" : currency);
     if (err) {
       toastError(err);
       return;
@@ -132,15 +132,15 @@ function WithdrawPage() {
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             type="number"
-            min={currency === "BDX" ? 4000 : bdxToUsd(4000)}
+            min={isBeldex || currency === "BDX" ? 4000 : MIN_WITHDRAWAL}
             step={currency === "BDX" ? "0.001" : "0.001"}
-            placeholder={currency === "BDX" ? "Minimum 4,000 BDX" : "Minimum $293.984"}
+            placeholder={isBeldex || currency === "BDX" ? "Minimum 4,000 BDX" : "Minimum $300"}
             className="mt-0 h-14 border-2 border-line-strong bg-surface px-4 text-base font-medium placeholder:text-muted focus:border-accent focus:ring-2 focus:ring-accent/20"
           />
         </div>
         <div className="mt-2 flex justify-between text-[11px]">
-          <span className="text-subtle">{t.available}: {currency === "BDX" ? `${formatBdx(bdxAvailable)} BDX` : formatUsd(available)} · Min: {isBeldex ? (currency === "BDX" ? `${formatBdx(4000)} (${formatUsd(bdxToUsd(4000), 3)})` : `${formatUsd(bdxToUsd(4000), 3)} (${formatBdx(4000)} equivalent)`) : formatUsd(MIN_WITHDRAWAL)}</span>
-          <button type="button" onClick={() => setAmount((currency === "BDX" ? bdxAvailable : available).toFixed(3))} className="text-accent">
+          <span className="text-subtle">{t.available}: {isBeldex || currency === "BDX" ? `${formatBdx(bdxAvailable)} BDX` : formatUsd(available)} · Min: {isBeldex || currency === "BDX" ? `${formatBdx(4000)} BDX` : formatUsd(MIN_WITHDRAWAL)}</span>
+          <button type="button" onClick={() => setAmount(((isBeldex || currency === "BDX") ? bdxAvailable : available).toFixed(3))} className="text-accent">
             {t.max}
           </button>
         </div>
@@ -206,9 +206,9 @@ function CoinEstimate({
   if (id === "beldex") {
     return (
       <div className="mt-2 rounded-md border border-accent/30 bg-accent/5 px-3 py-2 text-[11px] text-subtle">
-        <div>Platform rate: <span className="font-semibold text-fg">{formatUsd(BDX_USD_RATE, 6)} per BDX</span></div>
-        <div className="mt-0.5">{currency === "BDX" ? <>Account value: <span className="font-semibold text-accent">{formatUsd(usd, 3)}</span> for {formatBdx(amount)}</> : <>BDX to send: <span className="font-semibold text-accent">{formatBdx(amount / BDX_USD_RATE)}</span> for {formatUsd(amount, 3)}</>}</div>
-        <div className="mt-0.5 text-[10px]">{currency === "BDX" ? "Your BDX amount is converted to the account USD value." : "Your USD amount is converted to the BDX amount shown before processing."}</div>
+        <div>Beldex withdrawal denomination</div>
+        <div className="mt-0.5 font-semibold text-accent">{formatBdx(amount)} BDX</div>
+        <div className="mt-0.5 text-[10px]">Beldex withdrawals use BDX only. No USD-to-BDX conversion is applied.</div>
       </div>
     );
   }

@@ -43,6 +43,11 @@ test("database/API defense-in-depth migrations keep critical controls", () => {
   for (const needle of mustContain) assert.ok(migration.includes(needle), `Missing security control: ${needle}`);
   assert.match(accountingMigration, /drop function if exists public\.swap_assets\(uuid,text,text,numeric,numeric\)/);
   assert.match(accountingMigration, /drop function if exists public\.swap_assets\(text,text,numeric,numeric\)/);
+  assert.equal(
+    fs.existsSync(path.join(root, "supabase/functions/swap-assets/index.ts")),
+    false,
+    "Retired swap Edge Function must not be redeployed from this branch",
+  );
   assert.match(accountingMigration, /drop function if exists public\.create_financial_transaction\(text,numeric,text,text,uuid\)/);
   assert.match(adminAccountingMigration, /admin_adjust_bdx_balance/);
   assert.match(adminAccountingMigration, /Reference was already used for a different BDX adjustment/);

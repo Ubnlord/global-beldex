@@ -20,6 +20,9 @@ declare
   v_tx public.transaction;
   v_reason text := nullif(trim(coalesce(p_reason,'')),'');
   v_reference text := nullif(trim(coalesce(p_reference,'')),'');
+  v_request_id uuid;
+  v_key text;
+  v_note text;
   v_type text;
   v_amount numeric;
 begin
@@ -29,16 +32,39 @@ begin
   if p_user_id is null then raise exception 'User is required'; end if;
   if p_delta is null or p_delta=0 then raise exception 'Adjustment cannot be zero'; end if;
   if v_reason is null then raise exception 'Reason is required'; end if;
+  if v_reference is null then raise exception 'Reference is required for idempotency'; end if;
 
   select * into v_admin from public.admin_user where user_id=auth.uid();
   if v_admin.id is null then raise exception 'Admin access required'; end if;
-  select * into v_old from public.user_profile where user_id=p_user_id for update;
-  if v_old.user_id is null then raise exception 'User profile not found'; end if;
-  if coalesce(v_old.blocked,false) then raise exception 'User account is blocked'; end if;
-  if v_old.bdx_balance+p_delta<0 then raise exception 'Adjustment would make BDX balance negative'; end if;
 
   v_type := case when p_delta>0 then 'bonus' else 'withdraw' end;
   v_amount := abs(p_delta);
+  v_note := v_reason||' | Ref: '||v_reference;
+  v_key := md5(p_user_id::text||':'||v_reference);
+  v_request_id := (
+    substr(v_key,1,8)||'-'||substr(v_key,9,4)||'-'||substr(v_key,13,4)||'-'||
+    substr(v_key,17,4)||'-'||substr(v_key,21,12)
+  )::uuid;
+
+  -- Serialize adjustments for this user before checking the idempotency key.
+  select * into v_old from public.user_profile where user_id=p_user_id for update;
+  if v_old.user_id is null then raise exception 'User profile not found'; end if;
+
+  select * into v_tx from public.transaction
+   where user_id=p_user_id and request_id=v_request_id
+   limit 1 for update;
+  if found then
+    if v_tx.type<>v_type or v_tx.amount<>v_amount or coalesce(v_tx.currency,'USD')<>'BDX'
+      or coalesce(v_tx.method,'')<>'Admin BDX adjustment' or coalesce(v_tx.note,'')<>v_note
+    then
+      raise exception 'Reference was already used for a different BDX adjustment';
+    end if;
+    return v_tx;
+  end if;
+
+  if coalesce(v_old.blocked,false) then raise exception 'User account is blocked'; end if;
+  if v_old.bdx_balance+p_delta<0 then raise exception 'Adjustment would make BDX balance negative'; end if;
+
   update public.user_profile
      set bdx_balance=bdx_balance+p_delta,updated_at=now()
    where user_id=p_user_id
@@ -46,12 +72,11 @@ begin
 
   insert into public.transaction(
     user_id,type,amount,currency,status,approval_status,method,note,
-    approved_by,approval_reason,approved_at,settled_at
+    request_id,approved_by,approval_reason,approved_at,settled_at
   )
   values(
     p_user_id,v_type,v_amount,'BDX','completed','approved','Admin BDX adjustment',
-    v_reason||case when v_reference is not null then ' | Ref: '||v_reference else '' end,
-    v_admin.id,v_reason,now(),now()
+    v_note,v_request_id,v_admin.id,v_reason,now(),now()
   )
   returning * into v_tx;
 
@@ -61,7 +86,7 @@ begin
   values(
     v_admin.id,p_user_id,'bdx_balance_adjusted',v_tx.id,
     jsonb_build_object('bdx_balance',v_old.bdx_balance),
-    jsonb_build_object('bdx_balance',v_new.bdx_balance,'delta',p_delta,'currency','BDX'),
+    jsonb_build_object('bdx_balance',v_new.bdx_balance,'delta',p_delta,'currency','BDX','reference',v_reference),
     v_reason
   );
   return v_tx;

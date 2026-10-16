@@ -134,7 +134,7 @@ function WithdrawPage() {
           </button>
         </div>
         {method && (
-          <CoinEstimate label={method} currency={currency} amount={parseFloat(amount) || 0} usd={parseFloat(amount) || 0} book={book} />
+          <CoinEstimate label={method} amount={parseFloat(amount) || 0} usd={parseFloat(amount) || 0} book={book} />
         )}
 
         <FieldLabel>
@@ -181,13 +181,11 @@ function CoinEstimate({
   label,
   usd,
   amount,
-  currency,
   book,
 }: {
   label: string;
   usd: number;
   amount: number;
-  currency: "BDX" | "USD";
   book: Record<string, { usd: number; change: number }>;
 }) {
   const id = label === "Bitcoin" ? "bitcoin" : label === "Ethereum" ? "ethereum" : "beldex";

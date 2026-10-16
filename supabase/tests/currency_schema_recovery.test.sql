@@ -22,9 +22,8 @@ select has_column('public', 'transaction', 'currency',
 select has_function('public', 'create_financial_transaction',
   array['text','numeric','text','text','uuid','text'],
   'Currency-aware transaction RPC exists');
-select has_function('public', 'admin_financial_reconciliation_v2',
-  array[]::text[],
-  'Currency-separated reconciliation RPC exists');
+select ok(to_regprocedure('public.admin_financial_reconciliation_v2()') is null,
+  'Legacy reconciliation RPC is retired');
 select has_function('public', 'buy_investment_plan',
   array['text','numeric'],
   'Investment purchase RPC remains present');

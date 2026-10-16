@@ -13,7 +13,8 @@ const admin = readFileSync(new URL("../src/routes/admin.tsx", import.meta.url), 
 // New investments are explicitly BDX-denominated; legacy records remain USD.
 assert.match(migration, /add column if not exists currency text not null default 'USD'/);
 assert.match(migration, /check \(currency in \('USD','BDX'\)\)/);
-assert.match(migration, /if v_profile\.bdx_balance<p_amount then raise exception 'Insufficient BDX balance'/);
+assert.match(accountingMigration, /bdx_balance>=p_amount/);
+assert.match(accountingMigration, /raise exception 'Insufficient % balance'/);
 assert.match(migration, /bdx_balance=bdx_balance-p_amount/);
 assert.match(migration, /locked_bdx_balance=locked_bdx_balance\+p_amount/);
 assert.match(migration, /daily_rate,duration_days,currency\)[\s\S]*'BDX'/);

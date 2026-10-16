@@ -110,7 +110,7 @@ test("published plan ROI is divided across the full term without rewriting activ
     }
     assert.doesNotMatch(
       migration,
-      /update\\s+public\\.user_investment|update\\s+public\\.user_profile|update\\s+public\\.transaction/i,
+      /update\s+public\.user_investment|update\s+public\.user_profile|update\s+public\.transaction/i,
       "ROI catalogue correction must not rewrite active investments, balances, or ledger rows",
     );
   }

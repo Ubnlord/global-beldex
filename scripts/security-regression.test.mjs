@@ -8,7 +8,7 @@ const serviceKey = process.env.SUPABASE_TEST_SERVICE_ROLE_KEY;
 
 const step = async (_name, fn) => fn();
 
-test("security migration exposes only the intended swap executor", { skip: !url || !serviceKey }, async () => {
+test("financial authorization and currency controls hold", { skip: !url || !serviceKey }, async () => {
 
   const admin = createClient(url, serviceKey, {
     auth: { autoRefreshToken: false, persistSession: false },
@@ -49,7 +49,7 @@ test("security migration exposes only the intended swap executor", { skip: !url 
 
     for (const [user, permissions] of [
       [users.adminNoPermission, []],
-      [users.admin, ["manage_users", "approve_transactions", "reject_transactions"]],
+      [users.admin, ["manage_users", "approve_transactions", "reject_transactions", "view_transactions"]],
     ]) {
       const { error } = await admin.from("admin_user").upsert({
         user_id: user.id,
@@ -85,6 +85,48 @@ test("security migration exposes only the intended swap executor", { skip: !url 
         p_reason: "security regression test",
       });
       assert.ok(error, "admin without manage_users unexpectedly blocked a user");
+    });
+
+    await step("admin without approval permission cannot adjust BDX", async () => {
+      const client = await clientFor(users.adminNoPermission);
+      const { error } = await client.rpc("admin_adjust_bdx_balance", {
+        p_user_id: users.normal.id,
+        p_delta: 1,
+        p_reason: "permission regression test",
+        p_reference: null,
+      });
+      assert.ok(error, "admin without approve_transactions unexpectedly adjusted BDX");
+    });
+
+    await step("authorized admin can adjust BDX with a BDX ledger record", async () => {
+      const client = await clientFor(users.admin);
+      const result = await client.rpc("admin_adjust_bdx_balance", {
+        p_user_id: users.normal.id,
+        p_delta: 10,
+        p_reason: "BDX adjustment regression test",
+        p_reference: "security-test",
+      });
+      assert.ifError(result.error);
+      assert.equal(result.data?.currency, "BDX");
+      const { data, error } = await admin.from("user_profile")
+        .select("bdx_balance")
+        .eq("user_id", users.normal.id)
+        .single();
+      assert.ifError(error);
+      assert.equal(Number(data.bdx_balance), 10);
+    });
+
+    await step("admin without view_transactions cannot run financial reconciliation", async () => {
+      const client = await clientFor(users.adminNoPermission);
+      const { error } = await client.rpc("admin_financial_reconciliation_v3");
+      assert.ok(error, "admin without view_transactions unexpectedly read reconciliation");
+    });
+
+    await step("authorized admin can run currency-separated reconciliation", async () => {
+      const client = await clientFor(users.admin);
+      const { data, error } = await client.rpc("admin_financial_reconciliation_v3");
+      assert.ifError(error);
+      assert.ok(Array.isArray(data));
     });
 
     await step("authorized admin can execute protected user management", async () => {
@@ -309,6 +351,84 @@ test("security migration exposes only the intended swap executor", { skip: !url 
       assert.ifError(afterRejection.error);
       assert.equal(Number(afterRejection.data.available_balance), initialBalance - 300);
       assert.equal(Number(afterRejection.data.total_withdrawals), initialWithdrawals + 300);
+    });
+
+    await step("concurrent withdrawals reserve a balance only once", async () => {
+      const before = await admin.from("user_profile")
+        .select("available_balance")
+        .eq("user_id", users.normal.id)
+        .single();
+      assert.ifError(before.error);
+      const requestIds = [randomUUID(), randomUUID()];
+      const [clientA, clientB] = await Promise.all([clientFor(users.normal), clientFor(users.normal)]);
+      const results = await Promise.all(requestIds.map((requestId, index) =>
+        (index === 0 ? clientA : clientB).rpc("create_financial_transaction", {
+          p_type: "withdraw",
+          p_amount: 30000,
+          p_method: "Bitcoin",
+          p_note: "bc1qaaaaaaaaaaa",
+          p_request_id: requestId,
+          p_currency: "USD",
+        })
+      ));
+      assert.equal(results.filter((result) => !result.error).length, 1);
+      assert.equal(results.filter((result) => result.error).length, 1);
+      const after = await admin.from("user_profile")
+        .select("available_balance")
+        .eq("user_id", users.normal.id)
+        .single();
+      assert.ifError(after.error);
+      assert.equal(Number(before.data.available_balance) - Number(after.data.available_balance), 30000);
+      const { data, error } = await admin.from("transaction")
+        .select("id")
+        .eq("user_id", users.normal.id)
+        .in("request_id", requestIds);
+      assert.ifError(error);
+      assert.equal(data?.length, 1);
+    });
+
+    await step("concurrent settlement credits totals and audit once", async () => {
+      const client = await clientFor(users.normal);
+      const requestId = randomUUID();
+      const created = await client.rpc("create_financial_transaction", {
+        p_type: "withdraw",
+        p_amount: 300,
+        p_method: "Bitcoin",
+        p_note: "bc1qaaaaaaaaaaa",
+        p_request_id: requestId,
+        p_currency: "USD",
+      });
+      assert.ifError(created.error);
+      const adminClientA = await clientFor(users.admin);
+      const adminClientB = await clientFor(users.admin);
+      const approved = await adminClientA.rpc("admin_approve_transaction", {
+        p_transaction_id: created.data.id,
+        p_reason: "concurrency test approval",
+      });
+      assert.ifError(approved.error);
+      const before = await admin.from("user_profile")
+        .select("total_withdrawals")
+        .eq("user_id", users.normal.id)
+        .single();
+      assert.ifError(before.error);
+      const results = await Promise.all([
+        adminClientA.rpc("admin_settle_transaction", { p_transaction_id: created.data.id, p_reason: "concurrent settlement A" }),
+        adminClientB.rpc("admin_settle_transaction", { p_transaction_id: created.data.id, p_reason: "concurrent settlement B" }),
+      ]);
+      assert.equal(results.filter((result) => !result.error).length, 1);
+      assert.equal(results.filter((result) => result.error).length, 1);
+      const after = await admin.from("user_profile")
+        .select("total_withdrawals")
+        .eq("user_id", users.normal.id)
+        .single();
+      assert.ifError(after.error);
+      assert.equal(Number(after.data.total_withdrawals) - Number(before.data.total_withdrawals), 300);
+      const { data: auditRows, error: auditError } = await admin.from("transaction_audit")
+        .select("id")
+        .eq("transaction_id", created.data.id)
+        .eq("action", "settled");
+      assert.ifError(auditError);
+      assert.equal(auditRows?.length, 1);
     });
 
     await step("duplicate request_id is idempotent", async () => {

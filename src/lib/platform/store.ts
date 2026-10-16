@@ -2,8 +2,7 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { copy, fill, type Lang } from "./i18n";
 import { planCeiling, type Plan } from "./catalog";
-import { bdxToUsd, uid } from "@/lib/utils";
-import { fetchQuotes } from "@/lib/market/live-quotes";
+import { uid } from "@/lib/utils";
 import { pullCloudBook } from "@/lib/supabase/books";
 import { supabase } from "@/lib/supabase/client";
 import type { CloudProfile } from "@/lib/supabase/auth";
@@ -124,7 +123,6 @@ type PlatformState = {
   withdraw: (amount: number, method: string, address: string, requestId?: string, currency?: "BDX" | "USD") => Promise<string | null>;
   buyPlan: (plan: Plan, amount: number) => Promise<string | null>;
   settlePlans: () => Promise<void>;
-  swap: (from: "USD" | "BDX", to: "USD" | "BDX", amount: number, rate?: number) => Promise<string | null>;
   copyReferral: () => string;
   addNotice: (title: string, body: string) => void;
   markNoticesRead: () => void;
@@ -245,10 +243,11 @@ export const usePlatform = create<PlatformState>()(
         },
 
         deposit: async (amount, method, requestId, currency = "BDX") => {
-          const isBeldex = method === "BELDEX";
-          const ledgerCurrency = isBeldex ? currency : "USD";
+          const isBeldex = method.toUpperCase() === "BELDEX";
+          if (isBeldex && currency !== "BDX") return "BELDEX_REQUIRES_BDX";
+          const ledgerCurrency = isBeldex ? "BDX" : "USD";
           const ledgerAmount = amount;
-          const minimum = isBeldex ? (currency === "BDX" ? 4000 : bdxToUsd(4000)) : 300;
+          const minimum = isBeldex ? 4000 : 300;
           if (!amount || amount < minimum) return "MIN_DEPOSIT";
           const { error } = await supabase.rpc("create_financial_transaction", {
             p_type: "deposit",
@@ -268,9 +267,10 @@ export const usePlatform = create<PlatformState>()(
           const addressError = validateWithdrawalDestination(method, address);
           if (addressError) return addressError;
           if (!amount || amount <= 0) return "NEED_AMOUNT";
-          const isBeldex = method === "Beldex";
-          const ledgerCurrency = isBeldex ? currency : "USD";
-          const minimum = isBeldex ? (currency === "BDX" ? 4000 : bdxToUsd(4000)) : 300;
+          const isBeldex = method.toUpperCase() === "BELDEX";
+          if (isBeldex && currency !== "BDX") return "BELDEX_REQUIRES_BDX";
+          const ledgerCurrency = isBeldex ? "BDX" : "USD";
+          const minimum = isBeldex ? 4000 : 300;
           if (amount < minimum) return "MIN_WITHDRAWAL";
           const balance = ledgerCurrency === "BDX" ? get().bdx : get().available;
           if (amount > balance) return "INSUFFICIENT";
@@ -320,19 +320,6 @@ export const usePlatform = create<PlatformState>()(
           }
         },
 
-        swap: async (from, to, amount) => {
-          if (from === to) return "SWAP_SAME";
-          if (!amount || amount <= 0) return "NEED_AMOUNT";
-
-          const { error } = await supabase.functions.invoke("swap-assets", {
-            body: { from, to, amount },
-          });
-          if (error) return error.message;
-
-          const remote = await pullCloudBook();
-          if (remote) set({ ...remote, tickets: remote.tickets ?? [] });
-          return null;
-        },
         copyReferral: () => referralLink(get().user),
 
         addNotice: (title, body) => {

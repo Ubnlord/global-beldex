@@ -217,6 +217,19 @@ test("financial authorization and currency controls hold", { skip: !url || !serv
       assert.ok(error, "Beldex deposit unexpectedly accepted USD denomination");
     });
 
+    await step("financial requests reject a missing idempotency key", async () => {
+      const client = await clientFor(users.normal);
+      const { error } = await client.rpc("create_financial_transaction", {
+        p_type: "deposit",
+        p_amount: 4000,
+        p_method: "BELDEX",
+        p_note: null,
+        p_request_id: null,
+        p_currency: "BDX",
+      });
+      assert.ok(error, "financial request unexpectedly accepted a missing idempotency key");
+    });
+
     await step("ordinary user cannot read another user's profile or transaction", async () => {
       const client = await clientFor(users.normal);
       const { data: profileRows, error: profileError } = await client

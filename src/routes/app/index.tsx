@@ -8,14 +8,12 @@ import {
   Gift,
   History,
   LayoutGrid,
-  Repeat,
   TrendingUp,
   Users,
   Wallet,
   X,
 } from "lucide-react";
 import { AdvancedChart, SymbolOverview } from "@/components/market/tradingview";
-import { BdxConverter } from "@/components/market/live-price";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/layout/toast";
 import { TvCredit } from "@/components/platform/plan-card";
@@ -48,6 +46,10 @@ function Dashboard() {
   const lang = usePlatform((s) => s.lang);
   const t = copy[lang];
   const active = plans.filter((p) => p.status === "active");
+  const bdxProfit = plans.reduce((sum, p) => sum + (p.currency === "BDX" ? (p.creditedProfit ?? 0) : 0), 0);
+  const bdxBonus = txs.filter((tx) => tx.type === "bonus" && tx.currency === "BDX" && tx.status === "completed").reduce((sum, tx) => sum + tx.amount, 0);
+  const bdxReferralBonus = txs.filter((tx) => tx.type === "referral" && tx.currency === "BDX" && tx.status === "completed").reduce((sum, tx) => sum + tx.amount, 0);
+  const bdxWithdrawn = txs.filter((tx) => tx.type === "withdraw" && tx.currency === "BDX" && tx.status === "completed").reduce((sum, tx) => sum + tx.amount, 0);
 
   return (
     <div className="mx-auto max-w-[480px] px-4 pb-[100px] pt-4">
@@ -74,32 +76,32 @@ function Dashboard() {
       )}
 
       <div className="rounded-lg border border-line bg-elevated p-5">
-        <div className="text-xs text-muted">{t.page.accountOverview}</div>
+        <div className="text-xs text-muted">BDX account overview</div>
         <div className="mt-1 text-lg font-bold text-fg">
           {t.hello} {user?.name || "Kenneth Munachimso"}!
         </div>
         <div className="mt-4 grid grid-cols-2 gap-4">
           <div>
-            <div className="text-[11px] text-subtle">{t.available}</div>
+            <div className="text-[11px] text-subtle">Historical USD available · read-only</div>
             <div className="text-xl font-bold tabular text-accent">{formatUsd(available)}</div>
           </div>
           <div>
-            <div className="text-[11px] text-subtle">{t.locked}</div>
+            <div className="text-[11px] text-subtle">Historical USD locked · read-only</div>
             <div className="text-xl font-bold tabular text-warn">{formatUsd(locked)}</div>
           </div>
         </div>
         <div className="mt-4 rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-4">
           <div className="flex items-center gap-2 text-[11px] font-semibold text-emerald-300">
-            <Wallet size={15} /> BDX WALLET
+            <Wallet size={15} /> AVAILABLE BDX WALLET
           </div>
-          <div className="mt-1 text-2xl font-extrabold tabular text-emerald-200">{formatBdx(bdx)} BDX</div>
+          <div className="mt-1 text-2xl font-extrabold tabular text-emerald-200">{formatBdx(bdx)}</div>
           <div className="mt-1 text-[10px] text-subtle">Available BDX balance · BDX investment profits and referral rewards stay in BDX</div>
         </div>
         <div className="mt-5 grid grid-cols-2 gap-3">
-          <Stat icon={TrendingUp} label={t.totalProfit + " (USD)"} value={formatUsd(profit, 0)} tone="text-accent" />
-          <Stat icon={Gift} label={t.bonus + " (USD)"} value={formatUsd(bonus, 0)} tone="text-warn" />
-          <Stat icon={Users} label={t.referralBonus + " (USD)"} value={formatUsd(referralBonus, 0)} tone="text-violet" />
-          <Stat icon={Wallet} label={t.withdrawals + " (USD)"} value={formatUsd(withdrawn, 0)} tone="text-rose" />
+          <Stat icon={TrendingUp} label="BDX interest credited" value={formatBdx(bdxProfit)} tone="text-accent" />
+          <Stat icon={Gift} label="BDX bonuses credited" value={formatBdx(bdxBonus)} tone="text-warn" />
+          <Stat icon={Users} label="BDX referral rewards" value={formatBdx(bdxReferralBonus)} tone="text-violet" />
+          <Stat icon={Wallet} label="BDX withdrawals completed" value={formatBdx(bdxWithdrawn)} tone="text-rose" />
         </div>
         <Button className="mt-5 w-full" onClick={() => navigate({ to: "/app/deposit" })}>
           <ArrowDownToLine size={16} /> {t.investNow}
@@ -118,7 +120,7 @@ function Dashboard() {
           {[
             { label: t.deposit, icon: ArrowDownToLine, to: "/app/deposit" as const },
             { label: t.withdraw, icon: ArrowUpFromLine, to: "/app/withdraw" as const },
-            { label: t.swap, icon: Repeat, to: "/app/swap" as const },
+            { label: t.buyPlan, icon: TrendingUp, to: "/app/plans" as const },
             { label: t.history, icon: History, to: "/app/history" as const },
           ].map((a) => (
             <Link
@@ -133,10 +135,6 @@ function Dashboard() {
             </Link>
           ))}
         </div>
-      </div>
-
-      <div className="mt-6">
-        <BdxConverter />
       </div>
 
       <div className="mt-6 rounded-lg border border-line bg-elevated p-4">

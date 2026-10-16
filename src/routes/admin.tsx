@@ -384,6 +384,7 @@ export function AdminPage({ initialTab = "dashboard", transactionType }: { initi
           !deltaOk(row.deposits_delta) ||
           !deltaOk(row.withdrawals_delta) ||
           !deltaOk(row.referral_delta) ||
+          !deltaOk(row.referral_bdx_delta) ||
           !deltaOk(row.investment_profit_delta) ||
           !deltaOk(row.locked_bdx_delta) ||
           !deltaOk(row.deposits_bdx_delta) ||

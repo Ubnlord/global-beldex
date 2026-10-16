@@ -183,6 +183,30 @@ $function$;
 revoke all on function public.admin_manage_investment(uuid,numeric,boolean,text,text) from public,anon;
 grant execute on function public.admin_manage_investment(uuid,numeric,boolean,text,text) to authenticated;
 
+-- Keep the historical four-argument RPC signature as a safe compatibility
+-- wrapper. It delegates to the currency-aware implementation above and contains
+-- no independent balance mutation logic.
+create or replace function public.admin_manage_investment(
+  p_investment_id uuid,
+  p_daily_rate numeric,
+  p_status text,
+  p_reason text
+)
+returns public.user_investment
+language plpgsql
+security definer
+set search_path = pg_catalog, public, pg_temp
+as $function$
+begin
+  return public.admin_manage_investment(
+    p_investment_id,p_daily_rate,null::boolean,p_status,p_reason
+  );
+end;
+$function$;
+
+revoke all on function public.admin_manage_investment(uuid,numeric,text,text) from public,anon;
+grant execute on function public.admin_manage_investment(uuid,numeric,text,text) to authenticated,service_role;
+
 -- Read-only reconciliation v3 reports BDX referrals separately and excludes
 -- administrative balance adjustments from user withdrawal totals.
 create or replace function public.admin_financial_reconciliation_v3()

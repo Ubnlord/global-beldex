@@ -64,6 +64,7 @@ assert.match(suite, /currency-explicit financial request RPC exists/i);
   assert.match(adminRoute, /view_transactions/);
   assert.match(adminRoute, /view_audit_log/);
   assert.match(adminRoute, /admin_financial_reconciliation/);
+  assert.match(adminRoute, /!deltaOk\(row\.referral_bdx_delta\)/, "BDX referral reconciliation deltas must trigger exception alerts");
   assert.match(adminRoute, /never writes balances, investments or transaction states directly/);
 });
 

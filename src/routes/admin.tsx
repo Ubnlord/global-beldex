@@ -101,6 +101,9 @@ type ReconciliationRow = {
   referral_earnings: string | number;
   recorded_referrals: string | number;
   referral_delta: string | number;
+  referral_earnings_bdx: string | number;
+  recorded_referrals_bdx: string | number;
+  referral_bdx_delta: string | number;
   credited_investment_profit: string | number;
   recorded_investment_profit: string | number;
   investment_profit_delta: string | number;
@@ -224,7 +227,7 @@ export function AdminPage({ initialTab = "dashboard", transactionType }: { initi
 
   async function loadReconciliation() {
     setReconLoading(true);
-    const { data, error: reconError } = await supabase.rpc("admin_financial_reconciliation_v2");
+    const { data, error: reconError } = await supabase.rpc("admin_financial_reconciliation_v3");
     if (reconError) setError(reconError.message);
     else setReconciliation((data ?? []) as ReconciliationRow[]);
     setReconLoading(false);
@@ -683,11 +686,11 @@ function ReconciliationPanel({ rows, loading, problems, onRun }: { rows: Reconci
             <div className="mt-1 text-xs opacity-80">{problems ? "No automatic repair was attempted." : "All tested deltas are zero and no negative balances were reported."}</div>
           </div>
           <div className="mt-4 overflow-x-auto rounded-xl border border-line">
-            <table className="min-w-[1500px] w-full text-left text-xs">
-              <thead className="bg-elevated text-muted"><tr><th className="p-3">User</th><th className="p-3">Available</th><th className="p-3">Locked Δ</th><th className="p-3">Deposits Δ</th><th className="p-3">Withdrawals Δ</th><th className="p-3">Referrals Δ</th><th className="p-3">Profit Δ (USD)</th><th className="p-3">BDX available</th><th className="p-3">BDX locked Δ</th><th className="p-3">BDX deposits Δ</th><th className="p-3">BDX withdrawals Δ</th><th className="p-3">BDX profit Δ</th><th className="p-3">Status</th></tr></thead>
+            <table className="min-w-[1650px] w-full text-left text-xs">
+              <thead className="bg-elevated text-muted"><tr><th className="p-3">User</th><th className="p-3">Available</th><th className="p-3">Locked Δ</th><th className="p-3">Deposits Δ</th><th className="p-3">Withdrawals Δ</th><th className="p-3">Referrals Δ</th><th className="p-3">Profit Δ (USD)</th><th className="p-3">BDX available</th><th className="p-3">BDX locked Δ</th><th className="p-3">BDX deposits Δ</th><th className="p-3">BDX withdrawals Δ</th><th className="p-3">BDX referrals Δ</th><th className="p-3">BDX profit Δ</th><th className="p-3">Status</th></tr></thead>
               <tbody className="divide-y divide-line">{rows.map((row) => {
-                const bad = row.negative_balance || !deltaOk(row.locked_delta) || !deltaOk(row.deposits_delta) || !deltaOk(row.withdrawals_delta) || !deltaOk(row.referral_delta) || !deltaOk(row.investment_profit_delta) || !deltaOk(row.locked_bdx_delta) || !deltaOk(row.deposits_bdx_delta) || !deltaOk(row.withdrawals_bdx_delta) || !deltaOk(row.investment_profit_bdx_delta);
-                return <tr key={row.user_id}><td className="p-3 font-mono text-[10px]">{row.user_id}</td><td className="p-3">{money(row.available_balance)}</td><td className="p-3">{money(row.locked_delta)}</td><td className="p-3">{money(row.deposits_delta)}</td><td className="p-3">{money(row.withdrawals_delta)}</td><td className="p-3">{money(row.referral_delta)}</td><td className="p-3">{money(row.investment_profit_delta)}</td><td className="p-3">{money(row.bdx_balance)} BDX</td><td className="p-3">{money(row.locked_bdx_delta)} BDX</td><td className="p-3">{money(row.deposits_bdx_delta)} BDX</td><td className="p-3">{money(row.withdrawals_bdx_delta)} BDX</td><td className="p-3">{money(row.investment_profit_bdx_delta)} BDX</td><td className="p-3"><Status value={bad ? "review" : "ok"} /></td></tr>;
+                const bad = row.negative_balance || !deltaOk(row.locked_delta) || !deltaOk(row.deposits_delta) || !deltaOk(row.withdrawals_delta) || !deltaOk(row.referral_delta) || !deltaOk(row.investment_profit_delta) || !deltaOk(row.locked_bdx_delta) || !deltaOk(row.deposits_bdx_delta) || !deltaOk(row.withdrawals_bdx_delta) || !deltaOk(row.referral_bdx_delta) || !deltaOk(row.investment_profit_bdx_delta);
+                return <tr key={row.user_id}><td className="p-3 font-mono text-[10px]">{row.user_id}</td><td className="p-3">{money(row.available_balance)}</td><td className="p-3">{money(row.locked_delta)}</td><td className="p-3">{money(row.deposits_delta)}</td><td className="p-3">{money(row.withdrawals_delta)}</td><td className="p-3">{money(row.referral_delta)}</td><td className="p-3">{money(row.investment_profit_delta)}</td><td className="p-3">{money(row.bdx_balance)} BDX</td><td className="p-3">{money(row.locked_bdx_delta)} BDX</td><td className="p-3">{money(row.deposits_bdx_delta)} BDX</td><td className="p-3">{money(row.withdrawals_bdx_delta)} BDX</td><td className="p-3">{money(row.referral_bdx_delta)} BDX</td><td className="p-3">{money(row.investment_profit_bdx_delta)} BDX</td><td className="p-3"><Status value={bad ? "review" : "ok"} /></td></tr>;
               })}</tbody>
             </table>
           </div>

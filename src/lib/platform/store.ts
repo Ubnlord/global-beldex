@@ -242,10 +242,10 @@ export const usePlatform = create<PlatformState>()(
           set({ txs });
         },
 
-        deposit: async (amount, method, requestId, currency = "BDX") => {
+        deposit: async (amount, method, requestId, currency) => {
           const isBeldex = method.toUpperCase() === "BELDEX";
-          if (isBeldex && currency !== "BDX") return "BELDEX_REQUIRES_BDX";
           const ledgerCurrency = isBeldex ? "BDX" : "USD";
+          if (currency && currency !== ledgerCurrency) return "PAYMENT_METHOD_CURRENCY_MISMATCH";
           const ledgerAmount = amount;
           const minimum = isBeldex ? 4000 : 300;
           if (!amount || amount < minimum) return "MIN_DEPOSIT";
@@ -262,7 +262,7 @@ export const usePlatform = create<PlatformState>()(
           return null;
         },
 
-        withdraw: async (amount, method, address, requestId, currency = "BDX") => {
+        withdraw: async (amount, method, address, requestId, currency) => {
           if (!method) return "NEED_METHOD";
           const addressError = validateWithdrawalDestination(method, address);
           if (addressError) return addressError;

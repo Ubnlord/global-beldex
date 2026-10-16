@@ -167,7 +167,7 @@ select
   (select count(*) from public.transaction_audit) as transaction_audit_count;
 
 select throws_ok(
-  $select public.swap_assets('00000000-0000-0000-0000-000000000001'::uuid,'USD','BDX',1,1)$,
+  $$select public.swap_assets('00000000-0000-0000-0000-000000000001'::uuid,'USD','BDX',1,1)$$,
   'P0001',
   'Currency swaps are retired; use the BDX-native wallet flow',
   'retired swap RPC returns the explicit fail-closed error'

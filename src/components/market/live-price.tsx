@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { create } from "zustand";
-import { ArrowLeftRight, TrendingDown, TrendingUp } from "lucide-react";
+import { TrendingDown, TrendingUp } from "lucide-react";
 import { CoinLogo } from "@/components/market/coin-logo";
 import { fetchQuotes } from "@/lib/market/live-quotes";
 import { copy } from "@/lib/platform/i18n";
@@ -243,128 +243,6 @@ export function PriceChip() {
           {change24h.toFixed(2)}%
         </span>
       )}
-    </div>
-  );
-}
-
-function trimNum(n: number) {
-  if (!Number.isFinite(n)) return "";
-  const abs = Math.abs(n);
-  const digits = abs >= 1000 ? 2 : abs >= 1 ? 4 : 6;
-  return n.toFixed(digits).replace(/\.?0+$/, "");
-}
-
-function smallUsd(n: number) {
-  const abs = Math.abs(n);
-  const digits = abs >= 1 ? 2 : abs >= 0.01 ? 4 : 6;
-  return `${n < 0 ? "-" : ""}$${abs.toFixed(digits)}`;
-}
-
-export function BdxConverter() {
-  const p = copy[usePlatform((s) => s.lang)].page;
-  const { usd, change24h, status, load } = useBeldexQuote();
-  const price = usd && usd > 0 ? usd : null;
-  const [bdx, setBdx] = useState("1");
-  const [dollars, setDollars] = useState("");
-  const [active, setActive] = useState<"bdx" | "usd">("bdx");
-
-  useEffect(() => {
-    if (!price) return;
-    if (active === "bdx") {
-      const n = parseFloat(bdx);
-      if (Number.isFinite(n)) setDollars(trimNum(n * price));
-      return;
-    }
-    const n = parseFloat(dollars);
-    if (Number.isFinite(n)) setBdx(trimNum(n / price));
-  }, [price, active, bdx, dollars]);
-
-  const amount = parseFloat(bdx);
-  const delta =
-    price && change24h != null && Number.isFinite(amount)
-      ? amount * price * (change24h / 100)
-      : null;
-  const up = (change24h ?? 0) >= 0;
-
-  return (
-    <div className="rounded-lg border border-line bg-elevated p-4">
-      <div className="flex items-center justify-between gap-2">
-        <div className="text-[11px] font-semibold tracking-widest text-subtle">{p.converter}</div>
-        <div className="rounded-full border border-line-strong bg-surface px-2 py-0.5 text-[10px] text-muted">
-          BDX/USD
-        </div>
-      </div>
-      <div className="mt-1 text-lg font-bold">{p.calculator}</div>
-      <div className="mt-1 text-[11px] text-subtle">
-        {price ? (
-          <>
-            1 BDX = <LiveFigure value={formatCoinUsd(price)} />
-          </>
-        ) : status === "error" ? (
-          <button
-            type="button"
-            onClick={() => void load()}
-            className="text-accent underline underline-offset-2"
-          >
-            Live price unavailable — tap to retry
-          </button>
-        ) : (
-          "Loading live BDX price…"
-        )}
-      </div>
-
-      <div className="mt-4 rounded-lg border border-line bg-surface p-3">
-        <label className="block">
-          <span className="flex items-center gap-1.5 text-[10px] tracking-wide text-subtle">
-            <CoinLogo coin="beldex" size={16} />
-            BDX
-          </span>
-          <input
-            inputMode="decimal"
-            value={bdx}
-            onChange={(e) => {
-              setActive("bdx");
-              setBdx(e.target.value);
-            }}
-            className="mt-1 w-full bg-transparent text-lg font-semibold tabular text-fg outline-none"
-          />
-        </label>
-        <div className="my-2 flex items-center gap-2 text-subtle">
-          <div className="h-px flex-1 bg-line" />
-          <ArrowLeftRight size={14} className="text-accent" />
-          <div className="h-px flex-1 bg-line" />
-        </div>
-        <label className="block">
-          <span className="text-[10px] tracking-wide text-subtle">USD</span>
-          <input
-            inputMode="decimal"
-            value={dollars}
-            onChange={(e) => {
-              setActive("usd");
-              setDollars(e.target.value);
-            }}
-            className="mt-1 w-full bg-transparent text-lg font-semibold tabular text-fg outline-none"
-          />
-        </label>
-      </div>
-
-      <div className="mt-3 grid grid-cols-2 gap-2 text-[11px]">
-        <div className="rounded-md border border-line bg-surface px-3 py-2">
-          <div className="text-subtle">24h change</div>
-          <div className={cn("mt-0.5 font-semibold tabular", up ? "text-accent" : "text-danger")}>
-            {change24h == null ? "…" : `${up ? "+" : ""}${change24h.toFixed(2)}%`}
-          </div>
-        </div>
-        <div className="rounded-md border border-line bg-surface px-3 py-2">
-          <div className="text-subtle">24h value</div>
-          <div className={cn("mt-0.5 font-semibold tabular", up ? "text-accent" : "text-danger")}>
-            {delta == null ? "…" : `${delta > 0 ? "+" : ""}${smallUsd(delta)}`}
-          </div>
-        </div>
-      </div>
-      <p className="mt-3 text-[10px] text-subtle">
-        Calculator only. It uses the live Beldex price and does not move your balance.
-      </p>
     </div>
   );
 }

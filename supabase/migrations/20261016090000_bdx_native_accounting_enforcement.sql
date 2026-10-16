@@ -145,8 +145,30 @@ grant execute on function public.create_financial_transaction(text,numeric,text,
 drop function if exists public.create_financial_transaction(text,numeric,text,text,uuid);
 drop function if exists public.create_financial_transaction(text,numeric,text,text);
 
--- Retire currency swaps: no new USD/BDX exchange transactions are permitted.
-drop function if exists public.swap_assets(uuid,text,text,numeric,numeric);
+-- Retire currency swaps without breaking an already-deployed Edge Function.
+-- The service-role endpoint may remain deployed until explicitly removed, so keep
+-- its UUID-signature RPC as a fail-closed compatibility stub. It never writes
+-- balances or transactions and returns a clear error. Direct client calls remain
+-- revoked. The obsolete text-signature overload is removed.
+create or replace function public.swap_assets(
+  p_user_id uuid,
+  p_from text,
+  p_to text,
+  p_amount numeric,
+  p_rate numeric
+)
+returns public.transaction
+language plpgsql
+security definer
+set search_path = pg_catalog, public, pg_temp
+as $function$
+begin
+  raise exception 'Currency swaps are retired; use the BDX-native wallet flow';
+end;
+$function$;
+
+revoke all on function public.swap_assets(uuid,text,text,numeric,numeric) from public, anon, authenticated;
+grant execute on function public.swap_assets(uuid,text,text,numeric,numeric) to service_role;
 drop function if exists public.swap_assets(text,text,numeric,numeric);
 
 commit;

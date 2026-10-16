@@ -92,7 +92,7 @@ function WithdrawPage() {
               <button
                 key={m.id}
                 type="button"
-                onClick={() => { setMethod(m.label); if (m.id !== "BELDEX") setCurrency("USD"); }}
+                onClick={() => { setMethod(m.label); setCurrency(m.id === "BELDEX" ? "BDX" : "USD"); }}
                 className={
                   active
                     ? "flex items-center justify-between rounded-md border-2 border-accent bg-accent/10 p-3"
@@ -114,11 +114,15 @@ function WithdrawPage() {
           })}
         </div>
 
-        <FieldLabel>Withdrawal currency</FieldLabel>
-        <div className="mt-2 grid grid-cols-2 gap-2 rounded-md border border-line bg-surface p-1">
-          <button type="button" onClick={() => { setCurrency("BDX"); setMethod("Beldex"); }} className={currency === "BDX" ? "rounded-md bg-accent px-3 py-2 text-xs font-semibold text-accent-fg" : "rounded-md px-3 py-2 text-xs text-subtle"}>BDX</button>
-          <button type="button" onClick={() => setCurrency("USD")} className={currency === "USD" ? "rounded-md bg-accent px-3 py-2 text-xs font-semibold text-accent-fg" : "rounded-md px-3 py-2 text-xs text-subtle"}>USD</button>
-        </div>
+        {!isBeldex && (
+          <>
+            <FieldLabel>Withdrawal currency</FieldLabel>
+            <div className="mt-2 grid grid-cols-2 gap-2 rounded-md border border-line bg-surface p-1">
+              <button type="button" onClick={() => setCurrency("BDX")} className={currency === "BDX" ? "rounded-md bg-accent px-3 py-2 text-xs font-semibold text-accent-fg" : "rounded-md px-3 py-2 text-xs text-subtle"}>BDX</button>
+              <button type="button" onClick={() => setCurrency("USD")} className={currency === "USD" ? "rounded-md bg-accent px-3 py-2 text-xs font-semibold text-accent-fg" : "rounded-md px-3 py-2 text-xs text-subtle"}>USD</button>
+            </div>
+          </>
+        )}
         <FieldLabel>
           <span className="mt-4 block">{currency === "BDX" ? "Amount (BDX)" : "Amount (USD)"}</span>
         </FieldLabel>

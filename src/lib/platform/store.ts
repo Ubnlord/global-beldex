@@ -255,7 +255,7 @@ export const usePlatform = create<PlatformState>()(
             p_currency: ledgerCurrency,
             p_method: method,
             p_note: null,
-            p_request_id: requestId ? requestId : null,
+            p_request_id: requestId ?? uid(),
           });
           if (error) return error.message;
           await get().refreshTransactions();
@@ -280,7 +280,7 @@ export const usePlatform = create<PlatformState>()(
             p_currency: ledgerCurrency,
             p_method: method,
             p_note: address.trim(),
-            p_request_id: requestId ? requestId : null,
+            p_request_id: requestId ?? uid(),
           });
           if (error) return error.message;
           await get().refreshTransactions();

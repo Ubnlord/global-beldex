@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(66);
+select plan(68);
 
 -- Schema and RLS baseline.
 select has_table('public', 'user_profile', 'user_profile exists');
@@ -122,10 +122,10 @@ select function_privs_are('public', 'admin_manage_investment', array['uuid','num
 select function_privs_are('public', 'admin_fund_user', array['uuid','numeric','text'], 'authenticated', array['EXECUTE'], 'authenticated can reach admin_fund_user; function enforces permission');
 select function_privs_are('public', 'admin_adjust_balance', array['uuid','numeric','text'], 'authenticated', array['EXECUTE'], 'authenticated can reach admin_adjust_balance; function enforces permission');
 
-select function_privs_are('public', 'create_financial_transaction', array['text','numeric','text','text','uuid'], 'authenticated', array['EXECUTE'], 'authenticated can create financial requests');
+select function_privs_are('public', 'create_financial_transaction', array['text','numeric','text','text','uuid','text'], 'authenticated', array['EXECUTE'], 'authenticated can create currency-aware financial requests');
 
 select ok(
-  position('p_type = ''withdraw''' in pg_get_functiondef('public.create_financial_transaction(text,numeric,text,text,uuid)'::regprocedure)) > 0
+  position('p_type = ''withdraw''' in pg_get_functiondef('public.create_financial_transaction(text,numeric,text,text,uuid,text)'::regprocedure)) > 0
   and position('p_amount < 300' in pg_get_functiondef('public.create_financial_transaction(text,numeric,text,text,uuid)'::regprocedure)) > 0,
   'withdrawal RPC enforces the $300 minimum'
 );
@@ -145,8 +145,19 @@ select ok(
   'withdrawal RPC validates Beldex destinations'
 );
 
-select function_privs_are('public', 'swap_assets', array['uuid','text','text','numeric','numeric'], 'authenticated', '{}', 'authenticated cannot execute swap_assets directly');
-select function_privs_are('public', 'swap_assets', array['uuid','text','text','numeric','numeric'], 'service_role', array['EXECUTE'], 'service role can execute swap_assets');
+select ok(to_regprocedure('public.swap_assets(uuid,text,text,numeric,numeric)') is null, 'currency swap RPC is retired');
+select ok(to_regprocedure('public.swap_assets(text,text,numeric,numeric)') is null, 'legacy currency swap RPC overload is retired');
+select ok(to_regprocedure('public.create_financial_transaction(text,numeric,text,text,uuid)') is null, 'legacy currency-optional financial request RPC is retired');
+select ok(
+  (select daily_rate = 0.019 / 30 from public.investment_plan_catalog where id='gns')
+  and (select daily_rate = 0.0251 / 60 from public.investment_plan_catalog where id='build')
+  and (select daily_rate = 0.0392 / 60 from public.investment_plan_catalog where id='follow')
+  and (select daily_rate = 0.0856 / 365 from public.investment_plan_catalog where id='apex')
+  and (select daily_rate = 0.1343 / 730 from public.investment_plan_catalog where id='edifex')
+  and (select daily_rate = 0.1543 / 730 from public.investment_plan_catalog where id='dixon')
+  and (select daily_rate = 0.2378 / 1825 from public.investment_plan_catalog where id='falcon'),
+  'new BDX plan daily rates equal published total ROI divided by plan duration'
+);
 
 -- Direct table writes remain closed to browser roles.
 select ok(not has_table_privilege('authenticated', 'public.user_profile', 'INSERT'), 'authenticated cannot insert user_profile directly');

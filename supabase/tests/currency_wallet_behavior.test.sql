@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(22);
+select plan(25);
 
 -- Isolated identities and balances; transaction rollback leaves no fixture data.
 insert into auth.users (
@@ -28,7 +28,7 @@ select is(
   10000::numeric,'initial BDX wallet fixture'
 );
 select is(
-  (public.create_financial_transaction('withdraw',4000,'Beldex','test destination','a1100000-0000-4000-8000-000000000101','BDX')).currency,
+  (public.create_financial_transaction('withdraw',4000,'Beldex',repeat('A',95),'a1100000-0000-4000-8000-000000000101','BDX')).currency,
   'BDX'::text,'BDX withdrawal request is denominated in BDX'
 );
 select is(
@@ -46,7 +46,7 @@ select is(
 );
 select throws_ok(
   $$select public.create_financial_transaction('withdraw',4000,'Beldex','test destination','a1100000-0000-4000-8000-000000000101','USD')$$,
-  'P0001','Request ID was already used for a different transaction',
+  'P0001','Beldex transactions must be denominated in BDX',
   'reusing a request ID with a different currency is rejected'
 );
 
@@ -67,7 +67,7 @@ select is(
 
 -- USD withdrawal reservation and completion leave BDX untouched.
 select set_config('request.jwt.claim.sub','a1100000-0000-4000-8000-000000000001',true);
-select public.create_financial_transaction('withdraw',300,'Bank','test destination','a1100000-0000-4000-8000-000000000102','USD');
+select public.create_financial_transaction('withdraw',300,'Ethereum','0x1111111111111111111111111111111111111111','a1100000-0000-4000-8000-000000000102','USD');
 select is(
   (select available_balance from public.user_profile where user_id='a1100000-0000-4000-8000-000000000001'),
   700::numeric,'USD withdrawal reserves from USD wallet'
@@ -89,8 +89,8 @@ select is(
 
 -- USD and BDX deposits settle to their own wallets and their own totals.
 select set_config('request.jwt.claim.sub','a1100000-0000-4000-8000-000000000001',true);
-select public.create_financial_transaction('deposit',50,'Bank',null,'a1100000-0000-4000-8000-000000000103','USD');
-select public.create_financial_transaction('deposit',500,'Beldex',null,'a1100000-0000-4000-8000-000000000104','BDX');
+select public.create_financial_transaction('deposit',300,'Ethereum',null,'a1100000-0000-4000-8000-000000000103','USD');
+select public.create_financial_transaction('deposit',4000,'Beldex',null,'a1100000-0000-4000-8000-000000000104','BDX');
 select set_config('request.jwt.claim.sub','a1100000-0000-4000-8000-000000000002',true);
 select public.admin_approve_transaction((select id from public.transaction where request_id='a1100000-0000-4000-8000-000000000103'),'approve USD deposit');
 select public.admin_settle_transaction((select id from public.transaction where request_id='a1100000-0000-4000-8000-000000000103'),'settle USD deposit');
@@ -98,19 +98,19 @@ select public.admin_approve_transaction((select id from public.transaction where
 select public.admin_settle_transaction((select id from public.transaction where request_id='a1100000-0000-4000-8000-000000000104'),'settle BDX deposit');
 select is(
   (select available_balance from public.user_profile where user_id='a1100000-0000-4000-8000-000000000001'),
-  750::numeric,'USD deposit credits only USD wallet'
+  1000::numeric,'USD deposit credits only USD wallet'
 );
 select is(
   (select bdx_balance from public.user_profile where user_id='a1100000-0000-4000-8000-000000000001'),
-  10500::numeric,'BDX deposit credits only BDX wallet'
+  14000::numeric,'BDX deposit credits only BDX wallet'
 );
 select is(
   (select total_deposits from public.user_profile where user_id='a1100000-0000-4000-8000-000000000001'),
-  50::numeric,'USD deposit increments legacy USD total'
+  300::numeric,'USD deposit increments legacy USD total'
 );
 select is(
   (select total_deposits_bdx from public.user_profile where user_id='a1100000-0000-4000-8000-000000000001'),
-  500::numeric,'BDX deposit increments BDX-specific total'
+  4000::numeric,'BDX deposit increments BDX-specific total'
 );
 select is(
   (select count(*)::integer from public.transaction where user_id='a1100000-0000-4000-8000-000000000001' and status='completed' and currency='BDX'),
@@ -131,6 +131,21 @@ select is(
 select is(
   (select withdrawals_bdx_delta from public.admin_financial_reconciliation_v2() where user_id='a1100000-0000-4000-8000-000000000001'),
   0::numeric,'rejected BDX withdrawal is excluded from completed BDX withdrawal totals'
+);
+
+select set_config('request.jwt.claim.sub','a1100000-0000-4000-8000-000000000002',true);
+select is(
+  (public.admin_adjust_bdx_balance('a1100000-0000-4000-8000-000000000001',25,'BDX adjustment test','fixture')).currency,
+  'BDX'::text,'admin BDX adjustment creates a BDX ledger row'
+);
+select is(
+  (select bdx_balance from public.user_profile where user_id='a1100000-0000-4000-8000-000000000001'),
+  14025::numeric,'admin BDX adjustment changes only the BDX wallet'
+);
+select throws_ok(
+  $select public.admin_adjust_bdx_balance('a1100000-0000-4000-8000-000000000001',-999999,'must not go negative',null)$,
+  'P0001','Adjustment would make BDX balance negative',
+  'admin BDX adjustment cannot create a negative balance'
 );
 
 select * from finish();

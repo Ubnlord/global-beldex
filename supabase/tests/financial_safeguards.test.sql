@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(72);
+select plan(73);
 
 -- Schema and RLS baseline.
 select has_table('public', 'user_profile', 'user_profile exists');
@@ -157,6 +157,10 @@ select ok(
   position('locked_bdx_balance=locked_bdx_balance-v_old.principal' in pg_get_functiondef('public.admin_manage_investment(uuid,numeric,boolean,text,text)'::regprocedure)) > 0
   and position('Completed or cancelled investments cannot be reactivated' in pg_get_functiondef('public.admin_manage_investment(uuid,numeric,boolean,text,text)'::regprocedure)) > 0,
   'admin investment management preserves BDX principal and prevents unsafe reactivation'
+);
+select ok(
+  position('null::boolean' in pg_get_functiondef('public.admin_manage_investment(uuid,numeric,text,text)'::regprocedure)) > 0,
+  'legacy admin investment RPC delegates to currency-aware implementation'
 );
 select ok(
   position('admin_has_permission(''view_transactions'')' in pg_get_functiondef('public.admin_financial_reconciliation_v3()'::regprocedure)) > 0

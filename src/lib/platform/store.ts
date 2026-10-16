@@ -268,8 +268,8 @@ export const usePlatform = create<PlatformState>()(
           if (addressError) return addressError;
           if (!amount || amount <= 0) return "NEED_AMOUNT";
           const isBeldex = method.toUpperCase() === "BELDEX";
-          if (isBeldex && currency !== "BDX") return "BELDEX_REQUIRES_BDX";
           const ledgerCurrency = isBeldex ? "BDX" : "USD";
+          if (currency && currency !== ledgerCurrency) return "PAYMENT_METHOD_CURRENCY_MISMATCH";
           const minimum = isBeldex ? 4000 : 300;
           if (amount < minimum) return "MIN_WITHDRAWAL";
           const balance = ledgerCurrency === "BDX" ? get().bdx : get().available;

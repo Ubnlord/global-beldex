@@ -83,7 +83,7 @@ test("financial refresh cannot present failed cold-start hydration as verified z
 
 
 
-test("published plan ROI is divided across the full term without rewriting active investments", () => {
+test("published plan ROI remains the daily rate without rewriting active investments", () => {
   const initialRateMigration = fs.readFileSync(
     path.join(root, "supabase/migrations/20261011003000_daily_roi_rate_interpretation.sql"),
     "utf8",
@@ -104,8 +104,8 @@ test("published plan ROI is divided across the full term without rewriting activ
     ]) {
       assert.match(
         migration,
-        new RegExp("when '" + plan[0] + "' then " + plan[1] + "::numeric / duration_days"),
-        plan[0] + " daily rate must be full-term ROI divided by duration",
+        new RegExp("when '" + plan[0] + "' then " + plan[1] + "::numeric"),
+        plan[0] + " daily rate must match the published daily ROI",
       );
     }
     assert.doesNotMatch(
@@ -114,7 +114,7 @@ test("published plan ROI is divided across the full term without rewriting activ
       "ROI catalogue correction must not rewrite active investments, balances, or ledger rows",
     );
   }
-  assert.match(forwardRateMigration, /raise exception 'Plan catalogue daily rates do not equal full-term ROI divided by duration'/);
+  assert.match(forwardRateMigration, /raise exception 'Plan catalogue daily rates do not match published daily ROI'/);
 });
 
 test("admin investment compatibility overloads cannot be ambiguous", () => {

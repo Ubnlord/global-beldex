@@ -6,6 +6,7 @@ import path from "node:path";
 const root = process.cwd();
 const migration = fs.readFileSync(path.join(root, "migrations/0008_security_hardening_v1.sql"), "utf8");
 const accountingMigration = fs.readFileSync(path.join(root, "supabase/migrations/20261016090000_bdx_native_accounting_enforcement.sql"), "utf8");
+const adminAccountingMigration = fs.readFileSync(path.join(root, "supabase/migrations/20261016091000_bdx_admin_controls_and_reconciliation.sql"), "utf8");
 const directWriteLockdown = fs.readFileSync(path.join(root, "migrations/0009_lock_down_direct_client_writes.sql"), "utf8");
 const databaseDefense = fs.readFileSync(path.join(root, "migrations/0011_database_api_defense_in_depth.sql"), "utf8");
 const authorizationTightening = fs.readFileSync(path.join(root, "migrations/0012_tighten_authorization_helpers.sql"), "utf8");
@@ -43,6 +44,9 @@ test("database/API defense-in-depth migrations keep critical controls", () => {
   assert.match(accountingMigration, /drop function if exists public\.swap_assets\(uuid,text,text,numeric,numeric\)/);
   assert.match(accountingMigration, /drop function if exists public\.swap_assets\(text,text,numeric,numeric\)/);
   assert.match(accountingMigration, /drop function if exists public\.create_financial_transaction\(text,numeric,text,text,uuid\)/);
+  assert.match(adminAccountingMigration, /admin_adjust_bdx_balance/);
+  assert.match(adminAccountingMigration, /Reference was already used for a different BDX adjustment/);
+  assert.match(adminAccountingMigration, /admin_has_permission\('view_transactions'\)/);
 
   for (const needle of [
     "revoke all on table public.books from anon, authenticated;",

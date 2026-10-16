@@ -7,12 +7,10 @@ const testRoot = path.join(root, ".security-test");
 const supabaseRoot = path.join(testRoot, "supabase");
 const targetMigrations = path.join(supabaseRoot, "migrations");
 const targetTests = path.join(supabaseRoot, "tests");
-const targetFunctions = path.join(supabaseRoot, "functions");
 
 fs.rmSync(testRoot, { recursive: true, force: true });
 fs.mkdirSync(targetMigrations, { recursive: true });
 fs.mkdirSync(targetTests, { recursive: true });
-fs.mkdirSync(targetFunctions, { recursive: true });
 
 const files = fs.readdirSync(sourceMigrations)
   .filter((name) => /^\d+_.+\.sql$/.test(name))

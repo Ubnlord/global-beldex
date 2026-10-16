@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(77);
+select plan(78);
 
 -- Schema and RLS baseline.
 select has_table('public', 'user_profile', 'user_profile exists');
@@ -102,6 +102,10 @@ select has_function('public', 'admin_reject_withdrawal', array['uuid','text'], '
 select has_function('public', 'admin_manage_investment', array['uuid','numeric','text','text'], 'admin_manage_investment signature');
 
 select is_definer('public', 'admin_adjust_bdx_balance', array['uuid','numeric','text','text'], 'BDX adjustment is security definer');
+select ok(
+  position('Existing BDX adjustment is missing matching audit evidence' in pg_get_functiondef('public.admin_adjust_bdx_balance(uuid,numeric,text,text)'::regprocedure)) > 0,
+  'idempotent BDX adjustment replay fails closed when its audit evidence is missing'
+);
 select is_definer('public', 'admin_financial_reconciliation_v3', array[]::text[], 'BDX reconciliation is security definer');
 select is_definer('public', 'admin_approve_deposit', array['uuid','text'], 'admin_approve_deposit is security definer');
 select is_definer('public', 'admin_reject_deposit', array['uuid','text'], 'admin_reject_deposit is security definer');

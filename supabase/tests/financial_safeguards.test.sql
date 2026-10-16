@@ -191,26 +191,24 @@ select ok(not has_table_privilege('authenticated', 'public.transaction_audit', '
 select policies_are('public', 'admin_action_audit', array['admin_action_audit_select'], 'admin action audit has only its admin-read policy');
 select policies_are('public', 'transaction_audit', array['transaction_audit_select'], 'transaction audit has only its admin-read policy');
 
--- Source-level invariants for the two most sensitive admin balance RPCs.
+-- Legacy USD balance-mutation endpoints are retired; new admin credits/debits
+-- must use the reference-idempotent BDX adjustment RPC.
 select ok(
-  position('from public.admin_user' in pg_get_functiondef('public.admin_fund_user(uuid,numeric,text)'::regprocedure)) > 0
-  and position('v_admin_id' in pg_get_functiondef('public.admin_fund_user(uuid,numeric,text)'::regprocedure)) > 0,
-  'admin_fund_user resolves the audit actor through admin_user.id'
+  to_regprocedure('public.admin_fund_user(uuid,numeric,text)') is null
+  and to_regprocedure('public.admin_fund_user(uuid,numeric,text,text)') is null,
+  'legacy USD funding RPCs are retired'
 );
 
 select ok(
-  position('p_amount <= 0' in pg_get_functiondef('public.admin_fund_user(uuid,numeric,text)'::regprocedure)) > 0
-  and position('reason is required' in pg_get_functiondef('public.admin_fund_user(uuid,numeric,text)'::regprocedure)) > 0
-  and position('v_profile.blocked' in pg_get_functiondef('public.admin_fund_user(uuid,numeric,text)'::regprocedure)) > 0,
-  'admin_fund_user validates amount, reason, and blocked status'
+  to_regprocedure('public.admin_adjust_balance(uuid,numeric,text)') is null
+  and to_regprocedure('public.admin_adjust_balance(uuid,numeric,text,text)') is null,
+  'legacy USD adjustment RPCs are retired'
 );
 
 select ok(
-  position('p_delta = 0' in pg_get_functiondef('public.admin_adjust_balance(uuid,numeric,text)'::regprocedure)) > 0
-  and position('reason is required' in pg_get_functiondef('public.admin_adjust_balance(uuid,numeric,text)'::regprocedure)) > 0
-  and position('v_profile.available_balance + p_delta < 0' in pg_get_functiondef('public.admin_adjust_balance(uuid,numeric,text)'::regprocedure)) > 0
-  and position('v_profile.blocked' in pg_get_functiondef('public.admin_adjust_balance(uuid,numeric,text)'::regprocedure)) > 0,
-  'admin_adjust_balance validates delta, reason, blocked status, and nonnegative balance'
+  position('Reference is required for idempotency' in pg_get_functiondef('public.admin_adjust_bdx_balance(uuid,numeric,text,text)'::regprocedure)) > 0
+  and position('md5(p_user_id::text||'':''||v_reference)' in pg_get_functiondef('public.admin_adjust_bdx_balance(uuid,numeric,text,text)'::regprocedure)) > 0,
+  'BDX admin adjustments require a stable idempotency reference'
 );
 
 select * from finish();

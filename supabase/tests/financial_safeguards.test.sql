@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(68);
+select plan(72);
 
 -- Schema and RLS baseline.
 select has_table('public', 'user_profile', 'user_profile exists');
@@ -151,6 +151,19 @@ select ok(
 select ok(to_regprocedure('public.swap_assets(uuid,text,text,numeric,numeric)') is null, 'currency swap RPC is retired');
 select ok(to_regprocedure('public.swap_assets(text,text,numeric,numeric)') is null, 'legacy currency swap RPC overload is retired');
 select ok(to_regprocedure('public.create_financial_transaction(text,numeric,text,text,uuid)') is null, 'legacy currency-optional financial request RPC is retired');
+select has_function('public', 'admin_adjust_bdx_balance', array['uuid','numeric','text','text'], 'BDX admin adjustment RPC exists');
+select has_function('public', 'admin_financial_reconciliation_v3', array[]::text[], 'currency-separated reconciliation v3 exists');
+select ok(
+  position('locked_bdx_balance=locked_bdx_balance-v_old.principal' in pg_get_functiondef('public.admin_manage_investment(uuid,numeric,boolean,text,text)'::regprocedure)) > 0
+  and position('Completed or cancelled investments cannot be reactivated' in pg_get_functiondef('public.admin_manage_investment(uuid,numeric,boolean,text,text)'::regprocedure)) > 0,
+  'admin investment management preserves BDX principal and prevents unsafe reactivation'
+);
+select ok(
+  position('admin_has_permission(''view_transactions'')' in pg_get_functiondef('public.admin_financial_reconciliation_v3()'::regprocedure)) > 0
+  and position('referral_earnings_bdx' in pg_get_functiondef('public.admin_financial_reconciliation_v3()'::regprocedure)) > 0,
+  'BDX reconciliation enforces report permission and includes BDX referrals'
+);
+
 select ok(
   (select daily_rate = 0.019 / 30 from public.investment_plan_catalog where id='gns')
   and (select daily_rate = 0.0251 / 60 from public.investment_plan_catalog where id='build')

@@ -41,7 +41,9 @@ const mustContain = [
 
 test("database/API defense-in-depth migrations keep critical controls", () => {
   for (const needle of mustContain) assert.ok(migration.includes(needle), `Missing security control: ${needle}`);
-  assert.match(accountingMigration, /drop function if exists public\.swap_assets\(uuid,text,text,numeric,numeric\)/);
+  assert.match(accountingMigration, /create or replace function public\.swap_assets\([\s\S]*?raise exception 'Currency swaps are retired; use the BDX-native wallet flow'/);
+  assert.match(accountingMigration, /revoke all on function public\.swap_assets\(uuid,text,text,numeric,numeric\) from public, anon, authenticated/i);
+  assert.match(accountingMigration, /grant execute on function public\.swap_assets\(uuid,text,text,numeric,numeric\) to service_role/i);
   assert.match(accountingMigration, /drop function if exists public\.swap_assets\(text,text,numeric,numeric\)/);
   assert.equal(
     fs.existsSync(path.join(root, "supabase/functions/swap-assets/index.ts")),

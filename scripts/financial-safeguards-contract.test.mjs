@@ -80,3 +80,19 @@ test("financial refresh cannot present failed cold-start hydration as verified z
   assert.match(cloudBookGuardTests, /investment data is null, missing, or not an array/);
   assert.match(cloudBookGuardTests, /genuinely empty ledgers/);
 });
+
+
+test("admin investment compatibility overloads cannot be ambiguous", () => {
+  const migration = fs.readFileSync(
+    path.join(root, "supabase/migrations/20261016091000_bdx_admin_controls_and_reconciliation.sql"),
+    "utf8",
+  );
+  assert.match(
+    migration,
+    /create or replace function public\.admin_manage_investment\(\s*p_investment_id uuid,\s*p_daily_rate numeric,\s*p_daily_accrual_enabled boolean,\s*p_status text,\s*p_reason text\s*\)/,
+  );
+  assert.match(
+    migration,
+    /create or replace function public\.admin_manage_investment\(\s*p_investment_id uuid,\s*p_daily_rate numeric,\s*p_status text,\s*p_reason text\s*\)/,
+  );
+});

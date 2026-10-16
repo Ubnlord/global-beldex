@@ -165,13 +165,13 @@ select ok(
 );
 
 select ok(
-  (select daily_rate = 0.019 / 30 from public.investment_plan_catalog where id='gns')
-  and (select daily_rate = 0.0251 / 60 from public.investment_plan_catalog where id='build')
-  and (select daily_rate = 0.0392 / 60 from public.investment_plan_catalog where id='follow')
-  and (select daily_rate = 0.0856 / 365 from public.investment_plan_catalog where id='apex')
-  and (select daily_rate = 0.1343 / 730 from public.investment_plan_catalog where id='edifex')
-  and (select daily_rate = 0.1543 / 730 from public.investment_plan_catalog where id='dixon')
-  and (select daily_rate = 0.2378 / 1825 from public.investment_plan_catalog where id='falcon'),
+  (select abs(daily_rate - (0.019 / 30)) < 0.000000000000000001 from public.investment_plan_catalog where id='gns')
+  and (select abs(daily_rate - (0.0251 / 60)) < 0.000000000000000001 from public.investment_plan_catalog where id='build')
+  and (select abs(daily_rate - (0.0392 / 60)) < 0.000000000000000001 from public.investment_plan_catalog where id='follow')
+  and (select abs(daily_rate - (0.0856 / 365)) < 0.000000000000000001 from public.investment_plan_catalog where id='apex')
+  and (select abs(daily_rate - (0.1343 / 730)) < 0.000000000000000001 from public.investment_plan_catalog where id='edifex')
+  and (select abs(daily_rate - (0.1543 / 730)) < 0.000000000000000001 from public.investment_plan_catalog where id='dixon')
+  and (select abs(daily_rate - (0.2378 / 1825)) < 0.000000000000000001 from public.investment_plan_catalog where id='falcon'),
   'new BDX plan daily rates equal published total ROI divided by plan duration'
 );
 

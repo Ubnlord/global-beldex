@@ -31,7 +31,6 @@ function WithdrawPage() {
   const [address, setAddress] = useState("");
   const [requestId, setRequestId] = useState<string | null>(null);
   const isBeldex = method === "Beldex";
-  const isBdxCurrency = currency === "BDX";
 
   const submit = async () => {
     const n = parseFloat(amount);
@@ -145,7 +144,7 @@ function WithdrawPage() {
           </button>
         </div>
         {method && (
-          <CoinEstimate label={method} currency={currency} amount={parseFloat(amount) || 0} usd={isBeldex && currency === "BDX" ? bdxToUsd(parseFloat(amount) || 0) : parseFloat(amount) || 0} book={book} />
+          <CoinEstimate label={method} currency={currency} amount={parseFloat(amount) || 0} usd={parseFloat(amount) || 0} book={book} />
         )}
 
         <FieldLabel>

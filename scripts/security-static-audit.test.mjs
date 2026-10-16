@@ -40,7 +40,9 @@ const mustContain = [
 
 test("database/API defense-in-depth migrations keep critical controls", () => {
   for (const needle of mustContain) assert.ok(migration.includes(needle), `Missing security control: ${needle}`);
-  assert.equal((migration.match(/grant execute on function public\.swap_assets\(/g) || []).length, 1);
+  assert.match(accountingMigration, /drop function if exists public\.swap_assets\(uuid,text,text,numeric,numeric\)/);
+  assert.match(accountingMigration, /drop function if exists public\.swap_assets\(text,text,numeric,numeric\)/);
+  assert.match(accountingMigration, /drop function if exists public\.create_financial_transaction\(text,numeric,text,text,uuid\)/);
 
   for (const needle of [
     "revoke all on table public.books from anon, authenticated;",

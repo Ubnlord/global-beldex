@@ -117,10 +117,10 @@ grant execute on function public.admin_adjust_bdx_balance(uuid,numeric,text,text
 -- doing so could re-credit principal or accrue an old interval twice.
 create or replace function public.admin_manage_investment(
   p_investment_id uuid,
-  p_daily_rate numeric,
-  p_daily_accrual_enabled boolean,
-  p_status text,
-  p_reason text
+  p_daily_rate numeric default null,
+  p_daily_accrual_enabled boolean default null,
+  p_status text default null,
+  p_reason text default null
 )
 returns public.user_investment
 language plpgsql

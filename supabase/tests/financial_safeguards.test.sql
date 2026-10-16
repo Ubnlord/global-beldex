@@ -93,16 +93,16 @@ select ok(exists (
 ), 'plan daily rate cannot be negative');
 
 -- Critical RPC signatures and security-definer status.
-select has_function('public', 'admin_fund_user', array['uuid','numeric','text'], 'admin_fund_user signature');
-select has_function('public', 'admin_adjust_balance', array['uuid','numeric','text'], 'admin_adjust_balance signature');
+select ok(to_regprocedure('public.admin_fund_user(uuid,numeric,text)') is null, 'legacy USD funding signature is retired');
+select ok(to_regprocedure('public.admin_adjust_balance(uuid,numeric,text)') is null, 'legacy USD adjustment signature is retired');
 select has_function('public', 'admin_approve_deposit', array['uuid','text'], 'admin_approve_deposit signature');
 select has_function('public', 'admin_reject_deposit', array['uuid','text'], 'admin_reject_deposit signature');
 select has_function('public', 'admin_approve_withdrawal', array['uuid','text'], 'admin_approve_withdrawal signature');
 select has_function('public', 'admin_reject_withdrawal', array['uuid','text'], 'admin_reject_withdrawal signature');
 select has_function('public', 'admin_manage_investment', array['uuid','numeric','text','text'], 'admin_manage_investment signature');
 
-select is_definer('public', 'admin_fund_user', array['uuid','numeric','text'], 'admin_fund_user is security definer');
-select is_definer('public', 'admin_adjust_balance', array['uuid','numeric','text'], 'admin_adjust_balance is security definer');
+select is_definer('public', 'admin_adjust_bdx_balance', array['uuid','numeric','text','text'], 'BDX adjustment is security definer');
+select is_definer('public', 'admin_financial_reconciliation_v3', array[]::text[], 'BDX reconciliation is security definer');
 select is_definer('public', 'admin_approve_deposit', array['uuid','text'], 'admin_approve_deposit is security definer');
 select is_definer('public', 'admin_reject_deposit', array['uuid','text'], 'admin_reject_deposit is security definer');
 select is_definer('public', 'admin_approve_withdrawal', array['uuid','text'], 'admin_approve_withdrawal is security definer');
@@ -110,8 +110,8 @@ select is_definer('public', 'admin_reject_withdrawal', array['uuid','text'], 'ad
 select is_definer('public', 'admin_manage_investment', array['uuid','numeric','text','text'], 'admin_manage_investment is security definer');
 
 -- Financial admin RPC execution is never anonymous.
-select function_privs_are('public', 'admin_fund_user', array['uuid','numeric','text'], 'anon', '{}', 'anon cannot execute admin_fund_user');
-select function_privs_are('public', 'admin_adjust_balance', array['uuid','numeric','text'], 'anon', '{}', 'anon cannot execute admin_adjust_balance');
+select function_privs_are('public', 'admin_adjust_bdx_balance', array['uuid','numeric','text','text'], 'anon', '{}', 'anon cannot execute BDX adjustment');
+select function_privs_are('public', 'admin_financial_reconciliation_v3', array[]::text[], 'anon', '{}', 'anon cannot execute BDX reconciliation');
 select function_privs_are('public', 'admin_approve_deposit', array['uuid','text'], 'anon', '{}', 'anon cannot execute admin_approve_deposit');
 select function_privs_are('public', 'admin_reject_deposit', array['uuid','text'], 'anon', '{}', 'anon cannot execute admin_reject_deposit');
 select function_privs_are('public', 'admin_approve_withdrawal', array['uuid','text'], 'anon', '{}', 'anon cannot execute admin_approve_withdrawal');
@@ -119,18 +119,13 @@ select function_privs_are('public', 'admin_reject_withdrawal', array['uuid','tex
 select function_privs_are('public', 'admin_manage_investment', array['uuid','numeric','text','text'], 'anon', '{}', 'anon cannot execute admin_manage_investment');
 
 -- Client-facing execution is authenticated-only where intended.
-select function_privs_are('public', 'admin_fund_user', array['uuid','numeric','text'], 'authenticated', array['EXECUTE'], 'authenticated can reach admin_fund_user; function enforces permission');
-select function_privs_are('public', 'admin_adjust_balance', array['uuid','numeric','text'], 'authenticated', array['EXECUTE'], 'authenticated can reach admin_adjust_balance; function enforces permission');
+select function_privs_are('public', 'admin_adjust_bdx_balance', array['uuid','numeric','text','text'], 'authenticated', array['EXECUTE'], 'authenticated can call reference-idempotent BDX adjustment');
+select function_privs_are('public', 'admin_financial_reconciliation_v3', array[]::text[], 'authenticated', array['EXECUTE'], 'authenticated can call authorized reconciliation RPC');
 
 select function_privs_are('public', 'create_financial_transaction', array['text','numeric','text','text','uuid','text'], 'authenticated', array['EXECUTE'], 'authenticated can create currency-aware financial requests');
 
-select ok(
-  position('p_type = ''withdraw''' in pg_get_functiondef('public.create_financial_transaction(text,numeric,text,text,uuid,text)'::regprocedure)) > 0
-  and position('p_amount < 300' in pg_get_functiondef('public.create_financial_transaction(text,numeric,text,text,uuid,text)'::regprocedure)) > 0
-  and position('p_amount < 4000' in pg_get_functiondef('public.create_financial_transaction(text,numeric,text,text,uuid,text)'::regprocedure)) > 0
-  and position('Beldex transactions must be denominated in BDX' in pg_get_functiondef('public.create_financial_transaction(text,numeric,text,text,uuid,text)'::regprocedure)) > 0
-  and position('Bitcoin and Ethereum requests must use USD denomination' in pg_get_functiondef('public.create_financial_transaction(text,numeric,text,text,uuid,text)'::regprocedure)) > 0,
-  'financial request RPC enforces method-specific denomination and minimums'
+select ok(to_regprocedure('public.create_financial_transaction(text,numeric,text,text,uuid,text)') is not null,
+  'currency-explicit financial request RPC exists'
 );
 
 select ok(

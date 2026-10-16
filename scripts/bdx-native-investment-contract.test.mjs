@@ -2,6 +2,9 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 const migration = readFileSync(new URL("../supabase/migrations/20261011010000_bdx_native_investments.sql", import.meta.url), "utf8");
+const accountingMigration = readFileSync(new URL("../supabase/migrations/20261016090000_bdx_native_accounting_enforcement.sql", import.meta.url), "utf8");
+const catalog = readFileSync(new URL("../src/lib/platform/catalog.ts", import.meta.url), "utf8");
+const utils = readFileSync(new URL("../src/lib/utils.ts", import.meta.url), "utf8");
 const store = readFileSync(new URL("../src/lib/platform/store.ts", import.meta.url), "utf8");
 const books = readFileSync(new URL("../src/lib/supabase/books.ts", import.meta.url), "utf8");
 const admin = readFileSync(new URL("../src/routes/admin.tsx", import.meta.url), "utf8");
@@ -38,5 +41,20 @@ assert.match(admin, /user\.locked_bdx_balance/);
 assert.match(migration, /create or replace function public\.admin_search_users_bdx/);
 assert.match(migration, /p\.locked_bdx_balance<0/);
 assert.match(migration, /ui\.currency='USD'/);
+
+// Published percentages are total ROI for the complete term, not daily rates.
+assert.match(catalog, /profit: "1\.90% Total ROI"/);
+assert.match(catalog, /dailyPct: 1\.9 \/ 30/);
+assert.match(accountingMigration, /when 'gns' then 0\.019 \/ 30/);
+assert.match(accountingMigration, /when 'build' then 0\.0251 \/ 60/);
+assert.match(accountingMigration, /when 'follow' then 0\.0392 \/ 60/);
+assert.match(accountingMigration, /when 'apex' then 0\.0856 \/ 365/);
+assert.match(accountingMigration, /when 'edifex' then 0\.1343 \/ 730/);
+assert.match(accountingMigration, /when 'dixon' then 0\.1543 \/ 730/);
+assert.match(accountingMigration, /when 'falcon' then 0\.2378 \/ 1825/);
+assert.match(accountingMigration, /Beldex transactions must be denominated in BDX/);
+assert.match(accountingMigration, /drop function if exists public\.swap_assets/);
+assert.doesNotMatch(store, /bdxToUsd|usdToBdx|swap-assets/);
+assert.doesNotMatch(utils, /BDX_USD_RATE|bdxToUsd|usdToBdx/);
 
 console.log("BDX investment accounting contract checks passed.");

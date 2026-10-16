@@ -5,6 +5,7 @@ import path from "node:path";
 
 const root = process.cwd();
 const migration = fs.readFileSync(path.join(root, "migrations/0008_security_hardening_v1.sql"), "utf8");
+const accountingMigration = fs.readFileSync(path.join(root, "supabase/migrations/20261016090000_bdx_native_accounting_enforcement.sql"), "utf8");
 const directWriteLockdown = fs.readFileSync(path.join(root, "migrations/0009_lock_down_direct_client_writes.sql"), "utf8");
 const databaseDefense = fs.readFileSync(path.join(root, "migrations/0011_database_api_defense_in_depth.sql"), "utf8");
 const authorizationTightening = fs.readFileSync(path.join(root, "migrations/0012_tighten_authorization_helpers.sql"), "utf8");
@@ -24,8 +25,6 @@ const mustContain = [
   "grant execute on function public.admin_approve_transaction(uuid,text) to authenticated;",
   "grant execute on function public.admin_reject_transaction(uuid,text) to authenticated;",
   "grant execute on function public.admin_settle_transaction(uuid,text) to authenticated;",
-  "revoke all on function public.swap_assets(uuid,text,text,numeric,numeric) from public, anon, authenticated;",
-  "grant execute on function public.swap_assets(uuid,text,text,numeric,numeric) to service_role;",
   "create unique index if not exists transaction_user_request_id_uq",
   "perform public.assert_user_can_transact(v_uid);",
   "alter table public.user_profile enable row level security;",

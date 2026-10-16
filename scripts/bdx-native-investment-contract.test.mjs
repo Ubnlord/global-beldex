@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 
 const migration = readFileSync(new URL("../supabase/migrations/20261011010000_bdx_native_investments.sql", import.meta.url), "utf8");
 const accountingMigration = readFileSync(new URL("../supabase/migrations/20261016090000_bdx_native_accounting_enforcement.sql", import.meta.url), "utf8");
+const adminAccountingMigration = readFileSync(new URL("../supabase/migrations/20261016091000_bdx_admin_controls_and_reconciliation.sql", import.meta.url), "utf8");
 const catalog = readFileSync(new URL("../src/lib/platform/catalog.ts", import.meta.url), "utf8");
 const utils = readFileSync(new URL("../src/lib/utils.ts", import.meta.url), "utf8");
 const store = readFileSync(new URL("../src/lib/platform/store.ts", import.meta.url), "utf8");
@@ -56,5 +57,9 @@ assert.match(accountingMigration, /Beldex transactions must be denominated in BD
 assert.match(accountingMigration, /drop function if exists public\.swap_assets/);
 assert.doesNotMatch(store, /bdxToUsd|usdToBdx|swap-assets/);
 assert.doesNotMatch(utils, /BDX_USD_RATE|bdxToUsd|usdToBdx/);
+assert.match(adminAccountingMigration, /locked_bdx_balance=locked_bdx_balance-v_old.principal/);
+assert.match(adminAccountingMigration, /Reference was already used for a different BDX adjustment/);
+assert.match(adminAccountingMigration, /admin_financial_reconciliation_v3/);
+assert.match(adminAccountingMigration, /recorded_referrals_bdx/);
 
 console.log("BDX investment accounting contract checks passed.");

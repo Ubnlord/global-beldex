@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(25);
+select plan(27);
 
 -- Isolated identities and balances; transaction rollback leaves no fixture data.
 insert into auth.users (
@@ -142,8 +142,18 @@ select is(
   (select bdx_balance from public.user_profile where user_id='a1100000-0000-4000-8000-000000000001'),
   14025::numeric,'admin BDX adjustment changes only the BDX wallet'
 );
+select is(
+  (public.admin_adjust_bdx_balance('a1100000-0000-4000-8000-000000000001',25,'BDX adjustment test','fixture')).id,
+  (select id from public.transaction where user_id='a1100000-0000-4000-8000-000000000001'
+    and method='Admin BDX adjustment' and note='BDX adjustment test | Ref: fixture'),
+  'replayed admin adjustment returns the original ledger row'
+);
+select is(
+  (select bdx_balance from public.user_profile where user_id='a1100000-0000-4000-8000-000000000001'),
+  14025::numeric,'replayed admin adjustment does not change BDX balance twice'
+);
 select throws_ok(
-  $select public.admin_adjust_bdx_balance('a1100000-0000-4000-8000-000000000001',-999999,'must not go negative',null)$,
+  $sql$select public.admin_adjust_bdx_balance('a1100000-0000-4000-8000-000000000001',-999999,'must not go negative','fixture-negative')$sql$,
   'P0001','Adjustment would make BDX balance negative',
   'admin BDX adjustment cannot create a negative balance'
 );

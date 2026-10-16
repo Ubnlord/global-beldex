@@ -59,6 +59,22 @@ begin
     then
       raise exception 'Reference was already used for a different BDX adjustment';
     end if;
+    -- A prior adjustment is only considered safely replayable when its audit
+    -- evidence is still present. Never silently report success for a transaction
+    -- whose required audit record has been removed or corrupted.
+    if not exists (
+      select 1 from public.admin_action_audit a
+       where a.admin_id = v_tx.approved_by
+         and a.user_id = p_user_id
+         and a.action = 'bdx_balance_adjusted'
+         and a.target_id = v_tx.id
+         and coalesce(a.reason,'') = v_reason
+         and a.new_values->>'reference' = v_reference
+         and a.new_values->>'currency' = 'BDX'
+         and (a.new_values->>'delta')::numeric = p_delta
+    ) then
+      raise exception 'Existing BDX adjustment is missing matching audit evidence';
+    end if;
     return v_tx;
   end if;
 

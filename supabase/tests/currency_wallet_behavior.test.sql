@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(30);
+select plan(36);
 
 -- Isolated identities and balances; transaction rollback leaves no fixture data.
 insert into auth.users (
@@ -9,12 +9,18 @@ insert into auth.users (
   raw_app_meta_data, raw_user_meta_data, created_at, updated_at
 ) values
   ('a1100000-0000-4000-8000-000000000001','authenticated','authenticated','wallet-behavior-user@example.test','',now(),'{}'::jsonb,'{}'::jsonb,now(),now()),
-  ('a1100000-0000-4000-8000-000000000002','authenticated','authenticated','wallet-behavior-admin@example.test','',now(),'{}'::jsonb,'{}'::jsonb,now(),now())
+  ('a1100000-0000-4000-8000-000000000002','authenticated','authenticated','wallet-behavior-admin@example.test','',now(),'{}'::jsonb,'{}'::jsonb,now(),now()),
+  ('a1100000-0000-4000-8000-000000000003','authenticated','authenticated','wallet-behavior-referrer@example.test','',now(),'{}'::jsonb,'{}'::jsonb,now(),now())
 on conflict (id) do nothing;
 
 insert into public.user_profile(user_id,available_balance,bdx_balance)
-values ('a1100000-0000-4000-8000-000000000001',1000,10000)
-on conflict (user_id) do update set available_balance=1000,bdx_balance=10000;
+values ('a1100000-0000-4000-8000-000000000003',0,0)
+on conflict (user_id) do update set available_balance=0,bdx_balance=0;
+
+insert into public.user_profile(user_id,available_balance,bdx_balance,referred_by_user_id)
+values ('a1100000-0000-4000-8000-000000000001',1000,10000,'a1100000-0000-4000-8000-000000000003')
+on conflict (user_id) do update
+set available_balance=1000,bdx_balance=10000,referred_by_user_id='a1100000-0000-4000-8000-000000000003';
 
 insert into public.admin_user(user_id,role,permissions)
 values ('a1100000-0000-4000-8000-000000000002','admin',array['approve_transactions','reject_transactions','manage_users','view_transactions'])
@@ -116,6 +122,31 @@ select is(
   (select count(*)::integer from public.transaction where user_id='a1100000-0000-4000-8000-000000000001' and status='completed' and currency='BDX'),
   1,'completed BDX transactions remain identifiable in ledger history'
 );
+select is(
+  (select available_balance from public.user_profile where user_id='a1100000-0000-4000-8000-000000000003'),
+  30::numeric,'USD referral credits only the USD wallet'
+);
+select is(
+  (select bdx_balance from public.user_profile where user_id='a1100000-0000-4000-8000-000000000003'),
+  400::numeric,'BDX referral credits only the BDX wallet'
+);
+select is(
+  (select referral_earnings from public.user_profile where user_id='a1100000-0000-4000-8000-000000000003'),
+  30::numeric,'USD referral earnings stay in USD accounting'
+);
+select is(
+  (select referral_earnings_bdx from public.user_profile where user_id='a1100000-0000-4000-8000-000000000003'),
+  400::numeric,'BDX referral earnings stay in BDX accounting'
+);
+select is(
+  public.credit_referral_for_deposit((select id from public.transaction where request_id='a1100000-0000-4000-8000-000000000104')),
+  0::numeric,'replaying a settled BDX referral credit is idempotent'
+);
+select is(
+  (select bdx_balance from public.user_profile where user_id='a1100000-0000-4000-8000-000000000003'),
+  400::numeric,'replayed BDX referral does not credit twice'
+);
+
 select is(
   (select deposits_delta from public.admin_financial_reconciliation_v3() where user_id='a1100000-0000-4000-8000-000000000001'),
   0::numeric,'USD deposit reconciliation compares USD totals to USD ledger only'

@@ -15,7 +15,6 @@ export const Route = createFileRoute("/app/plans")({ component: PlansPage });
 
 function PlansPage() {
   const navigate = useNavigate();
-  const available = usePlatform((s) => s.available);
   const activePlans = usePlatform((s) => s.plans);
   const accrualFailed = usePlatform((s) => s.accrualFailed);
   const buyPlan = usePlatform((s) => s.buyPlan);

@@ -44,6 +44,7 @@ begin
   if v_uid is null then raise exception 'Unauthorized'; end if;
   if p_type not in ('deposit','withdraw') then raise exception 'Invalid transaction type'; end if;
   if p_amount is null or p_amount <= 0 then raise exception 'Amount must be greater than zero'; end if;
+  if p_request_id is null then raise exception 'Request ID is required for idempotency'; end if;
   if v_currency not in ('BDX','USD') then raise exception 'Unsupported currency'; end if;
   if v_method not in ('BELDEX','BITCOIN','ETHEREUM') then raise exception 'Invalid payment method'; end if;
 

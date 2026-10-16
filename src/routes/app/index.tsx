@@ -33,10 +33,6 @@ function Dashboard() {
   const available = usePlatform((s) => s.available);
   const bdx = usePlatform((s) => s.bdx);
   const locked = usePlatform((s) => s.locked);
-  const profit = usePlatform((s) => s.profit);
-  const bonus = usePlatform((s) => s.bonus);
-  const referralBonus = usePlatform((s) => s.referralBonus);
-  const withdrawn = usePlatform((s) => s.withdrawn);
   const txs = usePlatform((s) => s.txs);
   const plans = usePlatform((s) => s.plans);
   const accrualFailed = usePlatform((s) => s.accrualFailed);
@@ -80,16 +76,6 @@ function Dashboard() {
         <div className="mt-1 text-lg font-bold text-fg">
           {t.hello} {user?.name || "Kenneth Munachimso"}!
         </div>
-        <div className="mt-4 grid grid-cols-2 gap-4">
-          <div>
-            <div className="text-[11px] text-subtle">Historical USD available · read-only</div>
-            <div className="text-xl font-bold tabular text-accent">{formatUsd(available)}</div>
-          </div>
-          <div>
-            <div className="text-[11px] text-subtle">Historical USD locked · read-only</div>
-            <div className="text-xl font-bold tabular text-warn">{formatUsd(locked)}</div>
-          </div>
-        </div>
         <div className="mt-4 rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-4">
           <div className="flex items-center gap-2 text-[11px] font-semibold text-emerald-300">
             <Wallet size={15} /> AVAILABLE BDX WALLET
@@ -112,6 +98,21 @@ function Dashboard() {
         >
           <TrendingUp size={16} /> {t.buyPlan}
         </Button>
+      </div>
+
+      <div className="mt-4 rounded-lg border border-line bg-surface p-4">
+        <div className="text-[11px] font-semibold tracking-wide text-subtle">Historical USD balances · read-only reporting</div>
+        <div className="mt-3 grid grid-cols-2 gap-4">
+          <div>
+            <div className="text-[11px] text-subtle">Available USD</div>
+            <div className="text-lg font-bold tabular text-fg">{formatUsd(available)}</div>
+          </div>
+          <div>
+            <div className="text-[11px] text-subtle">Locked USD</div>
+            <div className="text-lg font-bold tabular text-fg">{formatUsd(locked)}</div>
+          </div>
+        </div>
+        <p className="mt-2 text-[10px] text-subtle">These legacy USD figures are separate from the BDX wallet and are not converted or included in BDX totals.</p>
       </div>
 
       <div className="mt-4">

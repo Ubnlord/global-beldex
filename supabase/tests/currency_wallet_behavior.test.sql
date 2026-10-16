@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(27);
+select plan(30);
 
 -- Isolated identities and balances; transaction rollback leaves no fixture data.
 insert into auth.users (
@@ -17,7 +17,7 @@ values ('a1100000-0000-4000-8000-000000000001',1000,10000)
 on conflict (user_id) do update set available_balance=1000,bdx_balance=10000;
 
 insert into public.admin_user(user_id,role,permissions)
-values ('a1100000-0000-4000-8000-000000000002','admin',array['approve_transactions','reject_transactions','manage_users'])
+values ('a1100000-0000-4000-8000-000000000002','admin',array['approve_transactions','reject_transactions','manage_users','view_transactions'])
 on conflict (user_id) do update set permissions=excluded.permissions;
 
 -- BDX withdrawal reserves only BDX. Replaying the same request ID returns the
@@ -151,6 +151,20 @@ select is(
 select is(
   (select bdx_balance from public.user_profile where user_id='a1100000-0000-4000-8000-000000000001'),
   14025::numeric,'replayed admin adjustment does not change BDX balance twice'
+);
+select is(
+  (public.admin_adjust_bdx_balance('a1100000-0000-4000-8000-000000000001',-25,'BDX debit adjustment test','fixture-debit')).currency,
+  'BDX'::text,'negative admin adjustment records BDX denomination'
+);
+select is(
+  (select bdx_balance from public.user_profile where user_id='a1100000-0000-4000-8000-000000000001'),
+  14000::numeric,'negative admin adjustment debits only the BDX wallet'
+);
+select ok(
+  (select recorded_withdrawals_bdx=0 and total_withdrawals_bdx=0
+   from public.admin_financial_reconciliation_v3()
+   where user_id='a1100000-0000-4000-8000-000000000001'),
+  'admin debit is excluded from user withdrawal reconciliation'
 );
 select throws_ok(
   $sql$select public.admin_adjust_bdx_balance('a1100000-0000-4000-8000-000000000001',-999999,'must not go negative','fixture-negative')$sql$,

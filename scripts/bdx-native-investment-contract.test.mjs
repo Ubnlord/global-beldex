@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
-const migration = readFileSync(new URL("../supabase/migrations/20261011010000_bdx_native_investments.sql", import.meta.url), "utf8");
+const migration = readFileSync(new URL("../supabase/migrations/20261011054325_20261011010000_bdx_native_investments.sql", import.meta.url), "utf8");
 const accountingMigration = readFileSync(new URL("../supabase/migrations/20261016090000_bdx_native_accounting_enforcement.sql", import.meta.url), "utf8");
 const adminAccountingMigration = readFileSync(new URL("../supabase/migrations/20261016091000_bdx_admin_controls_and_reconciliation.sql", import.meta.url), "utf8");
 const catalog = readFileSync(new URL("../src/lib/platform/catalog.ts", import.meta.url), "utf8");

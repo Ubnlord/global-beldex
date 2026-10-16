@@ -27,13 +27,13 @@ begin
     where p.id in ('gns','build','follow','apex','edifex','dixon','falcon')
       and p.duration_days > 0
       and abs(p.daily_rate - case p.id
-        when 'gns' then 0.019::numeric / p.duration_days
-        when 'build' then 0.0251::numeric / p.duration_days
-        when 'follow' then 0.0392::numeric / p.duration_days
-        when 'apex' then 0.0856::numeric / p.duration_days
-        when 'edifex' then 0.1343::numeric / p.duration_days
-        when 'dixon' then 0.1543::numeric / p.duration_days
-        when 'falcon' then 0.2378::numeric / p.duration_days
+        when 'gns' then 0.019::numeric
+        when 'build' then 0.0251::numeric
+        when 'follow' then 0.0392::numeric
+        when 'apex' then 0.0856::numeric
+        when 'edifex' then 0.1343::numeric
+        when 'dixon' then 0.1543::numeric
+        when 'falcon' then 0.2378::numeric
       end) > 0.000000000000000001
   ) then
     raise exception 'Plan catalogue daily rates do not match published daily ROI';

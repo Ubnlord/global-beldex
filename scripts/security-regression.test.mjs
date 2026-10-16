@@ -327,10 +327,11 @@ test("security migration exposes only the intended swap executor", { skip: !url 
 
       const second = await client.rpc("create_financial_transaction", {
         p_type: "deposit",
-        p_amount: 125,
-        p_method: "security-test",
+        p_amount: 300,
+        p_method: "Bitcoin",
         p_note: null,
         p_request_id: requestId,
+        p_currency: "USD",
       });
       assert.ifError(second.error);
       assert.equal(second.data?.id, first.data?.id);

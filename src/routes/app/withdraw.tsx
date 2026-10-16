@@ -26,7 +26,6 @@ function WithdrawPage() {
   const t = copy[lang];
   const { book } = useBeldexQuote();
   const [method, setMethod] = useState("Beldex");
-  const [currency, setCurrency] = useState<"BDX" | "USD">("BDX");
   const [amount, setAmount] = useState("");
   const [address, setAddress] = useState("");
   const [requestId, setRequestId] = useState<string | null>(null);
@@ -56,7 +55,7 @@ function WithdrawPage() {
     }
     const id = requestId ?? crypto.randomUUID();
     setRequestId(id);
-    const err = await withdraw(n, method, address, id, isBeldex ? "BDX" : currency);
+    const err = await withdraw(n, method, address, id, isBeldex ? "BDX" : "USD");
     if (err) {
       toastError(err);
       return;
@@ -91,7 +90,7 @@ function WithdrawPage() {
               <button
                 key={m.id}
                 type="button"
-                onClick={() => { setMethod(m.label); setCurrency(m.id === "BELDEX" ? "BDX" : "USD"); }}
+                onClick={() => setMethod(m.label)}
                 className={
                   active
                     ? "flex items-center justify-between rounded-md border-2 border-accent bg-accent/10 p-3"
@@ -113,33 +112,24 @@ function WithdrawPage() {
           })}
         </div>
 
-        {!isBeldex && (
-          <>
-            <FieldLabel>Withdrawal currency</FieldLabel>
-            <div className="mt-2 grid grid-cols-2 gap-2 rounded-md border border-line bg-surface p-1">
-              <button type="button" onClick={() => setCurrency("BDX")} className={currency === "BDX" ? "rounded-md bg-accent px-3 py-2 text-xs font-semibold text-accent-fg" : "rounded-md px-3 py-2 text-xs text-subtle"}>BDX</button>
-              <button type="button" onClick={() => setCurrency("USD")} className={currency === "USD" ? "rounded-md bg-accent px-3 py-2 text-xs font-semibold text-accent-fg" : "rounded-md px-3 py-2 text-xs text-subtle"}>USD</button>
-            </div>
-          </>
-        )}
         <FieldLabel>
-          <span className="mt-4 block">{currency === "BDX" ? "Amount (BDX)" : "Amount (USD)"}</span>
+          <span className="mt-4 block">{isBeldex ? "Amount (BDX)" : "Amount (USD)"}</span>
         </FieldLabel>
         <div className="relative mt-2">
-          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-subtle">{currency === "BDX" ? "BDX" : "$"}</span>
+          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-subtle">{isBeldex ? "BDX" : "$"}</span>
           <Input
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             type="number"
-            min={isBeldex || currency === "BDX" ? 4000 : MIN_WITHDRAWAL}
-            step={currency === "BDX" ? "0.001" : "0.001"}
-            placeholder={isBeldex || currency === "BDX" ? "Minimum 4,000 BDX" : "Minimum $300"}
+            min={isBeldex ? 4000 : MIN_WITHDRAWAL}
+            step="0.001"
+            placeholder={isBeldex ? "Minimum 4,000 BDX" : "Minimum $300"}
             className="mt-0 h-14 border-2 border-line-strong bg-surface px-4 text-base font-medium placeholder:text-muted focus:border-accent focus:ring-2 focus:ring-accent/20"
           />
         </div>
         <div className="mt-2 flex justify-between text-[11px]">
-          <span className="text-subtle">{t.available}: {isBeldex || currency === "BDX" ? `${formatBdx(bdxAvailable)} BDX` : formatUsd(available)} · Min: {isBeldex || currency === "BDX" ? `${formatBdx(4000)} BDX` : formatUsd(MIN_WITHDRAWAL)}</span>
-          <button type="button" onClick={() => setAmount(((isBeldex || currency === "BDX") ? bdxAvailable : available).toFixed(3))} className="text-accent">
+          <span className="text-subtle">{t.available}: {isBeldex ? `${formatBdx(bdxAvailable)} BDX` : formatUsd(available)} · Min: {isBeldex ? `${formatBdx(4000)} BDX` : formatUsd(MIN_WITHDRAWAL)}</span>
+          <button type="button" onClick={() => setAmount((isBeldex ? bdxAvailable : available).toFixed(3))} className="text-accent">
             {t.max}
           </button>
         </div>

@@ -346,6 +346,10 @@ $function$;
 revoke all on function public.admin_financial_reconciliation_v3() from public,anon;
 grant execute on function public.admin_financial_reconciliation_v3() to authenticated;
 
+-- Retire older reconciliation endpoints that did not enforce the report permission.
+drop function if exists public.admin_financial_reconciliation_v2();
+drop function if exists public.admin_financial_reconciliation();
+
 -- Legacy admin functions can credit or adjust USD balances/bonuses and are no
 -- longer exposed. The console must use the reference-idempotent BDX RPC above.
 drop function if exists public.admin_fund_user(uuid,numeric,text);

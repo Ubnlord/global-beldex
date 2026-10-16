@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(73);
+select plan(75);
 
 -- Schema and RLS baseline.
 select has_table('public', 'user_profile', 'user_profile exists');
@@ -206,6 +206,14 @@ select ok(
   'BDX admin adjustments require a stable idempotency reference'
 );
 
+select ok(
+  to_regprocedure('public.admin_financial_reconciliation()') is null,
+  'legacy reconciliation RPC is retired'
+);
+select ok(
+  to_regprocedure('public.admin_financial_reconciliation_v2()') is null,
+  'legacy v2 reconciliation RPC is retired'
+);
 select * from finish();
 
 rollback;

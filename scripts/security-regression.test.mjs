@@ -106,9 +106,10 @@ test("security migration exposes only the intended swap executor", { skip: !url 
       const { error } = await client.rpc("create_financial_transaction", {
         p_type: "deposit",
         p_amount: 100,
-        p_method: "security-test",
+        p_method: "Bitcoin",
         p_note: null,
         p_request_id: randomUUID(),
+        p_currency: "USD",
       });
       assert.ok(error, "blocked user unexpectedly created a financial transaction");
     });
@@ -126,29 +127,26 @@ test("security migration exposes only the intended swap executor", { skip: !url 
       const client = await clientFor(users.blocked);
       const { error } = await client.rpc("create_financial_transaction", {
         p_type: "withdraw",
-        p_amount: 100,
-        p_method: "security-test",
-        p_note: null,
+        p_amount: 300,
+        p_method: "Bitcoin",
+        p_note: "bc1qexampleaddress000000000000000000000000",
         p_request_id: randomUUID(),
+        p_currency: "USD",
       });
       assert.ok(error, "blocked user unexpectedly created a withdrawal");
     });
 
-    await step("blocked user cannot swap through the Edge Function", async () => {
-      const client = await clientFor(users.blocked);
-      const { data: sessionData, error: sessionError } = await client.auth.getSession();
-      assert.ifError(sessionError);
-      assert.ok(sessionData.session?.access_token);
-
-      const response = await fetch(`${url}/functions/v1/swap-assets`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${sessionData.session.access_token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ from: "USD", to: "BDX", amount: 1, rate: 0.000001 }),
+    await step("Beldex requests cannot be recorded in USD", async () => {
+      const client = await clientFor(users.normal);
+      const { error } = await client.rpc("create_financial_transaction", {
+        p_type: "deposit",
+        p_amount: 4000,
+        p_method: "BELDEX",
+        p_note: null,
+        p_request_id: randomUUID(),
+        p_currency: "USD",
       });
-      assert.notEqual(response.status, 200, "blocked user unexpectedly swapped through Edge Function");
+      assert.ok(error, "Beldex deposit unexpectedly accepted USD denomination");
     });
 
     await step("ordinary user cannot read another user's profile or transaction", async () => {

@@ -105,7 +105,7 @@ test("security migration exposes only the intended swap executor", { skip: !url 
       const client = await clientFor(users.blocked);
       const { error } = await client.rpc("create_financial_transaction", {
         p_type: "deposit",
-        p_amount: 100,
+        p_amount: 300,
         p_method: "Bitcoin",
         p_note: null,
         p_request_id: randomUUID(),
@@ -129,7 +129,7 @@ test("security migration exposes only the intended swap executor", { skip: !url 
         p_type: "withdraw",
         p_amount: 300,
         p_method: "Bitcoin",
-        p_note: "bc1qexampleaddress000000000000000000000000",
+        p_note: "bc1qaaaaaaaaaaa",
         p_request_id: randomUUID(),
         p_currency: "USD",
       });

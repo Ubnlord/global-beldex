@@ -143,7 +143,15 @@ select ok(
   'withdrawal RPC validates Beldex destinations'
 );
 
-select ok(to_regprocedure('public.swap_assets(uuid,text,text,numeric,numeric)') is null, 'currency swap RPC is retired');
+select ok(
+  to_regprocedure('public.swap_assets(uuid,text,text,numeric,numeric)') is not null
+  and position('Currency swaps are retired; use the BDX-native wallet flow' in pg_get_functiondef('public.swap_assets(uuid,text,text,numeric,numeric)'::regprocedure)) > 0
+  and not has_function_privilege('public', 'public.swap_assets(uuid,text,text,numeric,numeric)', 'EXECUTE')
+  and not has_function_privilege('anon', 'public.swap_assets(uuid,text,text,numeric,numeric)', 'EXECUTE')
+  and not has_function_privilege('authenticated', 'public.swap_assets(uuid,text,text,numeric,numeric)', 'EXECUTE')
+  and has_function_privilege('service_role', 'public.swap_assets(uuid,text,text,numeric,numeric)', 'EXECUTE'),
+  'currency swap RPC is a fail-closed compatibility stub for service_role only'
+);
 select ok(to_regprocedure('public.swap_assets(text,text,numeric,numeric)') is null, 'legacy currency swap RPC overload is retired');
 select ok(to_regprocedure('public.create_financial_transaction(text,numeric,text,text,uuid)') is null, 'legacy currency-optional financial request RPC is retired');
 select has_function('public', 'admin_adjust_bdx_balance', array['uuid','numeric','text','text'], 'BDX admin adjustment RPC exists');

@@ -24,7 +24,7 @@ assert.match(migration, /if v_inv\.currency\s*=\s*'BDX' then[\s\S]*bdx_balance\s
 assert.match(migration, /else[\s\S]*available_balance\s*=\s*available_balance\s*\+\s*v_profit\s*\+\s*v_principal_return/);
 assert.match(migration, /locked_bdx_balance\s*=\s*case when v_done then greatest\(0,locked_bdx_balance\s*-\s*v_inv\.principal\)/);
 assert.match(migration, /locked_balance\s*=\s*case when v_done then greatest\(0,locked_balance\s*-\s*v_inv\.principal\)/);
-assert.match(migration, /last_accrual_at\s*=\s*least\(v_inv\.started_at\s*\+\s*make_interval\(days\s*=>\s*v_inv\.duration_days\),v_now\)/);
+assert.match(migration, /last_accrual_at\s*=\s*least\(v_inv\.started_at\s*\+\s*make_interval\(days\s*=>\s*v_inv\.duration_days\),\s*v_now\)/);
 assert.match(migration, /where user_id\s*=\s*v_uid and status\s*=\s*'active' and daily_accrual_enabled\s*=\s*true[\s\S]*for update/);
 assert.match(migration, /if v_done then[\s\S]*'Investment principal returned'/);
 

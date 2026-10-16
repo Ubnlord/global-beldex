@@ -153,6 +153,38 @@ select ok(
   'currency swap RPC is a fail-closed compatibility stub for service_role only'
 );
 select ok(to_regprocedure('public.swap_assets(text,text,numeric,numeric)') is null, 'legacy currency swap RPC overload is retired');
+
+-- Runtime proof that the service-role compatibility entrypoint rejects swaps
+-- without changing balances, transaction rows, or audit rows.
+create temporary table swap_stub_before as
+select
+  coalesce((select sum(available_balance) from public.user_profile),0) as usd_available,
+  coalesce((select sum(locked_balance) from public.user_profile),0) as usd_locked,
+  coalesce((select sum(bdx_balance) from public.user_profile),0) as bdx_available,
+  coalesce((select sum(locked_bdx_balance) from public.user_profile),0) as bdx_locked,
+  (select count(*) from public.transaction) as transaction_count,
+  (select count(*) from public.admin_action_audit) as admin_audit_count,
+  (select count(*) from public.transaction_audit) as transaction_audit_count;
+
+select throws_ok(
+  $select public.swap_assets('00000000-0000-0000-0000-000000000001'::uuid,'USD','BDX',1,1)$,
+  'P0001',
+  'Currency swaps are retired; use the BDX-native wallet flow',
+  'retired swap RPC returns the explicit fail-closed error'
+);
+
+select ok(
+  (select b.usd_available = coalesce((select sum(available_balance) from public.user_profile),0)
+    and b.usd_locked = coalesce((select sum(locked_balance) from public.user_profile),0)
+    and b.bdx_available = coalesce((select sum(bdx_balance) from public.user_profile),0)
+    and b.bdx_locked = coalesce((select sum(locked_bdx_balance) from public.user_profile),0)
+    and b.transaction_count = (select count(*) from public.transaction)
+    and b.admin_audit_count = (select count(*) from public.admin_action_audit)
+    and b.transaction_audit_count = (select count(*) from public.transaction_audit)
+   from swap_stub_before b),
+  'rejected swap leaves USD/BDX balances, transactions, and audit logs unchanged'
+);
+
 select ok(to_regprocedure('public.create_financial_transaction(text,numeric,text,text,uuid)') is null, 'legacy currency-optional financial request RPC is retired');
 select has_function('public', 'admin_adjust_bdx_balance', array['uuid','numeric','text','text'], 'BDX admin adjustment RPC exists');
 select has_function('public', 'admin_financial_reconciliation_v3', array[]::text[], 'currency-separated reconciliation v3 exists');

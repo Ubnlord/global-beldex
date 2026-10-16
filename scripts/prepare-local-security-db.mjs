@@ -56,9 +56,5 @@ for (const name of testFiles) {
   fs.copyFileSync(path.join(sourceTests, name), path.join(targetTests, name));
 }
 
-const functionSource = path.join(root, "supabase/functions/swap-assets");
-const functionTarget = path.join(targetFunctions, "swap-assets");
-fs.cpSync(functionSource, functionTarget, { recursive: true });
-
 console.log(`Prepared reproducible local Supabase fixture with ${files.length} root migrations, ${supabaseMigrations.length} Supabase migrations, and ${testFiles.length} pgTAP suites.`);
 console.log("Source of truth: migrations/ (repository), not production schema.");

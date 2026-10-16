@@ -29,7 +29,6 @@ function DepositPage() {
   const [currency, setCurrency] = useState<"BDX" | "USD">("BDX");
   const [method, setMethod] = useState<keyof typeof DEPOSIT_METHODS>("BELDEX");
   const isBeldex = method === "BELDEX";
-  const isBdxCurrency = currency === "BDX";
   const [step, setStep] = useState<"form" | "pay">(() => {
     if (typeof window === "undefined") return "form";
     return new URLSearchParams(window.location.search).get("step") === "pay" ? "pay" : "form";

@@ -67,21 +67,6 @@ jobs:
         working-directory: .security-test
         run: supabase test db
 
-      - name: Start swap Edge Function locally
-        working-directory: .security-test
-        run: |
-          set -euo pipefail
-          eval "$(supabase status -o env)"
-          cat > functions.env <<EOF
-          SUPABASE_URL=$API_URL
-          SUPABASE_ANON_KEY=$ANON_KEY
-          SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY
-          EOF
-          nohup supabase functions serve swap-assets --env-file functions.env > functions.log 2>&1 &
-          echo $! > functions.pid
-          sleep 8
-          cat functions.log || true
-
       - name: Run full JavaScript security regression
         run: |
           set -euo pipefail
@@ -99,6 +84,5 @@ jobs:
         with:
           name: security-test-logs
           path: |
-            .security-test/functions.log
             .security-test/supabase/.temp/*.log
           if-no-files-found: ignore

@@ -63,14 +63,14 @@ jobs:
         working-directory: .security-test
         run: |
           set -euo pipefail
-          mkdir -p ../.security-test-evidence
-          supabase db reset 2>&1 | tee ../.security-test-evidence/migration-replay.log
+          mkdir -p ../security-test-evidence
+          supabase db reset 2>&1 | tee ../security-test-evidence/migration-replay.log
 
       - name: Run pgTAP safeguards
         working-directory: .security-test
         run: |
           set -euo pipefail
-          supabase test db 2>&1 | tee ../.security-test-evidence/pgtap-results.log
+          supabase test db 2>&1 | tee ../security-test-evidence/pgtap-results.log
 
       - name: Run full JavaScript security regression
         run: |
@@ -79,7 +79,7 @@ jobs:
           SUPABASE_TEST_URL="$API_URL" \
           SUPABASE_TEST_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY" \
           SUPABASE_TEST_PUBLISHABLE_KEY="$ANON_KEY" \
-          node --test scripts/security-regression.test.mjs 2>&1 | tee .security-test-evidence/javascript-regression.log
+          node --test scripts/security-regression.test.mjs 2>&1 | tee security-test-evidence/javascript-regression.log
 
       - name: Upload isolated database evidence
         if: always()
@@ -87,7 +87,7 @@ jobs:
         with:
           name: isolated-production-lineage-test-evidence
           path: |
-            .security-test-evidence/*.log
+            security-test-evidence/*.log
             .security-test/supabase/.temp/*.log
           if-no-files-found: warn
           retention-days: 14

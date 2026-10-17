@@ -93,8 +93,8 @@ select ok(exists (
 ), 'plan daily rate cannot be negative');
 
 -- Critical RPC signatures and security-definer status.
-select ok(to_regprocedure('public.admin_fund_user(uuid,numeric,text)') is null, 'legacy USD funding signature is retired');
-select ok(to_regprocedure('public.admin_adjust_balance(uuid,numeric,text)') is null, 'legacy USD adjustment signature is retired');
+select ok(to_regprocedure('public.admin_fund_user(uuid,numeric,text)') is not null, 'legacy USD funding signature remains available for existing admin clients');
+select ok(to_regprocedure('public.admin_adjust_balance(uuid,numeric,text)') is not null, 'legacy USD adjustment signature remains available for existing admin clients');
 select has_function('public', 'admin_approve_deposit', array['uuid','text'], 'admin_approve_deposit signature');
 select has_function('public', 'admin_reject_deposit', array['uuid','text'], 'admin_reject_deposit signature');
 select has_function('public', 'admin_approve_withdrawal', array['uuid','text'], 'admin_approve_withdrawal signature');

@@ -210,14 +210,14 @@ select ok(
 );
 
 select ok(
-  (select abs(daily_rate - 0.019::numeric / 30) < 0.000000000000000001 from public.investment_plan_catalog where id='gns')
-  and (select abs(daily_rate - 0.0251::numeric / 60) < 0.000000000000000001 from public.investment_plan_catalog where id='build')
-  and (select abs(daily_rate - 0.0392::numeric / 60) < 0.000000000000000001 from public.investment_plan_catalog where id='follow')
-  and (select abs(daily_rate - 0.0856::numeric / 365) < 0.000000000000000001 from public.investment_plan_catalog where id='apex')
-  and (select abs(daily_rate - 0.1343::numeric / 730) < 0.000000000000000001 from public.investment_plan_catalog where id='edifex')
-  and (select abs(daily_rate - 0.1543::numeric / 730) < 0.000000000000000001 from public.investment_plan_catalog where id='dixon')
-  and (select abs(daily_rate - 0.2378::numeric / 1825) < 0.000000000000000001 from public.investment_plan_catalog where id='falcon'),
-  'new BDX plan daily rates equal published total ROI divided by duration'
+  (select abs(daily_rate - 0.019::numeric) < 0.000000000000000001 from public.investment_plan_catalog where id='gns')
+  and (select abs(daily_rate - 0.0251::numeric) < 0.000000000000000001 from public.investment_plan_catalog where id='build')
+  and (select abs(daily_rate - 0.0392::numeric) < 0.000000000000000001 from public.investment_plan_catalog where id='follow')
+  and (select abs(daily_rate - 0.0856::numeric) < 0.000000000000000001 from public.investment_plan_catalog where id='apex')
+  and (select abs(daily_rate - 0.1343::numeric) < 0.000000000000000001 from public.investment_plan_catalog where id='edifex')
+  and (select abs(daily_rate - 0.1543::numeric) < 0.000000000000000001 from public.investment_plan_catalog where id='dixon')
+  and (select abs(daily_rate - 0.2378::numeric) < 0.000000000000000001 from public.investment_plan_catalog where id='falcon'),
+  'new BDX plan daily rates equal published daily ROI'
 );
 
 -- Direct table writes remain closed to browser roles.

@@ -68,10 +68,10 @@ grant execute on function public.admin_reject_withdrawal(uuid,text) to authentic
 -- Browser clients must use authorized RPCs rather than mutate financial or
 -- audit tables directly. RLS remains an additional defense, not a substitute
 -- for removing table write grants.
-revoke insert, update on table public.user_profile from anon, authenticated;
-revoke insert, update on table public.transaction from anon, authenticated;
-revoke insert, update on table public.user_investment from anon, authenticated;
-revoke insert, update on table public.admin_action_audit from anon, authenticated;
-revoke insert, update on table public.transaction_audit from anon, authenticated;
+revoke insert, update on table public.user_profile from public, anon, authenticated;
+revoke insert, update on table public.transaction from public, anon, authenticated;
+revoke insert, update on table public.user_investment from public, anon, authenticated;
+revoke insert, update on table public.admin_action_audit from public, anon, authenticated;
+revoke insert, update on table public.transaction_audit from public, anon, authenticated;
 
 commit;

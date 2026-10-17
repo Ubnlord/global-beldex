@@ -3,13 +3,13 @@ create extension if not exists pgtap with schema extensions;
 select plan(16);
 
 -- Assert the database catalog contains all seven published daily rates.
-select ok(abs((select daily_rate from public.investment_plan_catalog where id='gns')-(0.019::numeric / 30))<0.000000000000000001,'GNS daily rate is published daily rate derived from published total ROI');
-select ok(abs((select daily_rate from public.investment_plan_catalog where id='build')-(0.0251::numeric / 60))<0.000000000000000001,'BUILD UP daily rate is published daily rate derived from published total ROI');
-select ok(abs((select daily_rate from public.investment_plan_catalog where id='follow')-(0.0392::numeric / 60))<0.000000000000000001,'FOLLOW UP daily rate is published daily rate derived from published total ROI');
-select ok(abs((select daily_rate from public.investment_plan_catalog where id='apex')-(0.0856::numeric / 365))<0.000000000000000001,'APEX daily rate is published daily rate derived from published total ROI');
-select ok(abs((select daily_rate from public.investment_plan_catalog where id='edifex')-(0.1343::numeric / 730))<0.000000000000000001,'EDIFEX daily rate is published daily rate derived from published total ROI');
-select ok(abs((select daily_rate from public.investment_plan_catalog where id='dixon')-(0.1543::numeric / 730))<0.000000000000000001,'DIXON daily rate is published daily rate derived from published total ROI');
-select ok(abs((select daily_rate from public.investment_plan_catalog where id='falcon')-(0.2378::numeric / 1825))<0.000000000000000001,'FALCON daily rate is published daily rate derived from published total ROI');
+select ok(abs((select daily_rate from public.investment_plan_catalog where id='gns')-(0.019::numeric))<0.000000000000000001,'GNS daily rate equals the published daily ROI');
+select ok(abs((select daily_rate from public.investment_plan_catalog where id='build')-(0.0251::numeric))<0.000000000000000001,'BUILD UP daily rate equals the published daily ROI');
+select ok(abs((select daily_rate from public.investment_plan_catalog where id='follow')-(0.0392::numeric))<0.000000000000000001,'FOLLOW UP daily rate equals the published daily ROI');
+select ok(abs((select daily_rate from public.investment_plan_catalog where id='apex')-(0.0856::numeric))<0.000000000000000001,'APEX daily rate equals the published daily ROI');
+select ok(abs((select daily_rate from public.investment_plan_catalog where id='edifex')-(0.1343::numeric))<0.000000000000000001,'EDIFEX daily rate equals the published daily ROI');
+select ok(abs((select daily_rate from public.investment_plan_catalog where id='dixon')-(0.1543::numeric))<0.000000000000000001,'DIXON daily rate equals the published daily ROI');
+select ok(abs((select daily_rate from public.investment_plan_catalog where id='falcon')-(0.2378::numeric))<0.000000000000000001,'FALCON daily rate equals the published daily ROI');
 
 insert into auth.users (
   id, aud, role, email, encrypted_password, email_confirmed_at,

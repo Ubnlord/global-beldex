@@ -7,6 +7,8 @@ const supabaseRoot = path.join(testRoot, "supabase");
 const targetMigrations = path.join(supabaseRoot, "migrations");
 const targetTests = path.join(supabaseRoot, "tests");
 const sourceMigrations = path.join(root, "supabase", "migrations");
+const baselinePath = path.join(root, "supabase", "baselines", "20261012170510_production_schema_baseline.sql");
+const baselineName = "20261012170510_production_schema_baseline.sql";
 const sourceTests = path.join(root, "supabase", "tests");
 
 // A fresh local fixture must start from a schema-only baseline extracted from
@@ -16,18 +18,17 @@ const migrationFiles = fs.readdirSync(sourceMigrations)
   .filter((name) => /^\d{14}_.+\.sql$/.test(name))
   .sort((a, b) => a.localeCompare(b));
 
-const baselines = migrationFiles.filter((name) =>
-  /^\d{14}_production_schema_baseline\.sql$/.test(name)
-);
-
-if (baselines.length !== 1) {
+if (!fs.existsSync(baselinePath)) {
   throw new Error(
-    `Expected exactly one extracted production schema baseline in supabase/migrations/; found ${baselines.length}. Do not synthesize a baseline or renumber historical migrations. Generate it from an actual schema extraction first.`
+    `Missing actual schema extraction: supabase/baselines/${baselineName}. Generate it from the production schema using the dedicated extraction workflow. Do not hand-build it or synthesize a new migration version.`
   );
 }
 
-const baseline = baselines[0];
+const baseline = baselineName;
 const baselineVersion = baseline.slice(0, 14);
+// The baseline replaces the production migration history through the last
+// verified production version. Only migrations strictly newer than that
+// production version are replayed on top of it.
 const laterMigrations = migrationFiles.filter((name) => name.slice(0, 14) > baselineVersion);
 const selectedMigrations = [baseline, ...laterMigrations];
 
@@ -49,7 +50,10 @@ fs.mkdirSync(targetMigrations, { recursive: true });
 fs.mkdirSync(targetTests, { recursive: true });
 
 for (const name of selectedMigrations) {
-  fs.copyFileSync(path.join(sourceMigrations, name), path.join(targetMigrations, name));
+  const sourcePath = name === baseline
+    ? baselinePath
+    : path.join(sourceMigrations, name);
+  fs.copyFileSync(sourcePath, path.join(targetMigrations, name));
 }
 
 const testFiles = fs.readdirSync(sourceTests)
@@ -68,4 +72,4 @@ console.log(
   `Prepared isolated Supabase fixture from 1 extracted production schema baseline, ${laterMigrations.length} later migrations, and ${testFiles.length} pgTAP suites.`
 );
 console.log(`Baseline: ${baseline}`);
-console.log("Historical production migrations and numbered migrations/ files were intentionally excluded.");
+console.log("Baseline replaces production history through 20261012170510; older migration files and numbered migrations/ were intentionally excluded.");

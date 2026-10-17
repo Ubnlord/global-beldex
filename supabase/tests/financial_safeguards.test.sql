@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(66);
+select plan(78);
 
 -- Schema and RLS baseline.
 select has_table('public', 'user_profile', 'user_profile exists');
@@ -93,16 +93,20 @@ select ok(exists (
 ), 'plan daily rate cannot be negative');
 
 -- Critical RPC signatures and security-definer status.
-select has_function('public', 'admin_fund_user', array['uuid','numeric','text'], 'admin_fund_user signature');
-select has_function('public', 'admin_adjust_balance', array['uuid','numeric','text'], 'admin_adjust_balance signature');
+select ok(to_regprocedure('public.admin_fund_user(uuid,numeric,text)') is not null, 'legacy USD funding signature remains available for existing admin clients');
+select ok(to_regprocedure('public.admin_adjust_balance(uuid,numeric,text)') is not null, 'legacy USD adjustment signature remains available for existing admin clients');
 select has_function('public', 'admin_approve_deposit', array['uuid','text'], 'admin_approve_deposit signature');
 select has_function('public', 'admin_reject_deposit', array['uuid','text'], 'admin_reject_deposit signature');
 select has_function('public', 'admin_approve_withdrawal', array['uuid','text'], 'admin_approve_withdrawal signature');
 select has_function('public', 'admin_reject_withdrawal', array['uuid','text'], 'admin_reject_withdrawal signature');
 select has_function('public', 'admin_manage_investment', array['uuid','numeric','text','text'], 'admin_manage_investment signature');
 
-select is_definer('public', 'admin_fund_user', array['uuid','numeric','text'], 'admin_fund_user is security definer');
-select is_definer('public', 'admin_adjust_balance', array['uuid','numeric','text'], 'admin_adjust_balance is security definer');
+select is_definer('public', 'admin_adjust_bdx_balance', array['uuid','numeric','text','text'], 'BDX adjustment is security definer');
+select ok(
+  position('Existing BDX adjustment is missing matching audit evidence' in pg_get_functiondef('public.admin_adjust_bdx_balance(uuid,numeric,text,text)'::regprocedure)) > 0,
+  'idempotent BDX adjustment replay fails closed when its audit evidence is missing'
+);
+select is_definer('public', 'admin_financial_reconciliation_v3', array[]::text[], 'BDX reconciliation is security definer');
 select is_definer('public', 'admin_approve_deposit', array['uuid','text'], 'admin_approve_deposit is security definer');
 select is_definer('public', 'admin_reject_deposit', array['uuid','text'], 'admin_reject_deposit is security definer');
 select is_definer('public', 'admin_approve_withdrawal', array['uuid','text'], 'admin_approve_withdrawal is security definer');
@@ -110,8 +114,8 @@ select is_definer('public', 'admin_reject_withdrawal', array['uuid','text'], 'ad
 select is_definer('public', 'admin_manage_investment', array['uuid','numeric','text','text'], 'admin_manage_investment is security definer');
 
 -- Financial admin RPC execution is never anonymous.
-select function_privs_are('public', 'admin_fund_user', array['uuid','numeric','text'], 'anon', '{}', 'anon cannot execute admin_fund_user');
-select function_privs_are('public', 'admin_adjust_balance', array['uuid','numeric','text'], 'anon', '{}', 'anon cannot execute admin_adjust_balance');
+select function_privs_are('public', 'admin_adjust_bdx_balance', array['uuid','numeric','text','text'], 'anon', '{}', 'anon cannot execute BDX adjustment');
+select function_privs_are('public', 'admin_financial_reconciliation_v3', array[]::text[], 'anon', '{}', 'anon cannot execute BDX reconciliation');
 select function_privs_are('public', 'admin_approve_deposit', array['uuid','text'], 'anon', '{}', 'anon cannot execute admin_approve_deposit');
 select function_privs_are('public', 'admin_reject_deposit', array['uuid','text'], 'anon', '{}', 'anon cannot execute admin_reject_deposit');
 select function_privs_are('public', 'admin_approve_withdrawal', array['uuid','text'], 'anon', '{}', 'anon cannot execute admin_approve_withdrawal');
@@ -119,34 +123,102 @@ select function_privs_are('public', 'admin_reject_withdrawal', array['uuid','tex
 select function_privs_are('public', 'admin_manage_investment', array['uuid','numeric','text','text'], 'anon', '{}', 'anon cannot execute admin_manage_investment');
 
 -- Client-facing execution is authenticated-only where intended.
-select function_privs_are('public', 'admin_fund_user', array['uuid','numeric','text'], 'authenticated', array['EXECUTE'], 'authenticated can reach admin_fund_user; function enforces permission');
-select function_privs_are('public', 'admin_adjust_balance', array['uuid','numeric','text'], 'authenticated', array['EXECUTE'], 'authenticated can reach admin_adjust_balance; function enforces permission');
+select function_privs_are('public', 'admin_adjust_bdx_balance', array['uuid','numeric','text','text'], 'authenticated', array['EXECUTE'], 'authenticated can call reference-idempotent BDX adjustment');
+select function_privs_are('public', 'admin_financial_reconciliation_v3', array[]::text[], 'authenticated', array['EXECUTE'], 'authenticated can call authorized reconciliation RPC');
 
-select function_privs_are('public', 'create_financial_transaction', array['text','numeric','text','text','uuid'], 'authenticated', array['EXECUTE'], 'authenticated can create financial requests');
+select function_privs_are('public', 'create_financial_transaction', array['text','numeric','text','text','uuid','text'], 'authenticated', array['EXECUTE'], 'authenticated can create currency-aware financial requests');
 
-select ok(
-  position('p_type = ''withdraw''' in pg_get_functiondef('public.create_financial_transaction(text,numeric,text,text,uuid)'::regprocedure)) > 0
-  and position('p_amount < 300' in pg_get_functiondef('public.create_financial_transaction(text,numeric,text,text,uuid)'::regprocedure)) > 0,
-  'withdrawal RPC enforces the $300 minimum'
+select ok(to_regprocedure('public.create_financial_transaction(text,numeric,text,text,uuid,text)') is not null,
+  'currency-explicit financial request RPC exists'
 );
 
 select ok(
-  position('Invalid Ethereum destination address' in pg_get_functiondef('public.create_financial_transaction(text,numeric,text,text,uuid)'::regprocedure)) > 0,
+  position('Invalid Ethereum destination address' in pg_get_functiondef('public.create_financial_transaction(text,numeric,text,text,uuid,text)'::regprocedure)) > 0,
   'withdrawal RPC validates Ethereum destinations'
 );
 
 select ok(
-  position('Invalid Bitcoin destination address' in pg_get_functiondef('public.create_financial_transaction(text,numeric,text,text,uuid)'::regprocedure)) > 0,
+  position('Invalid Bitcoin destination address' in pg_get_functiondef('public.create_financial_transaction(text,numeric,text,text,uuid,text)'::regprocedure)) > 0,
   'withdrawal RPC validates Bitcoin destinations'
 );
 
 select ok(
-  position('Invalid Beldex destination address' in pg_get_functiondef('public.create_financial_transaction(text,numeric,text,text,uuid)'::regprocedure)) > 0,
+  position('Invalid Beldex destination address' in pg_get_functiondef('public.create_financial_transaction(text,numeric,text,text,uuid,text)'::regprocedure)) > 0,
   'withdrawal RPC validates Beldex destinations'
 );
 
-select function_privs_are('public', 'swap_assets', array['uuid','text','text','numeric','numeric'], 'authenticated', '{}', 'authenticated cannot execute swap_assets directly');
-select function_privs_are('public', 'swap_assets', array['uuid','text','text','numeric','numeric'], 'service_role', array['EXECUTE'], 'service role can execute swap_assets');
+select ok(
+  to_regprocedure('public.swap_assets(uuid,text,text,numeric,numeric)') is not null
+  and position('Currency swaps are retired; use the BDX-native wallet flow' in pg_get_functiondef('public.swap_assets(uuid,text,text,numeric,numeric)'::regprocedure)) > 0
+  and not has_function_privilege('public', 'public.swap_assets(uuid,text,text,numeric,numeric)', 'EXECUTE')
+  and not has_function_privilege('anon', 'public.swap_assets(uuid,text,text,numeric,numeric)', 'EXECUTE')
+  and not has_function_privilege('authenticated', 'public.swap_assets(uuid,text,text,numeric,numeric)', 'EXECUTE')
+  and has_function_privilege('service_role', 'public.swap_assets(uuid,text,text,numeric,numeric)', 'EXECUTE'),
+  'currency swap RPC is a fail-closed compatibility stub for service_role only'
+);
+select ok(to_regprocedure('public.swap_assets(text,text,numeric,numeric)') is null, 'legacy currency swap RPC overload is retired');
+
+-- Runtime proof that the service-role compatibility entrypoint rejects swaps
+-- without changing balances, transaction rows, or audit rows.
+create temporary table swap_stub_before as
+select
+  coalesce((select sum(available_balance) from public.user_profile),0) as usd_available,
+  coalesce((select sum(locked_balance) from public.user_profile),0) as usd_locked,
+  coalesce((select sum(bdx_balance) from public.user_profile),0) as bdx_available,
+  coalesce((select sum(locked_bdx_balance) from public.user_profile),0) as bdx_locked,
+  (select count(*) from public.transaction) as transaction_count,
+  (select count(*) from public.admin_action_audit) as admin_audit_count,
+  (select count(*) from public.transaction_audit) as transaction_audit_count;
+
+select throws_ok(
+  $$select public.swap_assets('00000000-0000-0000-0000-000000000001'::uuid,'USD','BDX',1,1)$$,
+  'P0001',
+  'Currency swaps are retired; use the BDX-native wallet flow',
+  'retired swap RPC returns the explicit fail-closed error'
+);
+
+select ok(
+  (select b.usd_available = coalesce((select sum(available_balance) from public.user_profile),0)
+    and b.usd_locked = coalesce((select sum(locked_balance) from public.user_profile),0)
+    and b.bdx_available = coalesce((select sum(bdx_balance) from public.user_profile),0)
+    and b.bdx_locked = coalesce((select sum(locked_bdx_balance) from public.user_profile),0)
+    and b.transaction_count = (select count(*) from public.transaction)
+    and b.admin_audit_count = (select count(*) from public.admin_action_audit)
+    and b.transaction_audit_count = (select count(*) from public.transaction_audit)
+   from swap_stub_before b),
+  'rejected swap leaves USD/BDX balances, transactions, and audit logs unchanged'
+);
+
+select ok(to_regprocedure('public.create_financial_transaction(text,numeric,text,text,uuid)') is null, 'legacy currency-optional financial request RPC is retired');
+select has_function('public', 'admin_adjust_bdx_balance', array['uuid','numeric','text','text'], 'BDX admin adjustment RPC exists');
+select has_function('public', 'admin_financial_reconciliation_v3', array[]::text[], 'currency-separated reconciliation v3 exists');
+select ok(
+  position('locked_bdx_balance=locked_bdx_balance-v_old.principal' in pg_get_functiondef('public.admin_manage_investment(uuid,numeric,boolean,text,text)'::regprocedure)) > 0
+  and position('Completed or cancelled investments cannot be reactivated' in pg_get_functiondef('public.admin_manage_investment(uuid,numeric,boolean,text,text)'::regprocedure)) > 0,
+  'admin investment management preserves BDX principal and prevents unsafe reactivation'
+);
+select ok(
+  position('null::boolean' in pg_get_functiondef('public.admin_manage_investment(uuid,numeric,text,text)'::regprocedure)) > 0,
+  'legacy admin investment RPC delegates to currency-aware implementation'
+);
+select ok(
+  position('admin_has_permission(''view_transactions'')' in pg_get_functiondef('public.admin_financial_reconciliation_v3()'::regprocedure)) > 0
+  and position('referral_earnings_bdx' in pg_get_functiondef('public.admin_financial_reconciliation_v3()'::regprocedure)) > 0
+  and position('lower(coalesce(t.method' in pg_get_functiondef('public.admin_financial_reconciliation_v3()'::regprocedure)) > 0
+  and position('admin adjustment' in pg_get_functiondef('public.admin_financial_reconciliation_v3()'::regprocedure)) > 0,
+  'BDX reconciliation enforces report permission, includes BDX referrals, and excludes legacy admin adjustments from user withdrawals'
+);
+
+select ok(
+  (select abs(daily_rate - 0.019::numeric / 30) < 0.000000000000000001 from public.investment_plan_catalog where id='gns')
+  and (select abs(daily_rate - 0.0251::numeric / 60) < 0.000000000000000001 from public.investment_plan_catalog where id='build')
+  and (select abs(daily_rate - 0.0392::numeric / 60) < 0.000000000000000001 from public.investment_plan_catalog where id='follow')
+  and (select abs(daily_rate - 0.0856::numeric / 365) < 0.000000000000000001 from public.investment_plan_catalog where id='apex')
+  and (select abs(daily_rate - 0.1343::numeric / 730) < 0.000000000000000001 from public.investment_plan_catalog where id='edifex')
+  and (select abs(daily_rate - 0.1543::numeric / 730) < 0.000000000000000001 from public.investment_plan_catalog where id='dixon')
+  and (select abs(daily_rate - 0.2378::numeric / 1825) < 0.000000000000000001 from public.investment_plan_catalog where id='falcon'),
+  'new BDX plan daily rates equal published total ROI divided by duration'
+);
 
 -- Direct table writes remain closed to browser roles.
 select ok(not has_table_privilege('authenticated', 'public.user_profile', 'INSERT'), 'authenticated cannot insert user_profile directly');
@@ -160,28 +232,32 @@ select ok(not has_table_privilege('authenticated', 'public.transaction_audit', '
 select policies_are('public', 'admin_action_audit', array['admin_action_audit_select'], 'admin action audit has only its admin-read policy');
 select policies_are('public', 'transaction_audit', array['transaction_audit_select'], 'transaction audit has only its admin-read policy');
 
--- Source-level invariants for the two most sensitive admin balance RPCs.
+-- Legacy USD admin contracts remain available for already-deployed callers.
+-- BDX changes use the separate reference-idempotent BDX adjustment RPC.
 select ok(
-  position('from public.admin_user' in pg_get_functiondef('public.admin_fund_user(uuid,numeric,text)'::regprocedure)) > 0
-  and position('v_admin_id' in pg_get_functiondef('public.admin_fund_user(uuid,numeric,text)'::regprocedure)) > 0,
-  'admin_fund_user resolves the audit actor through admin_user.id'
+  to_regprocedure('public.admin_fund_user(uuid,numeric,text)') is not null,
+  'legacy three-argument USD funding RPC remains available'
 );
 
 select ok(
-  position('p_amount <= 0' in pg_get_functiondef('public.admin_fund_user(uuid,numeric,text)'::regprocedure)) > 0
-  and position('reason is required' in pg_get_functiondef('public.admin_fund_user(uuid,numeric,text)'::regprocedure)) > 0
-  and position('v_profile.blocked' in pg_get_functiondef('public.admin_fund_user(uuid,numeric,text)'::regprocedure)) > 0,
-  'admin_fund_user validates amount, reason, and blocked status'
+  to_regprocedure('public.admin_adjust_balance(uuid,numeric,text)') is not null,
+  'legacy three-argument USD adjustment RPC remains available'
 );
 
 select ok(
-  position('p_delta = 0' in pg_get_functiondef('public.admin_adjust_balance(uuid,numeric,text)'::regprocedure)) > 0
-  and position('reason is required' in pg_get_functiondef('public.admin_adjust_balance(uuid,numeric,text)'::regprocedure)) > 0
-  and position('v_profile.available_balance + p_delta < 0' in pg_get_functiondef('public.admin_adjust_balance(uuid,numeric,text)'::regprocedure)) > 0
-  and position('v_profile.blocked' in pg_get_functiondef('public.admin_adjust_balance(uuid,numeric,text)'::regprocedure)) > 0,
-  'admin_adjust_balance validates delta, reason, blocked status, and nonnegative balance'
+  position('Reference is required for idempotency' in pg_get_functiondef('public.admin_adjust_bdx_balance(uuid,numeric,text,text)'::regprocedure)) > 0
+  and position('md5(p_user_id::text||'':''||v_reference)' in pg_get_functiondef('public.admin_adjust_bdx_balance(uuid,numeric,text,text)'::regprocedure)) > 0,
+  'BDX admin adjustments require a stable idempotency reference'
 );
 
+select ok(
+  to_regprocedure('public.admin_financial_reconciliation()') is null,
+  'legacy reconciliation RPC is retired'
+);
+select ok(
+  to_regprocedure('public.admin_financial_reconciliation_v2()') is null,
+  'legacy v2 reconciliation RPC is retired'
+);
 select * from finish();
 
 rollback;

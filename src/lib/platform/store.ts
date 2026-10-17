@@ -2,8 +2,7 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { copy, fill, type Lang } from "./i18n";
 import { planCeiling, type Plan } from "./catalog";
-import { bdxToUsd, uid } from "@/lib/utils";
-import { fetchQuotes } from "@/lib/market/live-quotes";
+import { uid } from "@/lib/utils";
 import { pullCloudBook } from "@/lib/supabase/books";
 import { supabase } from "@/lib/supabase/client";
 import type { CloudProfile } from "@/lib/supabase/auth";
@@ -124,7 +123,6 @@ type PlatformState = {
   withdraw: (amount: number, method: string, address: string, requestId?: string, currency?: "BDX" | "USD") => Promise<string | null>;
   buyPlan: (plan: Plan, amount: number) => Promise<string | null>;
   settlePlans: () => Promise<void>;
-  swap: (from: "USD" | "BDX", to: "USD" | "BDX", amount: number, rate?: number) => Promise<string | null>;
   copyReferral: () => string;
   addNotice: (title: string, body: string) => void;
   markNoticesRead: () => void;
@@ -244,11 +242,12 @@ export const usePlatform = create<PlatformState>()(
           set({ txs });
         },
 
-        deposit: async (amount, method, requestId, currency = "BDX") => {
-          const isBeldex = method === "BELDEX";
-          const ledgerCurrency = isBeldex ? currency : "USD";
+        deposit: async (amount, method, requestId, currency) => {
+          const isBeldex = method.toUpperCase() === "BELDEX";
+          const ledgerCurrency = isBeldex ? "BDX" : "USD";
+          if (currency && currency !== ledgerCurrency) return "PAYMENT_METHOD_CURRENCY_MISMATCH";
           const ledgerAmount = amount;
-          const minimum = isBeldex ? (currency === "BDX" ? 4000 : bdxToUsd(4000)) : 300;
+          const minimum = isBeldex ? 4000 : 300;
           if (!amount || amount < minimum) return "MIN_DEPOSIT";
           const { error } = await supabase.rpc("create_financial_transaction", {
             p_type: "deposit",
@@ -256,21 +255,22 @@ export const usePlatform = create<PlatformState>()(
             p_currency: ledgerCurrency,
             p_method: method,
             p_note: null,
-            p_request_id: requestId ? requestId : null,
+            p_request_id: requestId ?? uid(),
           });
           if (error) return error.message;
           await get().refreshTransactions();
           return null;
         },
 
-        withdraw: async (amount, method, address, requestId, currency = "BDX") => {
+        withdraw: async (amount, method, address, requestId, currency) => {
           if (!method) return "NEED_METHOD";
           const addressError = validateWithdrawalDestination(method, address);
           if (addressError) return addressError;
           if (!amount || amount <= 0) return "NEED_AMOUNT";
-          const isBeldex = method === "Beldex";
-          const ledgerCurrency = isBeldex ? currency : "USD";
-          const minimum = isBeldex ? (currency === "BDX" ? 4000 : bdxToUsd(4000)) : 300;
+          const isBeldex = method.toUpperCase() === "BELDEX";
+          const ledgerCurrency = isBeldex ? "BDX" : "USD";
+          if (currency && currency !== ledgerCurrency) return "PAYMENT_METHOD_CURRENCY_MISMATCH";
+          const minimum = isBeldex ? 4000 : 300;
           if (amount < minimum) return "MIN_WITHDRAWAL";
           const balance = ledgerCurrency === "BDX" ? get().bdx : get().available;
           if (amount > balance) return "INSUFFICIENT";
@@ -280,7 +280,7 @@ export const usePlatform = create<PlatformState>()(
             p_currency: ledgerCurrency,
             p_method: method,
             p_note: address.trim(),
-            p_request_id: requestId ? requestId : null,
+            p_request_id: requestId ?? uid(),
           });
           if (error) return error.message;
           await get().refreshTransactions();
@@ -320,19 +320,6 @@ export const usePlatform = create<PlatformState>()(
           }
         },
 
-        swap: async (from, to, amount) => {
-          if (from === to) return "SWAP_SAME";
-          if (!amount || amount <= 0) return "NEED_AMOUNT";
-
-          const { error } = await supabase.functions.invoke("swap-assets", {
-            body: { from, to, amount },
-          });
-          if (error) return error.message;
-
-          const remote = await pullCloudBook();
-          if (remote) set({ ...remote, tickets: remote.tickets ?? [] });
-          return null;
-        },
         copyReferral: () => referralLink(get().user),
 
         addNotice: (title, body) => {

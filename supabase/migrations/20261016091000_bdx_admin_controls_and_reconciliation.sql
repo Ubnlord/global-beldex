@@ -366,11 +366,11 @@ grant execute on function public.admin_financial_reconciliation_v3() to authenti
 drop function if exists public.admin_financial_reconciliation_v2();
 drop function if exists public.admin_financial_reconciliation();
 
--- Legacy admin functions can credit or adjust USD balances/bonuses and are no
--- longer exposed. The console must use the reference-idempotent BDX RPC above.
-drop function if exists public.admin_fund_user(uuid,numeric,text);
-drop function if exists public.admin_fund_user(uuid,numeric,text,text);
-drop function if exists public.admin_adjust_balance(uuid,numeric,text);
-drop function if exists public.admin_adjust_balance(uuid,numeric,text,text);
+-- Preserve the deployed legacy USD admin RPC contracts. Existing admin
+-- clients still call admin_fund_user(uuid,numeric,text) and
+-- admin_adjust_balance(uuid,numeric,text); their own authorization checks and
+-- audit behavior remain in force. The new BDX-specific console must call
+-- admin_adjust_bdx_balance(uuid,numeric,text,text). Do not drop or repurpose
+-- legacy USD signatures as part of this additive BDX migration.
 
 commit;

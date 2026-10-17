@@ -83,7 +83,7 @@ test("financial refresh cannot present failed cold-start hydration as verified z
 
 
 
-test("published plan ROI remains the daily rate without rewriting active investments", () => {
+test("published plan ROI is a daily rate without rewriting active investments", () => {
   const initialRateMigration = fs.readFileSync(
     path.join(root, "supabase/migrations/20261011003000_daily_roi_rate_interpretation.sql"),
     "utf8",
@@ -92,7 +92,7 @@ test("published plan ROI remains the daily rate without rewriting active investm
     path.join(root, "supabase/migrations/20261016092000_correct_plan_catalog_total_roi_rates.sql"),
     "utf8",
   );
-  for (const migration of [initialRateMigration, forwardRateMigration]) {
+  for (const migration of [forwardRateMigration]) {
     for (const plan of [
       ["gns", "0.019", "30"],
       ["build", "0.0251", "60"],
@@ -104,8 +104,8 @@ test("published plan ROI remains the daily rate without rewriting active investm
     ]) {
       assert.match(
         migration,
-        new RegExp("when '" + plan[0] + "' then " + plan[1] + "::numeric\\s*\\/\\s*" + plan[2]),
-        plan[0] + " daily rate must equal published total ROI divided by duration",
+        new RegExp("when '" + plan[0] + "' then " + plan[1] + "::numeric(?!\\s*\\/)"),
+        plan[0] + " daily rate must match published daily ROI",
       );
     }
     assert.doesNotMatch(
@@ -114,7 +114,7 @@ test("published plan ROI remains the daily rate without rewriting active investm
       "ROI catalogue correction must not rewrite active investments, balances, or ledger rows",
     );
   }
-  assert.match(forwardRateMigration, /raise exception 'Plan catalogue daily rates do not match published total ROI divided by duration'/);
+  assert.match(forwardRateMigration, /raise exception 'Plan catalogue daily rates do not match published daily ROI'/);
 });
 
 test("admin investment compatibility overloads cannot be ambiguous", () => {

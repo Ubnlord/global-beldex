@@ -230,18 +230,16 @@ select ok(not has_table_privilege('authenticated', 'public.transaction_audit', '
 select policies_are('public', 'admin_action_audit', array['admin_action_audit_select'], 'admin action audit has only its admin-read policy');
 select policies_are('public', 'transaction_audit', array['transaction_audit_select'], 'transaction audit has only its admin-read policy');
 
--- Legacy USD balance-mutation endpoints are retired; new admin credits/debits
--- must use the reference-idempotent BDX adjustment RPC.
+-- Legacy USD admin contracts remain available for already-deployed callers.
+-- BDX changes use the separate reference-idempotent BDX adjustment RPC.
 select ok(
-  to_regprocedure('public.admin_fund_user(uuid,numeric,text)') is null
-  and to_regprocedure('public.admin_fund_user(uuid,numeric,text,text)') is null,
-  'legacy USD funding RPCs are retired'
+  to_regprocedure('public.admin_fund_user(uuid,numeric,text)') is not null,
+  'legacy three-argument USD funding RPC remains available'
 );
 
 select ok(
-  to_regprocedure('public.admin_adjust_balance(uuid,numeric,text)') is null
-  and to_regprocedure('public.admin_adjust_balance(uuid,numeric,text,text)') is null,
-  'legacy USD adjustment RPCs are retired'
+  to_regprocedure('public.admin_adjust_balance(uuid,numeric,text)') is not null,
+  'legacy three-argument USD adjustment RPC remains available'
 );
 
 select ok(

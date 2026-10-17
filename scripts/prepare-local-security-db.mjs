@@ -24,6 +24,26 @@ if (!fs.existsSync(baselinePath)) {
   );
 }
 
+const baselineSql = fs.readFileSync(baselinePath, "utf8");
+const requiredSchemaMarkers = [
+  "user_profile",
+  "user_investment",
+  "investment_plan_catalog",
+  "admin_action_audit",
+  "transaction_audit",
+  "admin_fund_user",
+  "admin_adjust_balance",
+  "create_financial_transaction",
+];
+for (const marker of requiredSchemaMarkers) {
+  if (!baselineSql.includes(marker)) {
+    throw new Error(`Extracted production schema baseline is missing required schema marker: ${marker}`);
+  }
+}
+if (/^COPY public\\./m.test(baselineSql)) {
+  throw new Error("Production baseline unexpectedly contains table data; only a schema-only dump is allowed.");
+}
+
 const baseline = baselineName;
 const baselineVersion = baseline.slice(0, 14);
 // The baseline replaces the production migration history through the last

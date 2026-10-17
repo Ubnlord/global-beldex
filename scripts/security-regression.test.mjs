@@ -98,22 +98,77 @@ test("financial authorization and currency controls hold", { skip: !url || !serv
       assert.ok(error, "admin without approve_transactions unexpectedly adjusted BDX");
     });
 
-    await step("authorized admin can adjust BDX with a BDX ledger record", async () => {
+    await step("admin-console BDX adjustment RPC writes one balance change, transaction, and matching audit; replay is idempotent", async () => {
       const client = await clientFor(users.admin);
-      const result = await client.rpc("admin_adjust_bdx_balance", {
+      const adjustment = {
         p_user_id: users.normal.id,
         p_delta: 10,
         p_reason: "BDX adjustment regression test",
-        p_reference: "security-test",
-      });
-      assert.ifError(result.error);
-      assert.equal(result.data?.currency, "BDX");
-      const { data, error } = await admin.from("user_profile")
+        p_reference: `security-test-${suffix}`,
+      };
+
+      // This uses the same Supabase RPC name and named arguments as the admin
+      // console, against the isolated migrated schema and a signed-in admin.
+      const first = await client.rpc("admin_adjust_bdx_balance", adjustment);
+      assert.ifError(first.error);
+      assert.ok(first.data?.id, "RPC must return the created transaction");
+      assert.equal(first.data.currency, "BDX");
+      assert.equal(Number(first.data.amount), 10);
+      assert.equal(first.data.type, "bonus");
+      assert.equal(first.data.method, "Admin BDX adjustment");
+      assert.equal(first.data.status, "completed");
+      assert.equal(first.data.note, `BDX adjustment regression test | Ref: ${adjustment.p_reference}`);
+
+      const profileAfterFirst = await admin.from("user_profile")
         .select("bdx_balance")
         .eq("user_id", users.normal.id)
         .single();
-      assert.ifError(error);
-      assert.equal(Number(data.bdx_balance), 10);
+      assert.ifError(profileAfterFirst.error);
+      assert.equal(Number(profileAfterFirst.data.bdx_balance), 10);
+
+      const transactionRows = await admin.from("transaction")
+        .select("id,user_id,type,amount,currency,status,method,note,request_id,approved_by")
+        .eq("id", first.data.id)
+        .eq("user_id", users.normal.id);
+      assert.ifError(transactionRows.error);
+      assert.equal(transactionRows.data?.length, 1);
+      assert.equal(transactionRows.data[0].currency, "BDX");
+      assert.equal(Number(transactionRows.data[0].amount), 10);
+      assert.equal(transactionRows.data[0].method, "Admin BDX adjustment");
+      assert.equal(transactionRows.data[0].status, "completed");
+
+      const auditAfterFirst = await admin.from("admin_action_audit")
+        .select("admin_id,user_id,action,target_id,old_values,new_values,reason")
+        .eq("target_id", first.data.id)
+        .eq("action", "bdx_balance_adjusted");
+      assert.ifError(auditAfterFirst.error);
+      assert.equal(auditAfterFirst.data?.length, 1, "exactly one matching audit row is required");
+      assert.equal(auditAfterFirst.data[0].user_id, users.normal.id);
+      assert.equal(auditAfterFirst.data[0].reason, adjustment.p_reason);
+      assert.equal(Number(auditAfterFirst.data[0].old_values.bdx_balance), 0);
+      assert.equal(Number(auditAfterFirst.data[0].new_values.bdx_balance), 10);
+      assert.equal(Number(auditAfterFirst.data[0].new_values.delta), 10);
+      assert.equal(auditAfterFirst.data[0].new_values.currency, "BDX");
+      assert.equal(auditAfterFirst.data[0].new_values.reference, adjustment.p_reference);
+
+      // Replay the exact console request: it must return the original row and
+      // leave the balance, transaction count, and audit count unchanged.
+      const replay = await client.rpc("admin_adjust_bdx_balance", adjustment);
+      assert.ifError(replay.error);
+      assert.equal(replay.data?.id, first.data.id, "idempotent replay must return original transaction");
+      const [profileAfterReplay, transactionsAfterReplay, auditAfterReplay] = await Promise.all([
+        admin.from("user_profile").select("bdx_balance").eq("user_id", users.normal.id).single(),
+        admin.from("transaction").select("id", { count: "exact", head: true })
+          .eq("user_id", users.normal.id).eq("request_id", first.data.request_id),
+        admin.from("admin_action_audit").select("target_id", { count: "exact", head: true })
+          .eq("target_id", first.data.id).eq("action", "bdx_balance_adjusted"),
+      ]);
+      assert.ifError(profileAfterReplay.error);
+      assert.ifError(transactionsAfterReplay.error);
+      assert.ifError(auditAfterReplay.error);
+      assert.equal(Number(profileAfterReplay.data.bdx_balance), 10);
+      assert.equal(transactionsAfterReplay.count, 1, "replay must not create a duplicate transaction");
+      assert.equal(auditAfterReplay.count, 1, "replay must not create a duplicate audit row");
     });
 
     await step("admin without view_transactions cannot run financial reconciliation", async () => {

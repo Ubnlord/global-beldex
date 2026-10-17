@@ -45,16 +45,16 @@ assert.match(migration, /p\.locked_bdx_balance<0/);
 assert.match(migration, /ui\.currency='USD'/);
 
 // Published percentages are daily simple-interest rates for new investments.
-assert.match(catalog, /profit: "1\\.90% Daily ROI"/);
-assert.match(catalog, /dailyPct: 1\\.9,/);
-assert.match(catalog, /const profit = amount \\* \\(plan\\.dailyPct \\/ 100\\) \\* plan\\.durationDays/);
-assert.match(accountingMigration, /when 'gns' then 0\\.019(?:\\s|$)/);
-assert.match(accountingMigration, /when 'build' then 0\\.0251(?:\\s|$)/);
-assert.match(accountingMigration, /when 'follow' then 0\\.0392(?:\\s|$)/);
-assert.match(accountingMigration, /when 'apex' then 0\\.0856(?:\\s|$)/);
-assert.match(accountingMigration, /when 'edifex' then 0\\.1343(?:\\s|$)/);
-assert.match(accountingMigration, /when 'dixon' then 0\\.1543(?:\\s|$)/);
-assert.match(accountingMigration, /when 'falcon' then 0\\.2378(?:\\s|$)/);
+assert.match(catalog, /profit: "1\.90% Daily ROI"/);
+assert.match(catalog, /dailyPct: 1\.9,/);
+assert.match(catalog, /const profit = amount \* \(plan\.dailyPct \/ 100\) \* plan\.durationDays/);
+assert.match(accountingMigration, /when 'gns' then 0\.019(?:\s|$)/);
+assert.match(accountingMigration, /when 'build' then 0\.0251(?:\s|$)/);
+assert.match(accountingMigration, /when 'follow' then 0\.0392(?:\s|$)/);
+assert.match(accountingMigration, /when 'apex' then 0\.0856(?:\s|$)/);
+assert.match(accountingMigration, /when 'edifex' then 0\.1343(?:\s|$)/);
+assert.match(accountingMigration, /when 'dixon' then 0\.1543(?:\s|$)/);
+assert.match(accountingMigration, /when 'falcon' then 0\.2378(?:\s|$)/);
 assert.match(accountingMigration, /Beldex transactions must be denominated in BDX/);
 assert.match(accountingMigration, /drop function if exists public\.swap_assets/);
 assert.doesNotMatch(store, /bdxToUsd|usdToBdx|swap-assets/);

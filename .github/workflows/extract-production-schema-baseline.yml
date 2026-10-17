@@ -1,0 +1,55 @@
+name: Extract production schema baseline
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  extract-schema:
+    name: Read-only production schema extraction
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Validate read-only dump configuration
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_DB_URL:-}" ]; then
+            echo "::error::Configure the SUPABASE_DB_URL repository secret with a database connection URL permitted for schema-only reads."
+            exit 1
+          fi
+
+      - name: Extract schema only
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -euo pipefail
+          mkdir -p supabase/baselines
+          # No --data-only flag is used: this exports schema definitions only.
+          # The command connects to production for a dump and does not apply SQL.
+          supabase db dump \
+            --db-url "$SUPABASE_DB_URL" \
+            --schema public \
+            --file supabase/baselines/20261012170510_production_schema_baseline.sql
+          test -s supabase/baselines/20261012170510_production_schema_baseline.sql
+          grep -q "user_profile" supabase/baselines/20261012170510_production_schema_baseline.sql
+          grep -q "admin_fund_user" supabase/baselines/20261012170510_production_schema_baseline.sql
+          grep -q "create_financial_transaction" supabase/baselines/20261012170510_production_schema_baseline.sql
+          sha256sum supabase/baselines/20261012170510_production_schema_baseline.sql
+
+      - name: Upload extracted schema baseline
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-schema-baseline
+          path: supabase/baselines/20261012170510_production_schema_baseline.sql
+          if-no-files-found: error
+          retention-days: 7

@@ -61,28 +61,38 @@ jobs:
 
       - name: Apply repository migrations
         working-directory: .security-test
-        run: supabase db reset
+        run: |
+          set -euo pipefail
+          mkdir -p ../.security-test-evidence
+          supabase db reset 2>&1 | tee ../.security-test-evidence/migration-replay.log
 
       - name: Run pgTAP safeguards
         working-directory: .security-test
-        run: supabase test db
+        run: |
+          set -euo pipefail
+          supabase test db 2>&1 | tee ../.security-test-evidence/pgtap-results.log
 
       - name: Run full JavaScript security regression
         run: |
           set -euo pipefail
           eval "$(cd .security-test && supabase status -o env)"
-          SUPABASE_TEST_URL="$API_URL"           SUPABASE_TEST_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY"           SUPABASE_TEST_PUBLISHABLE_KEY="$ANON_KEY"           node --test scripts/security-regression.test.mjs
+          SUPABASE_TEST_URL="$API_URL" \
+          SUPABASE_TEST_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY" \
+          SUPABASE_TEST_PUBLISHABLE_KEY="$ANON_KEY" \
+          node --test scripts/security-regression.test.mjs 2>&1 | tee .security-test-evidence/javascript-regression.log
+
+      - name: Upload isolated database evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: isolated-production-lineage-test-evidence
+          path: |
+            .security-test-evidence/*.log
+            .security-test/supabase/.temp/*.log
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: Stop isolated Supabase
         if: always()
         working-directory: .security-test
         run: supabase stop
-
-      - name: Upload local Supabase logs on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: security-test-logs
-          path: |
-            .security-test/supabase/.temp/*.log
-          if-no-files-found: ignore

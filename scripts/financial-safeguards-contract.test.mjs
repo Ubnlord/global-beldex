@@ -104,8 +104,8 @@ test("published plan ROI remains the daily rate without rewriting active investm
     ]) {
       assert.match(
         migration,
-        new RegExp("when '" + plan[0] + "' then " + plan[1] + "::numeric"),
-        plan[0] + " daily rate must match the published daily ROI",
+        new RegExp("when '" + plan[0] + "' then " + plan[1] + "::numeric\\s*\\/\\s*" + plan[2]),
+        plan[0] + " daily rate must equal published total ROI divided by duration",
       );
     }
     assert.doesNotMatch(
@@ -114,7 +114,7 @@ test("published plan ROI remains the daily rate without rewriting active investm
       "ROI catalogue correction must not rewrite active investments, balances, or ledger rows",
     );
   }
-  assert.match(forwardRateMigration, /raise exception 'Plan catalogue daily rates do not match published daily ROI'/);
+  assert.match(forwardRateMigration, /raise exception 'Plan catalogue daily rates do not match published total ROI divided by duration'/);
 });
 
 test("admin investment compatibility overloads cannot be ambiguous", () => {

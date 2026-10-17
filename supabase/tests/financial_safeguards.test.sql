@@ -203,8 +203,10 @@ select ok(
 );
 select ok(
   position('admin_has_permission(''view_transactions'')' in pg_get_functiondef('public.admin_financial_reconciliation_v3()'::regprocedure)) > 0
-  and position('referral_earnings_bdx' in pg_get_functiondef('public.admin_financial_reconciliation_v3()'::regprocedure)) > 0,
-  'BDX reconciliation enforces report permission and includes BDX referrals'
+  and position('referral_earnings_bdx' in pg_get_functiondef('public.admin_financial_reconciliation_v3()'::regprocedure)) > 0
+  and position('lower(coalesce(t.method' in pg_get_functiondef('public.admin_financial_reconciliation_v3()'::regprocedure)) > 0
+  and position('admin adjustment' in pg_get_functiondef('public.admin_financial_reconciliation_v3()'::regprocedure)) > 0,
+  'BDX reconciliation enforces report permission, includes BDX referrals, and excludes legacy admin adjustments from user withdrawals'
 );
 
 select ok(

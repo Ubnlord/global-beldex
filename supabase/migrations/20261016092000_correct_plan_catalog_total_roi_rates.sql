@@ -1,8 +1,7 @@
 begin;
 
--- Forward correction to enforce the published plan-card policy: ROI is total
--- simple interest over the full plan duration; daily rate is total ROI / days. This updates only the catalogue for new
--- investments. Existing investment snapshots, credited profits, balances,
+-- Forward correction to enforce the published plan-card policy: ROI is total simple interest over the full plan duration; daily rate is
+-- total ROI divided by duration. This updates only the catalogue for new investments. Existing investment snapshots, credited profits, balances,
 -- and ledger rows are not rewritten.
 update public.investment_plan_catalog
    set daily_rate = case id
@@ -27,13 +26,13 @@ begin
     where p.id in ('gns','build','follow','apex','edifex','dixon','falcon')
       and p.duration_days > 0
       and abs(p.daily_rate - case p.id
-        when 'gns' then 0.019::numeric
-        when 'build' then 0.0251::numeric
-        when 'follow' then 0.0392::numeric
-        when 'apex' then 0.0856::numeric
-        when 'edifex' then 0.1343::numeric
-        when 'dixon' then 0.1543::numeric
-        when 'falcon' then 0.2378::numeric
+        when 'gns' then 0.019::numeric / 30
+        when 'build' then 0.0251::numeric / 60
+        when 'follow' then 0.0392::numeric / 60
+        when 'apex' then 0.0856::numeric / 365
+        when 'edifex' then 0.1343::numeric / 730
+        when 'dixon' then 0.1543::numeric / 730
+        when 'falcon' then 0.2378::numeric / 1825
       end) > 0.000000000000000001
   ) then
     raise exception 'Plan catalogue daily rates do not match published total ROI divided by duration';

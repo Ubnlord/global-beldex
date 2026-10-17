@@ -1,17 +1,17 @@
 begin;
 
--- The advertised percentages are total simple-interest ROI for the full term.
--- Daily rates are snapshots used only for new investments; existing investment
--- rows retain their recorded daily_rate and are never rewritten here.
+-- The published percentages are daily simple-interest rates. New investments
+-- snapshot these rates; existing investment rows keep their recorded rate.
+-- Accrual is principal * daily_rate * elapsed whole days, credited daily.
 update public.investment_plan_catalog
 set daily_rate = case id
-  when 'gns' then 0.019 / 30
-  when 'build' then 0.0251 / 60
-  when 'follow' then 0.0392 / 60
-  when 'apex' then 0.0856 / 365
-  when 'edifex' then 0.1343 / 730
-  when 'dixon' then 0.1543 / 730
-  when 'falcon' then 0.2378 / 1825
+  when 'gns' then 0.019
+  when 'build' then 0.0251
+  when 'follow' then 0.0392
+  when 'apex' then 0.0856
+  when 'edifex' then 0.1343
+  when 'dixon' then 0.1543
+  when 'falcon' then 0.2378
   else daily_rate
 end,
 updated_at = now()

@@ -302,7 +302,7 @@ begin
   ), w_usd as (
     select t.user_id,coalesce(sum(t.amount),0) amount from public.transaction t
     where t.type='withdraw' and t.status='completed' and coalesce(t.currency,'USD')='USD'
-      and coalesce(t.method,'')<>'Admin adjustment' group by t.user_id
+      and lower(coalesce(t.method,'')) not in ('admin','admin adjustment') group by t.user_id
   ), d_bdx as (
     select t.user_id,coalesce(sum(t.amount),0) amount from public.transaction t
     where t.type='deposit' and t.status='completed' and t.currency='BDX' group by t.user_id

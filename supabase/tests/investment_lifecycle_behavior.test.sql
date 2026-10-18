@@ -11,52 +11,26 @@ select ok(abs((select daily_rate from public.investment_plan_catalog where id='e
 select ok(abs((select daily_rate from public.investment_plan_catalog where id='dixon')-(0.1543::numeric))<0.000000000000000001,'DIXON daily rate equals the published daily ROI');
 select ok(abs((select daily_rate from public.investment_plan_catalog where id='falcon')-(0.2378::numeric))<0.000000000000000001,'FALCON daily rate equals the published daily ROI');
 
-insert into auth.users (
-  id, aud, role, email, encrypted_password, email_confirmed_at,
-  raw_app_meta_data, raw_user_meta_data, created_at, updated_at
-) values (
-  'a2200000-0000-4000-8000-000000000001','authenticated','authenticated',
-  'investment-lifecycle-user@example.test','',now(),'{}'::jsonb,'{}'::jsonb,now(),now()
-) on conflict (id) do nothing;
-
-insert into public.user_profile(user_id,available_balance,locked_balance,bdx_balance,locked_bdx_balance)
-values ('a2200000-0000-4000-8000-000000000001',0,100,0,100)
-on conflict (user_id) do update set available_balance=0,locked_balance=100,bdx_balance=0,locked_bdx_balance=100;
-
--- A legacy investment omits currency and must remain USD. The second row is
--- explicitly BDX-denominated. Both are past maturity with one uncredited day.
-insert into public.user_investment(
-  user_id,plan_id,principal,daily_rate,duration_days,started_at,last_accrual_at,status,daily_accrual_enabled
-) values (
-  'a2200000-0000-4000-8000-000000000001','gns',100,0.01,1,now()-interval '2 days',now()-interval '2 days','active',true
-);
-
-insert into public.user_investment(
-  user_id,plan_id,principal,daily_rate,duration_days,started_at,last_accrual_at,status,daily_accrual_enabled,currency
-) values (
-  'a2200000-0000-4000-8000-000000000001','gns',100,0.01,1,now()-interval '2 days',now()-interval '2 days','active',true,'BDX'
-);
-
-select set_config('request.jwt.claim.sub','a2200000-0000-4000-8000-000000000001',true);
-
-select is(public.accrue_user_investments('a2200000-0000-4000-8000-000000000001'),1::numeric,
-  'legacy numeric accrual return reports USD interest only, without summing BDX');
-select is((select available_balance from public.user_profile where user_id='a2200000-0000-4000-8000-000000000001'),101::numeric,
-  'legacy USD maturity returns principal and profit to USD wallet');
-select is((select bdx_balance from public.user_profile where user_id='a2200000-0000-4000-8000-000000000001'),101::numeric,
-  'BDX maturity returns principal and profit to BDX wallet');
-select is((select locked_balance from public.user_profile where user_id='a2200000-0000-4000-8000-000000000001'),0::numeric,
-  'USD locked principal is released at maturity');
-select is((select locked_bdx_balance from public.user_profile where user_id='a2200000-0000-4000-8000-000000000001'),0::numeric,
-  'BDX locked principal is released at maturity');
-select is(public.accrue_user_investments('a2200000-0000-4000-8000-000000000001'),0::numeric,
-  'repeated accrual after maturity credits nothing');
-select is((select count(*)::integer from public.transaction where user_id='a2200000-0000-4000-8000-000000000001' and note='Investment principal returned'),2,
-  'each investment has exactly one principal-return ledger entry');
-select is((select count(*)::integer from public.user_investment where user_id='a2200000-0000-4000-8000-000000000001' and status='completed' and currency='USD'),1,
-  'legacy investment remains USD and is marked completed');
-select is((select count(*)::integer from public.user_investment where user_id='a2200000-0000-4000-8000-000000000001' and status='completed' and currency='BDX'),1,
-  'BDX investment is marked completed separately');
+-- Automatic accrual is deliberately disabled. Verify the old entry points
+-- fail closed and the replacement manual path retains its financial controls.
+select ok(pg_get_functiondef('public.accrue_user_investments(uuid)'::regprocedure) like
+  '%Automatic investment accrual is disabled%', 'legacy per-user accrual is disabled');
+select ok(pg_get_functiondef('public.run_daily_investment_accrual()'::regprocedure) like
+  '%Automatic investment accrual is disabled%', 'legacy scheduled accrual is disabled');
+select ok(pg_get_functiondef('public.admin_add_daily_investment_profit(uuid,text)'::regprocedure) like
+  '%v_inv.principal * v_inv.daily_rate%', 'manual profit multiplies principal by the full daily rate');
+select ok(pg_get_functiondef('public.admin_add_daily_investment_profit(uuid,text)'::regprocedure) not like
+  '%v_inv.principal * v_inv.daily_rate /%', 'manual profit does not divide the daily rate by duration');
+select ok(pg_get_functiondef('public.admin_add_daily_investment_profit(uuid,text)'::regprocedure) like
+  '%admin_has_permission%', 'manual profit checks admin permissions');
+select ok(pg_get_functiondef('public.admin_add_daily_investment_profit(uuid,text)'::regprocedure) like
+  '%Blocked accounts cannot receive manual daily profit%', 'blocked users cannot receive manual profit');
+select ok(pg_get_functiondef('public.admin_add_daily_investment_profit(uuid,text)'::regprocedure) like
+  '%Reason is required%', 'manual profit requires an audit reason');
+select ok(pg_get_functiondef('public.admin_add_daily_investment_profit(uuid,text)'::regprocedure) like
+  '%on conflict (investment_id,profit_date) do nothing%', 'duplicate same-day credits are ignored');
+select ok(pg_get_functiondef('public.admin_add_daily_investment_profit(uuid,text)'::regprocedure) like
+  '%admin_action_audit%', 'manual profit records an admin audit event');
 
 select * from finish();
 rollback;

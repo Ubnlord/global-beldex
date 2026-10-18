@@ -21,18 +21,16 @@ select is((90000::numeric * 0.1343), 12087::numeric, 'EDIFEX daily interest uses
 select is((160000::numeric * 0.1543), 24688::numeric, 'DIXON daily interest uses daily rate');
 select is((220000::numeric * 0.2378), 52316::numeric, 'FALCON daily interest uses daily rate');
 
--- Guardrails that make duplicate accrual and maturity idempotent:
--- only active investments are accrued, with row locks and elapsed-day delta.
+-- Automatic accrual is intentionally disabled; assert fail-closed behavior
+-- rather than testing the retired automatic accrual implementation.
 select ok(pg_get_functiondef('public.accrue_user_investments(uuid)'::regprocedure) like
-  '%where user_id = v_uid and status = ''active'' and daily_accrual_enabled = true%',
-  'accrual only selects active, enabled investments');
-select ok(pg_get_functiondef('public.accrue_user_investments(uuid)'::regprocedure) like
-  '%for update%', 'accrual locks investment rows against concurrent duplicate credits');
-select ok(pg_get_functiondef('public.accrue_user_investments(uuid)'::regprocedure) like
-  '%greatest(0, v_elapsed_days - v_previous_days)%', 'accrual credits only previously uncredited elapsed days');
-select ok(pg_get_functiondef('public.accrue_user_investments(uuid)'::regprocedure) like
-  '%status = case when v_done then ''completed'' else ''active'' end%',
-  'maturity marks investment completed to prevent repeat principal return');
+  '%Automatic investment accrual is disabled%', 'legacy user accrual entry point fails closed');
+select ok(pg_get_functiondef('public.run_daily_investment_accrual()'::regprocedure) like
+  '%Automatic investment accrual is disabled%', 'legacy scheduled accrual entry point fails closed');
+select ok(pg_get_functiondef('public.admin_add_daily_investment_profit(uuid,text)'::regprocedure) like
+  '%v_inv.principal * v_inv.daily_rate%', 'manual profit uses the full daily rate without dividing by duration');
+select ok(pg_get_functiondef('public.admin_add_daily_investment_profit(uuid,text)'::regprocedure) like
+  '%on conflict (investment_id,profit_date) do nothing%', 'manual profit prevents duplicate credits for the same UTC day');
 
 select * from finish();
 rollback;

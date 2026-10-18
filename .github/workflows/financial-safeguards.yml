@@ -39,7 +39,9 @@ jobs:
 
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          # Pin the CLI to avoid a GitHub API lookup for `latest`, which can
+          # fail under unauthenticated release API rate limits.
+          version: 2.53.6
 
       - run: npm ci
 
@@ -94,5 +96,10 @@ jobs:
 
       - name: Stop isolated Supabase
         if: always()
-        working-directory: .security-test
-        run: supabase stop
+        run: |
+          if [ -d .security-test ]; then
+            cd .security-test
+            supabase stop
+          else
+            echo 'No isolated Supabase project was created; nothing to stop.'
+          fi

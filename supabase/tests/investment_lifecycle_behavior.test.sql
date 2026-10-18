@@ -19,7 +19,7 @@ select ok(pg_get_functiondef('public.run_daily_investment_accrual()'::regprocedu
   '%Automatic investment accrual is disabled%', 'legacy scheduled accrual is disabled');
 select ok(pg_get_functiondef('public.admin_add_daily_investment_profit(uuid,text)'::regprocedure) like
   '%v_inv.principal * v_inv.daily_rate%', 'manual profit multiplies principal by the full daily rate');
-select ok(pg_get_functiondef('public.admin_add_daily_investment_profit(uuid,text)'::regprocedure not like
+select ok(pg_get_functiondef('public.admin_add_daily_investment_profit(uuid,text)'::regprocedure) not like
   '%v_inv.principal * v_inv.daily_rate /%', 'manual profit does not divide the daily rate by duration');
 select ok(pg_get_functiondef('public.admin_add_daily_investment_profit(uuid,text)'::regprocedure) like
   '%admin_has_permission%', 'manual profit checks admin permissions');

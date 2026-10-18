@@ -304,14 +304,14 @@ export const usePlatform = create<PlatformState>()(
         },
 
         settlePlans: async () => {
-          const remote = await runWithFailureFallback(async () => {
-            const { error } = await supabase.rpc("accrue_user_investments", { p_user_id: null });
-            if (error) throw error;
-            return await pullCloudBook({ skipAccrual: true });
-          }, () => {
-            // Rejected network/RPC promises must never clear saved financial values.
-            set({ accrualFailed: true });
-          });
+          // Refresh only. Profit is added manually by an authorized administrator.
+          const remote = await runWithFailureFallback(
+            () => pullCloudBook({ skipAccrual: true }),
+            () => {
+              // Rejected network/RPC promises must never clear saved financial values.
+              set({ accrualFailed: true });
+            },
+          );
           if (remote) {
             set({ ...remote, tickets: remote.tickets ?? [] });
           } else {

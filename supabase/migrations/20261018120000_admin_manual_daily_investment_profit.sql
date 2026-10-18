@@ -116,4 +116,36 @@ $function$;
 revoke all on function public.admin_add_daily_investment_profit(uuid,text) from public,anon;
 grant execute on function public.admin_add_daily_investment_profit(uuid,text) to authenticated;
 
+
+-- Remove the previously installed nightly job and make the legacy accrual
+-- entry points fail closed so stale clients/jobs cannot credit profit silently.
+select cron.unschedule(jobid)
+from cron.job
+where jobname = 'global-beldex-daily-investment-accrual';
+
+create or replace function public.run_daily_investment_accrual()
+returns numeric
+language plpgsql
+security definer
+set search_path = pg_catalog, public, pg_temp
+as $function$
+begin
+  raise exception 'Automatic investment accrual is disabled; an administrator must add daily profit manually';
+end;
+$function$;
+
+create or replace function public.accrue_user_investments(p_user_id uuid default auth.uid())
+returns numeric
+language plpgsql
+security definer
+set search_path = pg_catalog, public, pg_temp
+as $function$
+begin
+  raise exception 'Automatic investment accrual is disabled; an administrator must add daily profit manually';
+end;
+$function$;
+
+revoke all on function public.run_daily_investment_accrual() from public, anon, authenticated, service_role;
+revoke all on function public.accrue_user_investments(uuid) from public, anon;
+
 commit;

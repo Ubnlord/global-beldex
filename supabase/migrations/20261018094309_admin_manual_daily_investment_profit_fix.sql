@@ -57,9 +57,8 @@ begin
     order by id
     for update
   loop
-    -- daily_rate stores the plan's total simple ROI fraction; divide by term
-    -- length to credit exactly one day's share of that total ROI.
-    v_profit := round(v_inv.principal * v_inv.daily_rate / v_inv.duration_days, 18);
+    -- daily_rate is the configured daily rate. Do not divide by duration.
+    v_profit := round(v_inv.principal * v_inv.daily_rate, 18);
     if v_profit <= 0 then continue; end if;
 
     v_daily_id := null;
@@ -111,6 +110,19 @@ $function$;
 
 revoke all on function public.admin_add_daily_investment_profit(uuid,text) from public,anon;
 grant execute on function public.admin_add_daily_investment_profit(uuid,text) to authenticated;
+
+-- pg_cron is optional in isolated test databases. Only query cron.job when it exists.
+do $cron_cleanup$
+begin
+  if to_regclass('cron.job') is not null then
+    execute $sql$
+      select cron.unschedule(jobid)
+      from cron.job
+      where jobname = 'global-beldex-daily-investment-accrual'
+    $sql$;
+  end if;
+end;
+$cron_cleanup$;
 
 -- Automatic accrual is disabled; only this authorized manual RPC may add profit.
 create or replace function public.run_daily_investment_accrual()

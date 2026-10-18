@@ -117,12 +117,19 @@ $function$;
 revoke all on function public.admin_add_daily_investment_profit(uuid,text) from public,anon;
 grant execute on function public.admin_add_daily_investment_profit(uuid,text) to authenticated;
 
-
--- Remove the previously installed nightly job and make the legacy accrual
--- entry points fail closed so stale clients/jobs cannot credit profit silently.
-select cron.unschedule(jobid)
-from cron.job
-where jobname = 'global-beldex-daily-investment-accrual';
+-- pg_cron is optional in isolated test databases. If it is installed, remove
+-- the legacy job; if it is absent, skip only this cleanup step.
+do $cron_cleanup$
+begin
+  if to_regclass('cron.job') is not null then
+    execute $sql$
+      select cron.unschedule(jobid)
+      from cron.job
+      where jobname = 'global-beldex-daily-investment-accrual'
+    $sql$;
+  end if;
+end;
+$cron_cleanup$;
 
 create or replace function public.run_daily_investment_accrual()
 returns numeric

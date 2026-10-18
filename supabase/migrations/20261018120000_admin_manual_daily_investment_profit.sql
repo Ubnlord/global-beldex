@@ -51,6 +51,9 @@ begin
   if v_admin.id is null then raise exception 'Admin access required'; end if;
   select * into v_profile from public.user_profile where user_id=p_user_id for update;
   if v_profile.user_id is null then raise exception 'User profile not found'; end if;
+  if coalesce(v_profile.blocked,false) then
+    raise exception 'Blocked accounts cannot receive manual daily profit';
+  end if;
 
   for v_inv in
     select * from public.user_investment

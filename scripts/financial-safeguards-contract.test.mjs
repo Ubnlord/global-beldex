@@ -33,8 +33,8 @@ test("permanent financial safeguard suite is present and non-destructive", () =>
     auditLock,
     /drop policy if exists transaction_audit_select_own_or_admin on public\.transaction_audit;/i,
   );
-  assert.match(suite, /select plan\(66\);/);
-  assert.match(suite, /withdrawal RPC enforces the \$300 minimum/i);
+  assert.match(suite, /select plan\(78\);/);
+  assert.match(suite, /currency-explicit financial request RPC exists/i);
   assert.match(withdrawalMigration, /p_method not in \('Bitcoin', 'Ethereum', 'Beldex'\)/i);
   assert.match(withdrawalMigration, /Invalid Ethereum destination address/);
   assert.match(withdrawalMigration, /Invalid Bitcoin destination address/);
@@ -64,6 +64,7 @@ test("permanent financial safeguard suite is present and non-destructive", () =>
   assert.match(adminRoute, /view_transactions/);
   assert.match(adminRoute, /view_audit_log/);
   assert.match(adminRoute, /admin_financial_reconciliation/);
+  assert.match(adminRoute, /!deltaOk\(row\.referral_bdx_delta\)/, "BDX referral reconciliation deltas must trigger exception alerts");
   assert.match(adminRoute, /never writes balances, investments or transaction states directly/);
 });
 
@@ -78,4 +79,55 @@ test("financial refresh cannot present failed cold-start hydration as verified z
   assert.match(cloudBookGuardTests, /transaction data is null, missing, or not an array/);
   assert.match(cloudBookGuardTests, /investment data is null, missing, or not an array/);
   assert.match(cloudBookGuardTests, /genuinely empty ledgers/);
+});
+
+
+
+test("published plan ROI is a daily rate without rewriting active investments", () => {
+  const initialRateMigration = fs.readFileSync(
+    path.join(root, "supabase/migrations/20261011003000_daily_roi_rate_interpretation.sql"),
+    "utf8",
+  );
+  const forwardRateMigration = fs.readFileSync(
+    path.join(root, "supabase/migrations/20261016092000_correct_plan_catalog_total_roi_rates.sql"),
+    "utf8",
+  );
+  for (const migration of [forwardRateMigration]) {
+    for (const plan of [
+      ["gns", "0.019", "30"],
+      ["build", "0.0251", "60"],
+      ["follow", "0.0392", "60"],
+      ["apex", "0.0856", "365"],
+      ["edifex", "0.1343", "730"],
+      ["dixon", "0.1543", "730"],
+      ["falcon", "0.2378", "1825"],
+    ]) {
+      assert.match(
+        migration,
+        new RegExp("when '" + plan[0] + "' then " + plan[1] + "::numeric(?!\\s*\\/)"),
+        plan[0] + " daily rate must match published daily ROI",
+      );
+    }
+    assert.doesNotMatch(
+      migration,
+      /update\s+public\.user_investment|update\s+public\.user_profile|update\s+public\.transaction/i,
+      "ROI catalogue correction must not rewrite active investments, balances, or ledger rows",
+    );
+  }
+  assert.match(forwardRateMigration, /raise exception 'Plan catalogue daily rates do not match published daily ROI'/);
+});
+
+test("admin investment compatibility overloads cannot be ambiguous", () => {
+  const migration = fs.readFileSync(
+    path.join(root, "supabase/migrations/20261016091000_bdx_admin_controls_and_reconciliation.sql"),
+    "utf8",
+  );
+  assert.match(
+    migration,
+    /create or replace function public\.admin_manage_investment\(\s*p_investment_id uuid,\s*p_daily_rate numeric(?: default null)?,\s*p_daily_accrual_enabled boolean(?: default null)?,\s*p_status text(?: default null)?,\s*p_reason text(?: default null)?\s*\)/,
+  );
+  assert.match(
+    migration,
+    /create or replace function public\.admin_manage_investment\(\s*p_investment_id uuid,\s*p_daily_rate numeric,\s*p_status text,\s*p_reason text\s*\)/,
+  );
 });

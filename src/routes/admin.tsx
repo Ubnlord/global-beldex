@@ -101,6 +101,9 @@ type ReconciliationRow = {
   referral_earnings: string | number;
   recorded_referrals: string | number;
   referral_delta: string | number;
+  referral_earnings_bdx: string | number;
+  recorded_referrals_bdx: string | number;
+  referral_bdx_delta: string | number;
   credited_investment_profit: string | number;
   recorded_investment_profit: string | number;
   investment_profit_delta: string | number;
@@ -224,7 +227,7 @@ export function AdminPage({ initialTab = "dashboard", transactionType }: { initi
 
   async function loadReconciliation() {
     setReconLoading(true);
-    const { data, error: reconError } = await supabase.rpc("admin_financial_reconciliation_v2");
+    const { data, error: reconError } = await supabase.rpc("admin_financial_reconciliation_v3");
     if (reconError) setError(reconError.message);
     else setReconciliation((data ?? []) as ReconciliationRow[]);
     setReconLoading(false);
@@ -353,13 +356,21 @@ export function AdminPage({ initialTab = "dashboard", transactionType }: { initi
     setBusy(null);
   }
 
-  async function accrueNow(userId: string) {
+  async function addDailyProfit(userId: string) {
     if (!canInvestments) return;
+    const reason = window.prompt("Reason for manually adding one day of investment profit:");
+    if (!reason?.trim()) return;
+    if (!window.confirm("Add one day's profit to each eligible active investment for this user? Repeated clicks today will not double-credit an investment.")) return;
     setBusy(`accrue:${userId}`);
     setError("");
-    const { error: actionError } = await supabase.rpc("accrue_user_investments", { p_user_id: userId });
+    const { data, error: actionError } = await supabase.rpc("admin_add_daily_investment_profit", {
+      p_user_id: userId,
+      p_reason: reason.trim(),
+    });
     if (actionError) setError(actionError.message);
     else {
+      const result = Array.isArray(data) ? data[0] : data;
+      window.alert(`Daily profit action complete. Investments credited: ${result?.credited_investments ?? 0}; total credited: ${result?.credited_amount ?? 0} (each investment can be credited once per UTC day).`);
       await Promise.all([loadUsers(query), loadTransactions(), loadAudit()]);
       if (selectedUserId) await openUser(selectedUserId);
     }
@@ -381,6 +392,7 @@ export function AdminPage({ initialTab = "dashboard", transactionType }: { initi
           !deltaOk(row.deposits_delta) ||
           !deltaOk(row.withdrawals_delta) ||
           !deltaOk(row.referral_delta) ||
+          !deltaOk(row.referral_bdx_delta) ||
           !deltaOk(row.investment_profit_delta) ||
           !deltaOk(row.locked_bdx_delta) ||
           !deltaOk(row.deposits_bdx_delta) ||
@@ -603,7 +615,7 @@ export function AdminPage({ initialTab = "dashboard", transactionType }: { initi
             setRateDrafts={setRateDrafts}
             onClose={() => setShowUserPanel(false)}
             onBlock={() => void toggleBlock(selectedUser)}
-            onAccrue={() => void accrueNow(selectedUser.user_id)}
+            onAccrue={() => void addDailyProfit(selectedUser.user_id)}
             onUpdateInvestment={updateInvestment}
           />
         )}
@@ -683,11 +695,11 @@ function ReconciliationPanel({ rows, loading, problems, onRun }: { rows: Reconci
             <div className="mt-1 text-xs opacity-80">{problems ? "No automatic repair was attempted." : "All tested deltas are zero and no negative balances were reported."}</div>
           </div>
           <div className="mt-4 overflow-x-auto rounded-xl border border-line">
-            <table className="min-w-[1500px] w-full text-left text-xs">
-              <thead className="bg-elevated text-muted"><tr><th className="p-3">User</th><th className="p-3">Available</th><th className="p-3">Locked Δ</th><th className="p-3">Deposits Δ</th><th className="p-3">Withdrawals Δ</th><th className="p-3">Referrals Δ</th><th className="p-3">Profit Δ (USD)</th><th className="p-3">BDX available</th><th className="p-3">BDX locked Δ</th><th className="p-3">BDX deposits Δ</th><th className="p-3">BDX withdrawals Δ</th><th className="p-3">BDX profit Δ</th><th className="p-3">Status</th></tr></thead>
+            <table className="min-w-[1650px] w-full text-left text-xs">
+              <thead className="bg-elevated text-muted"><tr><th className="p-3">User</th><th className="p-3">Available</th><th className="p-3">Locked Δ</th><th className="p-3">Deposits Δ</th><th className="p-3">Withdrawals Δ</th><th className="p-3">Referrals Δ</th><th className="p-3">Profit Δ (USD)</th><th className="p-3">BDX available</th><th className="p-3">BDX locked Δ</th><th className="p-3">BDX deposits Δ</th><th className="p-3">BDX withdrawals Δ</th><th className="p-3">BDX referrals Δ</th><th className="p-3">BDX profit Δ</th><th className="p-3">Status</th></tr></thead>
               <tbody className="divide-y divide-line">{rows.map((row) => {
-                const bad = row.negative_balance || !deltaOk(row.locked_delta) || !deltaOk(row.deposits_delta) || !deltaOk(row.withdrawals_delta) || !deltaOk(row.referral_delta) || !deltaOk(row.investment_profit_delta) || !deltaOk(row.locked_bdx_delta) || !deltaOk(row.deposits_bdx_delta) || !deltaOk(row.withdrawals_bdx_delta) || !deltaOk(row.investment_profit_bdx_delta);
-                return <tr key={row.user_id}><td className="p-3 font-mono text-[10px]">{row.user_id}</td><td className="p-3">{money(row.available_balance)}</td><td className="p-3">{money(row.locked_delta)}</td><td className="p-3">{money(row.deposits_delta)}</td><td className="p-3">{money(row.withdrawals_delta)}</td><td className="p-3">{money(row.referral_delta)}</td><td className="p-3">{money(row.investment_profit_delta)}</td><td className="p-3">{money(row.bdx_balance)} BDX</td><td className="p-3">{money(row.locked_bdx_delta)} BDX</td><td className="p-3">{money(row.deposits_bdx_delta)} BDX</td><td className="p-3">{money(row.withdrawals_bdx_delta)} BDX</td><td className="p-3">{money(row.investment_profit_bdx_delta)} BDX</td><td className="p-3"><Status value={bad ? "review" : "ok"} /></td></tr>;
+                const bad = row.negative_balance || !deltaOk(row.locked_delta) || !deltaOk(row.deposits_delta) || !deltaOk(row.withdrawals_delta) || !deltaOk(row.referral_delta) || !deltaOk(row.investment_profit_delta) || !deltaOk(row.locked_bdx_delta) || !deltaOk(row.deposits_bdx_delta) || !deltaOk(row.withdrawals_bdx_delta) || !deltaOk(row.referral_bdx_delta) || !deltaOk(row.investment_profit_bdx_delta);
+                return <tr key={row.user_id}><td className="p-3 font-mono text-[10px]">{row.user_id}</td><td className="p-3">{money(row.available_balance)}</td><td className="p-3">{money(row.locked_delta)}</td><td className="p-3">{money(row.deposits_delta)}</td><td className="p-3">{money(row.withdrawals_delta)}</td><td className="p-3">{money(row.referral_delta)}</td><td className="p-3">{money(row.investment_profit_delta)}</td><td className="p-3">{money(row.bdx_balance)} BDX</td><td className="p-3">{money(row.locked_bdx_delta)} BDX</td><td className="p-3">{money(row.deposits_bdx_delta)} BDX</td><td className="p-3">{money(row.withdrawals_bdx_delta)} BDX</td><td className="p-3">{money(row.referral_bdx_delta)} BDX</td><td className="p-3">{money(row.investment_profit_bdx_delta)} BDX</td><td className="p-3"><Status value={bad ? "review" : "ok"} /></td></tr>;
               })}</tbody>
             </table>
           </div>
@@ -715,8 +727,8 @@ function OperationsPanel({ adminRole, permissions, canTransactions, canUsers, ca
         <p className="mt-2 text-sm leading-6 text-amber-100/80">No client-side emergency switch has been added because a safe circuit breaker must be enforced by the backend RPC layer itself. The UI will not pretend a local toggle can stop financial writes.</p>
       </div>
       <div className="sm:col-span-2 rounded-2xl border border-line bg-surface p-5">
-        <div className="flex items-center gap-2 font-semibold text-fg"><Clock size={18} className="text-accent" /> Automated accrual</div>
-        <p className="mt-2 text-sm leading-6 text-muted">Production daily accrual is scheduled server-side at 00:00 UTC (01:00 Nigeria time during WAT). Manual accrual from a user profile also remains protected by the investment authorization path.</p>
+        <div className="flex items-center gap-2 font-semibold text-fg"><Clock size={18} className="text-accent" /> Manual daily profit</div>
+        <p className="mt-2 text-sm leading-6 text-muted">Daily profit is not added automatically. An authorized administrator must use “Add daily profit” on a user profile; each active investment can be credited once per UTC day.</p>
       </div>
     </div>
   );
@@ -766,7 +778,7 @@ function UserModal({ user, investments, txs, canUsers, canInvestments, busy, blo
 
         <div className="mt-5 flex items-center justify-between">
           <div><h3 className="font-semibold text-fg">Investment operations</h3><p className="text-xs text-muted">{activeInvestments} active investment(s)</p></div>
-          <button type="button" disabled={!canInvestments || busy === `accrue:${user.user_id}`} onClick={onAccrue} className="inline-flex items-center gap-2 rounded-xl border border-accent/30 bg-accent/10 px-3 py-2 text-xs font-semibold text-accent disabled:opacity-60"><TrendingUp size={15} /> Accrue due now</button>
+          <button type="button" disabled={!canInvestments || busy === `accrue:${user.user_id}`} onClick={onAccrue} className="inline-flex items-center gap-2 rounded-xl border border-accent/30 bg-accent/10 px-3 py-2 text-xs font-semibold text-accent disabled:opacity-60"><TrendingUp size={15} /> Add daily profit</button>
         </div>
 
         <div className="mt-3 space-y-3">

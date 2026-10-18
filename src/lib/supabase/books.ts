@@ -11,13 +11,9 @@ export async function pullCloudBook(options: { skipAccrual?: boolean } = {}): Pr
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
-  // Accrual is idempotent: PostgreSQL only credits elapsed days not already processed.
-  // Callers that just completed the RPC can skip a redundant second call.
-  let accrualFailed = false;
-  if (!options.skipAccrual) {
-    const accrualResult = await supabase.rpc("accrue_user_investments", { p_user_id: null });
-    accrualFailed = Boolean(accrualResult.error);
-  }
+  // Investment profit is credited only through the administrator's manual action.
+  // Refreshing a user's book must never create profit as a side effect.
+  const accrualFailed = false;
 
   const [profileResult, txResult, investmentsResult] = await Promise.all([
     supabase

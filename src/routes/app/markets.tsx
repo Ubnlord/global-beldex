@@ -6,7 +6,7 @@ import {
   SymbolOverview,
   TickerTape,
 } from "@/components/market/tradingview";
-import { LiveBadge, PriceChip, BdxConverter } from "@/components/market/live-price";
+import { LiveBadge, PriceChip } from "@/components/market/live-price";
 import { TvCredit } from "@/components/platform/plan-card";
 import { copy } from "@/lib/platform/i18n";
 import { usePlatform } from "@/lib/platform/store";
@@ -49,8 +49,8 @@ function MarketsPage() {
           <h3 className="mt-1 text-base font-bold">Crypto Markets</h3>
           <p className="mt-2 text-[12px] leading-5 text-subtle">
             View crypto-market information and the BDX market tools available on Global Beldex.
-            The live BDX price, converter, chart, and market overview below are designed to show
-            current market information when a live source is available.
+            The live BDX market price, chart, and market overview below show market information
+            when a live source is available.
           </p>
           <a
             href="https://www.tradingview.com/symbols/BDXUSD/"
@@ -63,9 +63,6 @@ function MarketsPage() {
         </section>
       </div>
 
-      <div className="mt-4">
-        <BdxConverter />
-      </div>
       <div className="mt-6 rounded-lg border border-line bg-elevated p-4">
         <div className="mb-3 flex items-center justify-between">
           <div className="text-[13px] font-semibold">{t.page.liveMarketTv}</div>

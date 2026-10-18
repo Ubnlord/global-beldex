@@ -9,14 +9,12 @@ import type { Plan } from "@/lib/platform/catalog";
 import { projectedReturn } from "@/lib/platform/catalog";
 import { copy, fill } from "@/lib/platform/i18n";
 import { usePlatform } from "@/lib/platform/store";
-import { bdxToUsd, formatBdx, formatUsd } from "@/lib/utils";
-import { fetchQuotes } from "@/lib/market/live-quotes";
+import { formatBdx, formatUsd } from "@/lib/utils";
 
 export const Route = createFileRoute("/app/plans")({ component: PlansPage });
 
 function PlansPage() {
   const navigate = useNavigate();
-  const available = usePlatform((s) => s.available);
   const activePlans = usePlatform((s) => s.plans);
   const accrualFailed = usePlatform((s) => s.accrualFailed);
   const buyPlan = usePlatform((s) => s.buyPlan);
@@ -24,21 +22,6 @@ function PlansPage() {
   const t = copy[lang];
   const [selected, setSelected] = useState<Plan | null>(null);
   const [amount, setAmount] = useState("");
-  const [bdxUsdRate, setBdxUsdRate] = useState(bdxToUsd(1));
-
-  useEffect(() => {
-    let cancelled = false;
-    const refresh = async () => {
-      const quotes = await fetchQuotes();
-      if (!cancelled) setBdxUsdRate(quotes.beldex.usd);
-    };
-    void refresh();
-    const timer = window.setInterval(() => void refresh(), 30_000);
-    return () => {
-      cancelled = true;
-      window.clearInterval(timer);
-    };
-  }, []);
 
   const confirm = async () => {
     if (!selected) return;
@@ -57,7 +40,7 @@ function PlansPage() {
     <div className="mx-auto max-w-[480px] px-4 pb-[100px] pt-4 md:max-w-[960px]">
       <TickerTape />
       <h2 className="mt-4 text-xl font-bold">{t.plansTitle}</h2>
-      <p className="mt-1 text-xs text-subtle">{fill(t.plansLead, { amount: formatUsd(available) })}</p>
+      <p className="mt-1 text-xs text-subtle">New investments, principal and interest are denominated in BDX. Historical USD investments remain reported in USD.</p>
       {accrualFailed && (
         <div role="alert" className="mt-4 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-200">
           We couldn't refresh interest from the server. The amounts below show the last saved records; estimated pending interest is not credited to your balance. Please refresh later or contact support if this continues.
@@ -72,7 +55,7 @@ function PlansPage() {
             </p>
           </div>
           {activePlans.map((plan) => (
-            <InvestmentMetrics key={plan.id} plan={plan} bdxUsdRate={bdxUsdRate} />
+            <InvestmentMetrics key={plan.id} plan={plan} />
           ))}
         </section>
       )}
@@ -92,8 +75,6 @@ function PlansPage() {
               {selected.name}
             </div>
             <div className="mt-1 text-xl font-bold">{formatBdx(selected.min)} min</div>
-            <div className="mt-1 text-xs font-semibold text-accent">≈ {formatUsd(selected.min * bdxUsdRate, 3)} USD</div>
-            <div className="mt-1 text-[10px] font-medium text-subtle">Live BDX price: {formatUsd(bdxUsdRate, 5)} per BDX</div>
             <p className="mt-2 text-[13px] text-subtle">
               {selected.profit} · {selected.duration} · max {selected.max}
             </p>
@@ -105,7 +86,7 @@ function PlansPage() {
                 onChange={(e) => setAmount(e.target.value)}
               />
             </div>
-            <Projection amount={parseFloat(amount) || selected.min} plan={selected} bdxUsdRate={bdxUsdRate} />
+            <Projection amount={parseFloat(amount) || selected.min} plan={selected} />
             <div className="mt-6 flex gap-2">
               <Button variant="secondary" className="flex-1" onClick={() => setSelected(null)}>
                 {t.close}
@@ -124,20 +105,19 @@ function PlansPage() {
   );
 }
 
-function Projection({ amount, plan, bdxUsdRate }: { amount: number; plan: Plan; bdxUsdRate: number }) {
+function Projection({ amount, plan }: { amount: number; plan: Plan }) {
   const lang = usePlatform((s) => s.lang);
   const t = copy[lang];
   const { profit, total } = projectedReturn(amount, plan);
   return (
     <div className="mt-3 rounded-md border border-line bg-surface px-3 py-2 text-[12px] text-subtle">
-      {t.heldTerm} <span className="text-accent">+{formatBdx(profit)}</span> {t.profitWord} ·{" "}
-      {formatUsd(profit * bdxUsdRate, 3)} USD · {formatBdx(total)} ({formatUsd(total * bdxUsdRate, 3)} USD) {t.returned}
+      {t.heldTerm} <span className="text-accent">+{formatBdx(profit)}</span> {t.profitWord} · {formatBdx(total)} {t.returned}
     </div>
   );
 }
 
 
-function InvestmentMetrics({ plan, bdxUsdRate }: { plan: import("@/lib/platform/store").ActivePlan; bdxUsdRate: number }) {
+function InvestmentMetrics({ plan }: { plan: import("@/lib/platform/store").ActivePlan }) {
   const [now, setNow] = useState(() => Date.now());
 
   // Re-render time-based metrics while this screen stays open. This is display-only:
@@ -175,12 +155,11 @@ function InvestmentMetrics({ plan, bdxUsdRate }: { plan: import("@/lib/platform/
 
   const isUsd = plan.currency === "USD";
   const formatNative = (value: number) => isUsd ? formatUsd(value) : formatBdx(value);
-  const formatUsdEquivalent = (value: number) => isUsd ? "" : ` · ${formatUsd(value * bdxUsdRate, 3)} USD`;
 
   const metrics = [
-    { label: "Today's Interest", value: `+${formatNative(dailyInterest)}${formatUsdEquivalent(dailyInterest)}` },
-    { label: "Total Interest Earned (Credited)", value: `+${formatNative(totalInterest)}${formatUsdEquivalent(totalInterest)}` },
-    { label: "Pending Interest (Estimate)", value: `~${formatNative(pendingEstimate)}${formatUsdEquivalent(pendingEstimate)}` },
+    { label: "Today's Interest", value: `+${formatNative(dailyInterest)}` },
+    { label: "Total Interest Earned (Credited)", value: `+${formatNative(totalInterest)}` },
+    { label: "Pending Interest (Estimate)", value: `~${formatNative(pendingEstimate)}` },
     { label: "Next Interest", value: nextInterest },
     { label: "Days Remaining", value: String(daysRemaining) },
   ];
@@ -191,7 +170,6 @@ function InvestmentMetrics({ plan, bdxUsdRate }: { plan: import("@/lib/platform/
         <div>
           <div className="text-[11px] font-bold tracking-widest text-accent">{plan.name}</div>
           <div className="mt-1 text-sm font-semibold">{formatNative(plan.amount)} principal</div>
-          {!isUsd && <div className="mt-0.5 text-xs text-subtle">≈ {formatUsd(plan.amount * bdxUsdRate, 3)} USD</div>}
         </div>
         <span className="rounded-full border border-line px-2 py-1 text-[10px] font-semibold uppercase text-subtle">
           {plan.status}

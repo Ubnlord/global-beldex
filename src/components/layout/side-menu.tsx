@@ -8,7 +8,6 @@ import {
   LifeBuoy,
   LineChart,
   LogOut,
-  Repeat,
   Settings,
   Shield,
   Users,
@@ -92,7 +91,6 @@ export function SideMenu({ open, onClose }: { open: boolean; onClose: () => void
               { to: "/app/withdraw", icon: ArrowUpFromLine, label: t.withdraw },
               { to: "/app/history", icon: History, label: t.transactions },
               { to: "/app/plans", icon: LayoutGrid, label: t.plans },
-              { to: "/app/swap", icon: Repeat, label: t.swap },
               { to: "/app/markets", icon: LineChart, label: t.markets },
             ]}
           />

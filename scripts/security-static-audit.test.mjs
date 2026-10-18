@@ -5,6 +5,8 @@ import path from "node:path";
 
 const root = process.cwd();
 const migration = fs.readFileSync(path.join(root, "migrations/0008_security_hardening_v1.sql"), "utf8");
+const accountingMigration = fs.readFileSync(path.join(root, "supabase/migrations/20261016090000_bdx_native_accounting_enforcement.sql"), "utf8");
+const adminAccountingMigration = fs.readFileSync(path.join(root, "supabase/migrations/20261016091000_bdx_admin_controls_and_reconciliation.sql"), "utf8");
 const directWriteLockdown = fs.readFileSync(path.join(root, "migrations/0009_lock_down_direct_client_writes.sql"), "utf8");
 const databaseDefense = fs.readFileSync(path.join(root, "migrations/0011_database_api_defense_in_depth.sql"), "utf8");
 const authorizationTightening = fs.readFileSync(path.join(root, "migrations/0012_tighten_authorization_helpers.sql"), "utf8");
@@ -24,8 +26,6 @@ const mustContain = [
   "grant execute on function public.admin_approve_transaction(uuid,text) to authenticated;",
   "grant execute on function public.admin_reject_transaction(uuid,text) to authenticated;",
   "grant execute on function public.admin_settle_transaction(uuid,text) to authenticated;",
-  "revoke all on function public.swap_assets(uuid,text,text,numeric,numeric) from public, anon, authenticated;",
-  "grant execute on function public.swap_assets(uuid,text,text,numeric,numeric) to service_role;",
   "create unique index if not exists transaction_user_request_id_uq",
   "perform public.assert_user_can_transact(v_uid);",
   "alter table public.user_profile enable row level security;",
@@ -41,7 +41,19 @@ const mustContain = [
 
 test("database/API defense-in-depth migrations keep critical controls", () => {
   for (const needle of mustContain) assert.ok(migration.includes(needle), `Missing security control: ${needle}`);
-  assert.equal((migration.match(/grant execute on function public\.swap_assets\(/g) || []).length, 1);
+  assert.match(accountingMigration, /create or replace function public\.swap_assets\([\s\S]*?raise exception 'Currency swaps are retired; use the BDX-native wallet flow'/);
+  assert.match(accountingMigration, /revoke all on function public\.swap_assets\(uuid,text,text,numeric,numeric\) from public, anon, authenticated/i);
+  assert.match(accountingMigration, /grant execute on function public\.swap_assets\(uuid,text,text,numeric,numeric\) to service_role/i);
+  assert.match(accountingMigration, /drop function if exists public\.swap_assets\(text,text,numeric,numeric\)/);
+  assert.equal(
+    fs.existsSync(path.join(root, "supabase/functions/swap-assets/index.ts")),
+    false,
+    "Retired swap Edge Function must not be redeployed from this branch",
+  );
+  assert.match(accountingMigration, /drop function if exists public\.create_financial_transaction\(text,numeric,text,text,uuid\)/);
+  assert.match(adminAccountingMigration, /admin_adjust_bdx_balance/);
+  assert.match(adminAccountingMigration, /Reference was already used for a different BDX adjustment/);
+  assert.match(adminAccountingMigration, /admin_has_permission\('view_transactions'\)/);
 
   for (const needle of [
     "revoke all on table public.books from anon, authenticated;",

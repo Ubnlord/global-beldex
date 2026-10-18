@@ -55,6 +55,7 @@ begin
   for v_inv in
     select * from public.user_investment
     where user_id=p_user_id and status='active' and daily_accrual_enabled=true
+      and currency='BDX'
     order by id
     for update
   loop

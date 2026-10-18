@@ -356,13 +356,21 @@ export function AdminPage({ initialTab = "dashboard", transactionType }: { initi
     setBusy(null);
   }
 
-  async function accrueNow(userId: string) {
+  async function addDailyProfit(userId: string) {
     if (!canInvestments) return;
+    const reason = window.prompt("Reason for manually adding one day of investment profit:");
+    if (!reason?.trim()) return;
+    if (!window.confirm("Add one day's profit to each eligible active investment for this user? Repeated clicks today will not double-credit an investment.")) return;
     setBusy(`accrue:${userId}`);
     setError("");
-    const { error: actionError } = await supabase.rpc("accrue_user_investments", { p_user_id: userId });
+    const { data, error: actionError } = await supabase.rpc("admin_add_daily_investment_profit", {
+      p_user_id: userId,
+      p_reason: reason.trim(),
+    });
     if (actionError) setError(actionError.message);
     else {
+      const result = Array.isArray(data) ? data[0] : data;
+      window.alert(`Daily profit action complete. Investments credited: ${result?.credited_investments ?? 0}; total credited: ${result?.credited_amount ?? 0} (each investment can be credited once per UTC day).`);
       await Promise.all([loadUsers(query), loadTransactions(), loadAudit()]);
       if (selectedUserId) await openUser(selectedUserId);
     }
@@ -607,7 +615,7 @@ export function AdminPage({ initialTab = "dashboard", transactionType }: { initi
             setRateDrafts={setRateDrafts}
             onClose={() => setShowUserPanel(false)}
             onBlock={() => void toggleBlock(selectedUser)}
-            onAccrue={() => void accrueNow(selectedUser.user_id)}
+            onAccrue={() => void addDailyProfit(selectedUser.user_id)}
             onUpdateInvestment={updateInvestment}
           />
         )}
@@ -719,8 +727,8 @@ function OperationsPanel({ adminRole, permissions, canTransactions, canUsers, ca
         <p className="mt-2 text-sm leading-6 text-amber-100/80">No client-side emergency switch has been added because a safe circuit breaker must be enforced by the backend RPC layer itself. The UI will not pretend a local toggle can stop financial writes.</p>
       </div>
       <div className="sm:col-span-2 rounded-2xl border border-line bg-surface p-5">
-        <div className="flex items-center gap-2 font-semibold text-fg"><Clock size={18} className="text-accent" /> Automated accrual</div>
-        <p className="mt-2 text-sm leading-6 text-muted">Production daily accrual is scheduled server-side at 00:00 UTC (01:00 Nigeria time during WAT). Manual accrual from a user profile also remains protected by the investment authorization path.</p>
+        <div className="flex items-center gap-2 font-semibold text-fg"><Clock size={18} className="text-accent" /> Manual daily profit</div>
+        <p className="mt-2 text-sm leading-6 text-muted">Daily profit is not added automatically. An authorized administrator must use “Add daily profit” on a user profile; each active investment can be credited once per UTC day.</p>
       </div>
     </div>
   );
@@ -770,7 +778,7 @@ function UserModal({ user, investments, txs, canUsers, canInvestments, busy, blo
 
         <div className="mt-5 flex items-center justify-between">
           <div><h3 className="font-semibold text-fg">Investment operations</h3><p className="text-xs text-muted">{activeInvestments} active investment(s)</p></div>
-          <button type="button" disabled={!canInvestments || busy === `accrue:${user.user_id}`} onClick={onAccrue} className="inline-flex items-center gap-2 rounded-xl border border-accent/30 bg-accent/10 px-3 py-2 text-xs font-semibold text-accent disabled:opacity-60"><TrendingUp size={15} /> Accrue due now</button>
+          <button type="button" disabled={!canInvestments || busy === `accrue:${user.user_id}`} onClick={onAccrue} className="inline-flex items-center gap-2 rounded-xl border border-accent/30 bg-accent/10 px-3 py-2 text-xs font-semibold text-accent disabled:opacity-60"><TrendingUp size={15} /> Add daily profit</button>
         </div>
 
         <div className="mt-3 space-y-3">

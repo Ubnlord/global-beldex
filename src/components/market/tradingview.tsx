@@ -15,8 +15,6 @@ const CONFIG: Record<
     payload: {
       symbols: [
         { proName: "CRYPTO:BDXUSD", title: "Beldex" },
-        { proName: "BINANCE:BTCUSDT", title: "Bitcoin" },
-        { proName: "BINANCE:ETHUSDT", title: "Ethereum" },
         { proName: "BINANCE:SOLUSDT", title: "Solana" },
         { proName: "BINANCE:XRPUSDT", title: "Ripple" },
       ],
@@ -98,7 +96,7 @@ function Fallback({ kind }: { kind: WidgetKind }) {
   if (kind === "tape") {
     return (
       <div className="flex h-full min-h-[46px] items-center gap-6 overflow-hidden px-4 text-xs text-muted">
-        {["BDXUSD", "BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT"].map((s) => (
+        {["BDXUSD", "SOLUSDT", "XRPUSDT"].map((s) => (
           <span key={s} className="shrink-0">
             <span className="text-fg font-medium">{s}</span>
             <span className="ml-2 text-accent">{p.liveWord}</span>

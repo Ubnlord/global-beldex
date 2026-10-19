@@ -133,20 +133,7 @@ function DepositPage() {
                   )}
                 </div>
               </button>
-              <Method
-                active={method === "BTC"}
-                onClick={() => setMethod("BTC")}
-                coin="bitcoin"
-                title="Bitcoin"
-                detail="BTC · 1-2 hrs"
-              />
-              <Method
-                active={method === "ETH"}
-                onClick={() => setMethod("ETH")}
-                coin="ethereum"
-                title="Ethereum"
-                detail="ETH · ERC-20"
-              />
+
             </div>
           </div>
           <Button className="mt-6 w-full" onClick={goPay}>

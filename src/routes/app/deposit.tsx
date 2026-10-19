@@ -87,7 +87,7 @@ function DepositPage() {
       </div>
 
       <div className="mt-4">
-        <MarketBoard active={quoteId} />
+        <MarketBoard active="beldex" />
       </div>
 
       {step === "form" ? (

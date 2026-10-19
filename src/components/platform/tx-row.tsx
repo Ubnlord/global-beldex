@@ -35,7 +35,7 @@ export function TxRow({ tx }: { tx: Transaction }) {
         </div>
         <div>
           <div className="text-[13px] text-fg">
-            {t.tx[tx.type]} · {tx.method}
+            {tx.type === "bonus" && tx.method === "Admin daily investment profit" ? "BDX • Daily Investment Profit" : `${t.tx[tx.type]} · ${tx.method}`}
           </div>
           <div className="text-[11px] text-subtle">{tx.date}</div>
         </div>

@@ -75,9 +75,7 @@ function WithdrawPage() {
       </div>
 
       <div className="mt-4">
-        <MarketBoard
-          active={method === "Bitcoin" ? "bitcoin" : method === "Ethereum" ? "ethereum" : method === "Beldex" ? "beldex" : undefined}
-        />
+        <MarketBoard active="beldex" />
       </div>
 
       <div className="mt-6 rounded-lg border border-line bg-elevated p-5">

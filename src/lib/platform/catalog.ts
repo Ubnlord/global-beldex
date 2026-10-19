@@ -333,8 +333,6 @@ export const TRENDING = [
 ] as const;
 
 export const WITHDRAW_METHODS = [
-  { id: "BTC", label: "Bitcoin" },
-  { id: "ETH", label: "Ethereum" },
   { id: "BELDEX", label: "Beldex" },
 ] as const;
 

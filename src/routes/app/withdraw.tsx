@@ -191,13 +191,7 @@ function CoinEstimate({
   const id = label === "Bitcoin" ? "bitcoin" : label === "Ethereum" ? "ethereum" : "beldex";
   const ticker = label === "Bitcoin" ? "BTC" : label === "Ethereum" ? "ETH" : "BDX";
   if (id === "beldex") {
-    return (
-      <div className="mt-2 rounded-md border border-accent/30 bg-accent/5 px-3 py-2 text-[11px] text-subtle">
-        <div>Beldex withdrawal denomination</div>
-        <div className="mt-0.5 font-semibold text-accent">{formatBdx(amount)} BDX</div>
-        <div className="mt-0.5 text-[10px]">Beldex withdrawals use BDX only. No USD-to-BDX conversion is applied.</div>
-      </div>
-    );
+    return null;
   }
   const row = book[id];
   if (!row) return null;

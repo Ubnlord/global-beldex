@@ -475,7 +475,7 @@ export function AdminPage({ initialTab = "dashboard", transactionType }: { initi
             </div>
 
             <div className="mt-3 grid gap-3 sm:grid-cols-3">
-              <InfoCard label="Automatic accrual" value="Daily at 01:00 Nigeria time" />
+              <InfoCard label="Investment profit" value="Manual admin credit only" />
               <InfoCard label="Reconciliation" value={reconciliation.length ? (reconciliationProblems.length ? `${reconciliationProblems.length} exception(s)` : "No exceptions") : "Run a check"} />
               <InfoCard label="Financial writes" value="Protected server-side RPCs only" />
             </div>

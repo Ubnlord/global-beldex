@@ -62,21 +62,6 @@ export function SideMenu({ open, onClose }: { open: boolean; onClose: () => void
         </div>
 
         <div className="space-y-6 p-4">
-          <section>
-            <p className="text-[10px] font-semibold tracking-widest text-subtle">{t.liveMarket}</p>
-            <div className="mt-2 rounded-md border border-line bg-elevated p-3">
-              <a
-                href="https://www.tradingview.com/symbols/BDXUSD/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs font-semibold text-fg hover:text-accent"
-              >
-                {t.page.tvChartTitle}
-              </a>
-              <p className="mt-1 text-[10px] text-subtle">{t.page.liveFromTv}</p>
-            </div>
-          </section>
-
           <NavGroup
             title={t.mainMenu}
             onClose={onClose}
@@ -109,7 +94,6 @@ export function SideMenu({ open, onClose }: { open: boolean; onClose: () => void
 
           <div className="rounded-lg border border-line bg-elevated p-4">
             <div className="text-[13px] font-semibold text-fg">{t.ready}</div>
-            <p className="mt-1 text-[11px] text-subtle">{t.readyBody}</p>
             <Link to="/app/deposit" onClick={onClose}>
               <Button className="mt-3 w-full" size="sm">
                 {t.startInvesting}

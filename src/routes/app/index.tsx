@@ -100,21 +100,6 @@ function Dashboard() {
         </Button>
       </div>
 
-      <div className="mt-4 rounded-lg border border-line bg-surface p-4">
-        <div className="text-[11px] font-semibold tracking-wide text-subtle">Historical USD balances · read-only reporting</div>
-        <div className="mt-3 grid grid-cols-2 gap-4">
-          <div>
-            <div className="text-[11px] text-subtle">Available USD</div>
-            <div className="text-lg font-bold tabular text-fg">{formatUsd(available)}</div>
-          </div>
-          <div>
-            <div className="text-[11px] text-subtle">Locked USD</div>
-            <div className="text-lg font-bold tabular text-fg">{formatUsd(locked)}</div>
-          </div>
-        </div>
-        <p className="mt-2 text-[10px] text-subtle">These legacy USD figures are separate from the BDX wallet and are not converted or included in BDX totals.</p>
-      </div>
-
       <div className="mt-4">
         <div className="text-[13px] font-semibold text-fg">{t.quick}</div>
         <div className="mt-3 grid grid-cols-4 gap-3">

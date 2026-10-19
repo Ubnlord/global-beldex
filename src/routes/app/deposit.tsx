@@ -150,13 +150,7 @@ function DepositPage() {
             via {DEPOSIT_METHODS[method].title}
             {isBeldex ? " · BDX amount only" : spot ? ` · ${formatCoinUsd(spot.usd)}` : ""}
           </div>
-          {isBeldex ? (
-            <div className="mt-3 rounded-md border border-accent/30 bg-accent/5 px-3 py-2.5">
-              <div className="text-[10px] text-subtle">Beldex deposit denomination</div>
-              <div className="mt-1 text-lg font-bold tabular text-fg">{formatBdx(parseFloat(amount || "0"))} BDX</div>
-              <div className="mt-1 text-[10px] text-subtle">This deposit request uses BDX only. No USD-to-BDX conversion is applied.</div>
-            </div>
-          ) : qty && spot ? (
+          {isBeldex ? null : qty && spot ? (
             <div className="mt-3 rounded-md border border-line bg-surface px-3 py-2.5">
               <div className="text-[10px] text-subtle">Live market price</div>
               <div className="mt-1 flex items-end justify-between">

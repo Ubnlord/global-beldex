@@ -43,7 +43,7 @@ function Dashboard() {
   const t = copy[lang];
   const active = plans.filter((p) => p.status === "active");
   const bdxProfit = plans.reduce((sum, p) => sum + (p.currency === "BDX" ? (p.creditedProfit ?? 0) : 0), 0);
-  const bdxBonus = txs.filter((tx) => tx.type === "bonus" && tx.currency === "BDX" && tx.status === "completed" && tx.note !== "Server-side investment profit" && tx.method !== "Admin investment principal release" && tx.method !== "Admin BDX adjustment").reduce((sum, tx) => sum + tx.amount, 0);
+  const bdxBonus = txs.filter((tx) => tx.type === "bonus" && tx.currency === "BDX" && tx.status === "completed" && tx.method !== "Admin daily investment profit" && tx.note !== "Server-side investment profit" && tx.method !== "Admin investment principal release" && tx.method !== "Admin BDX adjustment").reduce((sum, tx) => sum + tx.amount, 0);
   const bdxReferralBonus = txs.filter((tx) => tx.type === "referral" && tx.currency === "BDX" && tx.status === "completed").reduce((sum, tx) => sum + tx.amount, 0);
   const bdxWithdrawn = txs.filter((tx) => tx.type === "withdraw" && tx.currency === "BDX" && tx.status === "completed" && tx.method !== "Admin BDX adjustment").reduce((sum, tx) => sum + tx.amount, 0);
 

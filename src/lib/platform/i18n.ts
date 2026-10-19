@@ -71,8 +71,7 @@ const en = {
   sendExactly: "Send exactly",
   depositAddress: "Deposit address",
   addressCopied: "Address copied",
-  simAddress:
-    "Simulated deposit flow — this site does not initiate or automatically verify an on-chain transfer.",
+  simAddress: "",
   back: "Back",
   sentIt: "I have sent it",
   depositStarted: "Deposit request created — awaiting administrator review",

@@ -85,7 +85,7 @@ function WithdrawPage() {
         <div className="mt-2 grid gap-2">
           {WITHDRAW_METHODS.map((m) => {
             const active = method === m.label;
-            const coin = m.id === "BTC" ? "bitcoin" : m.id === "ETH" ? "ethereum" : "beldex";
+            const coin = "beldex";
             return (
               <button
                 key={m.id}
@@ -102,7 +102,7 @@ function WithdrawPage() {
                   <div>
                     <div className="text-[13px] font-semibold text-fg">{m.label}</div>
                     <div className="text-[11px] text-subtle">
-                      {m.id === "BTC" ? "BTC" : m.id === "ETH" ? "ETH" : "BDX"}
+                      {"BDX"}
                     </div>
                   </div>
                 </div>

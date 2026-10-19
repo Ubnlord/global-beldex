@@ -98,8 +98,6 @@ export function CoinPrice({ id }: { id: "beldex" | "bitcoin" | "ethereum" }) {
 }
 
 const BOARD = [
-  { id: "bitcoin" as const, name: "Bitcoin", ticker: "BTC" },
-  { id: "ethereum" as const, name: "Ethereum", ticker: "ETH" },
   { id: "beldex" as const, name: "Beldex", ticker: "BDX" },
 ];
 

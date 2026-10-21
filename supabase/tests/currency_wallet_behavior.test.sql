@@ -124,19 +124,19 @@ select is(
 );
 select is(
   (select available_balance from public.user_profile where user_id='a1100000-0000-4000-8000-000000000003'),
-  30::numeric,'USD referral credits only the USD wallet'
+  0::numeric,'referral bonus does not credit the USD wallet'
 );
 select is(
   (select bdx_balance from public.user_profile where user_id='a1100000-0000-4000-8000-000000000003'),
-  400::numeric,'BDX referral credits only the BDX wallet'
+  400::numeric,'first eligible referral credits exactly 400 BDX'
 );
 select is(
   (select referral_earnings from public.user_profile where user_id='a1100000-0000-4000-8000-000000000003'),
-  30::numeric,'USD referral earnings stay in USD accounting'
+  0::numeric,'referral earnings do not enter USD accounting'
 );
 select is(
   (select referral_earnings_bdx from public.user_profile where user_id='a1100000-0000-4000-8000-000000000003'),
-  400::numeric,'BDX referral earnings stay in BDX accounting'
+  400::numeric,'referral earnings are recorded in BDX accounting'
 );
 select is(
   public.credit_referral_for_deposit((select id from public.transaction where request_id='a1100000-0000-4000-8000-000000000104')),

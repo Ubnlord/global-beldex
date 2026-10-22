@@ -243,17 +243,14 @@ export const usePlatform = create<PlatformState>()(
         },
 
         deposit: async (amount, method, requestId, currency) => {
-          const isBeldex = method.toUpperCase() === "BELDEX";
-          const ledgerCurrency = isBeldex ? "BDX" : "USD";
-          if (currency && currency !== ledgerCurrency) return "PAYMENT_METHOD_CURRENCY_MISMATCH";
-          const ledgerAmount = amount;
-          const minimum = isBeldex ? 4000 : 300;
-          if (!amount || amount < minimum) return "MIN_DEPOSIT";
+          if (method.toUpperCase() !== "BELDEX") return "ONLY_BDX_SUPPORTED";
+          if (currency && currency !== "BDX") return "PAYMENT_METHOD_CURRENCY_MISMATCH";
+          if (!Number.isFinite(amount) || amount < 4000) return "MIN_DEPOSIT";
           const { error } = await supabase.rpc("create_financial_transaction", {
             p_type: "deposit",
-            p_amount: ledgerAmount,
-            p_currency: ledgerCurrency,
-            p_method: method,
+            p_amount: amount,
+            p_currency: "BDX",
+            p_method: "Beldex",
             p_note: null,
             p_request_id: requestId ?? uid(),
           });
@@ -263,22 +260,17 @@ export const usePlatform = create<PlatformState>()(
         },
 
         withdraw: async (amount, method, address, requestId, currency) => {
-          if (!method) return "NEED_METHOD";
-          const addressError = validateWithdrawalDestination(method, address);
+          if (method.toUpperCase() !== "BELDEX") return "ONLY_BDX_SUPPORTED";
+          if (currency && currency !== "BDX") return "PAYMENT_METHOD_CURRENCY_MISMATCH";
+          const addressError = validateWithdrawalDestination("Beldex", address);
           if (addressError) return addressError;
-          if (!amount || amount <= 0) return "NEED_AMOUNT";
-          const isBeldex = method.toUpperCase() === "BELDEX";
-          const ledgerCurrency = isBeldex ? "BDX" : "USD";
-          if (currency && currency !== ledgerCurrency) return "PAYMENT_METHOD_CURRENCY_MISMATCH";
-          const minimum = isBeldex ? 76 : 300;
-          if (amount < minimum) return "MIN_WITHDRAWAL";
-          const balance = ledgerCurrency === "BDX" ? get().bdx : get().available;
-          if (amount > balance) return "INSUFFICIENT";
+          if (!Number.isFinite(amount) || amount < 76) return "MIN_WITHDRAWAL";
+          if (amount > get().bdx) return "INSUFFICIENT";
           const { error } = await supabase.rpc("create_financial_transaction", {
             p_type: "withdraw",
             p_amount: amount,
-            p_currency: ledgerCurrency,
-            p_method: method,
+            p_currency: "BDX",
+            p_method: "Beldex",
             p_note: address.trim(),
             p_request_id: requestId ?? uid(),
           });

@@ -74,6 +74,7 @@ assert.match(bdxOnlyCutover, /select id from auth\.users/);
 assert.match(bdxOnlyCutover, /active legacy principal and locked balance do not reconcile per account/);
 assert.match(bdxOnlyCutover, /locked legacy balance has no matching active legacy investment/);
 assert.match(bdxOnlyCutover, /create or replace function public\.admin_financial_reconciliation_v3\(\)/);
+assert.match(bdxOnlyCutover, /t\.method='Admin daily investment profit'/);
 assert.match(bdxOnlyCutover, /financial_currency_conversion_profile_audit a/);
 assert.match(bdxOnlyCutover, /financial_currency_conversion_investment_audit a/);
 assert.match(bdxOnlyCutover, /p\.locked_balance-case when v_converted then 0 else coalesce\(inv\.active_usd,0\) end/);

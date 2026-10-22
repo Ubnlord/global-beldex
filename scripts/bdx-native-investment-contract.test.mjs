@@ -76,7 +76,7 @@ assert.match(bdxOnlyCutover, /locked legacy balance has no matching active legac
 assert.match(bdxOnlyCutover, /create or replace function public\.admin_financial_reconciliation_v3\(\)/);
 assert.match(bdxOnlyCutover, /financial_currency_conversion_profile_audit a/);
 assert.match(bdxOnlyCutover, /financial_currency_conversion_investment_audit a/);
-assert.match(bdxOnlyCutover, /case when v_converted then 0 else p\.available_balance end/);
+assert.match(bdxOnlyCutover, /p\.locked_balance-case when v_converted then 0 else coalesce\(inv\.active_usd,0\) end/);
 assert.match(bdxOnlyCutover, /coalesce\(v_tx\.note,''\)=case when p_type='withdraw' then v_address else '' end/);
 assert.match(bdxOnlyCutover, /Only pending transactions can be settled/);
 assert.match(bdxOnlyCutover, /CoinGecko and CoinMarketCap USD quotes are both required/);

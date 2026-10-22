@@ -18,7 +18,7 @@ export async function pullCloudBook(options: { skipAccrual?: boolean } = {}): Pr
   const [profileResult, txResult, investmentsResult] = await Promise.all([
     supabase
       .from("user_profile")
-      .select("available_balance,locked_balance,locked_bdx_balance,total_withdrawals,bdx_balance,referral_earnings")
+      .select("available_balance,locked_balance,locked_bdx_balance,total_withdrawals,bdx_balance,referral_earnings,total_withdrawals_bdx,referral_earnings_bdx")
       .eq("user_id", user.id)
       .maybeSingle(),
     supabase
@@ -71,25 +71,27 @@ export async function pullCloudBook(options: { skipAccrual?: boolean } = {}): Pr
   });
 
   const profit = (investmentsResult.data ?? []).reduce(
-    (sum: number, p: any) => sum + (p.currency === "BDX" ? 0 : num(p.credited_profit)),
+    (sum: number, investment: any) => sum + (investment.currency === "BDX" ? num(investment.credited_profit) : 0),
     0,
   );
   const bonus = rawTxs
-    .filter((t: any) => t.type === "bonus" && t.method === "Welcome Bonus" && t.currency !== "BDX")
+    .filter((t: any) => t.type === "bonus" && t.method === "Welcome Bonus" && t.currency === "BDX")
     .reduce((sum: number, t: any) => sum + num(t.amount), 0);
-  // USD and BDX referral earnings stay separate; never sum unlike currencies.
-  const referralBonusUsd = rawTxs
-    .filter((t: any) => t.type === "referral" && t.status === "completed" && t.currency !== "BDX")
+  const referralBonusBdx = rawTxs
+    .filter((t: any) => t.type === "referral" && t.status === "completed" && t.currency === "BDX")
     .reduce((sum: number, t: any) => sum + num(t.amount), 0);
 
+  const bdxBalance = num(p?.bdx_balance);
   return {
-    available: num(p?.available_balance),
-    bdx: num(p?.bdx_balance),
-    locked: num(p?.locked_balance),
+    // The legacy columns are zeroed by the guarded cutover. Keep compatibility
+    // fields BDX-denominated so no active view reads a USD wallet.
+    available: bdxBalance,
+    bdx: bdxBalance,
+    locked: num(p?.locked_bdx_balance),
     profit,
     bonus,
-    referralBonus: referralBonusUsd,
-    withdrawn: num(p?.total_withdrawals),
+    referralBonus: referralBonusBdx,
+    withdrawn: num(p?.total_withdrawals_bdx),
     txs,
     plans,
     notices: [],

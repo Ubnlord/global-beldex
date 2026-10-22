@@ -73,6 +73,10 @@ assert.match(bdxOnlyCutover, /alter table public\.user_investment alter column c
 assert.match(bdxOnlyCutover, /select id from auth\.users/);
 assert.match(bdxOnlyCutover, /active legacy principal and locked balance do not reconcile per account/);
 assert.match(bdxOnlyCutover, /locked legacy balance has no matching active legacy investment/);
+assert.match(bdxOnlyCutover, /create or replace function public\.admin_financial_reconciliation_v3\(\)/);
+assert.match(bdxOnlyCutover, /financial_currency_conversion_profile_audit a/);
+assert.match(bdxOnlyCutover, /financial_currency_conversion_investment_audit a/);
+assert.match(bdxOnlyCutover, /case when v_converted then 0 else p\.available_balance end/);
 assert.match(bdxOnlyCutover, /coalesce\(v_tx\.note,''\)=case when p_type='withdraw' then v_address else '' end/);
 assert.match(bdxOnlyCutover, /Only pending transactions can be settled/);
 assert.match(bdxOnlyCutover, /CoinGecko and CoinMarketCap USD quotes are both required/);

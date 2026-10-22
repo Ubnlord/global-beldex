@@ -14,7 +14,7 @@ const CONFIG: Record<
     height: 46,
     payload: {
       symbols: [
-        { proName: "CRYPTO:BDXUSD", title: "Beldex" },
+        { proName: "KUCOIN:BDX/USDTT", title: "Beldex" },
         { proName: "BINANCE:SOLUSDT", title: "Solana" },
         { proName: "BINANCE:XRPUSDT", title: "Ripple" },
       ],
@@ -30,7 +30,7 @@ const CONFIG: Record<
     height: 280,
     payload: {
       autosize: true,
-      symbol: "CRYPTO:BDXUSD",
+      symbol: "KUCOIN:BDX/USDTT",
       interval: "60",
       timezone: "Etc/UTC",
       theme: "dark",
@@ -46,7 +46,7 @@ const CONFIG: Record<
     height: 400,
     payload: {
       autosize: true,
-      symbol: "CRYPTO:BDXUSD",
+      symbol: "KUCOIN:BDX/USDTT",
       interval: "D",
       timezone: "Etc/UTC",
       theme: "dark",
@@ -61,7 +61,7 @@ const CONFIG: Record<
     src: "https://s3.tradingview.com/external-embedding/embed-widget-symbol-overview.js",
     height: 360,
     payload: {
-      symbols: [["Beldex", "CRYPTO:BDXUSD|1D"]],
+      symbols: [["Beldex", "KUCOIN:BDX/USDTT|1D"]],
       chartOnly: false,
       width: "100%",
       height: "100%",
@@ -96,7 +96,7 @@ function Fallback({ kind }: { kind: WidgetKind }) {
   if (kind === "tape") {
     return (
       <div className="flex h-full min-h-[46px] items-center gap-6 overflow-hidden px-4 text-xs text-muted">
-        {["BDXUSD", "SOLUSDT", "XRPUSDT"].map((s) => (
+        {["BDX/USDT", "SOLUSDT", "XRPUSDT"].map((s) => (
           <span key={s} className="shrink-0">
             <span className="text-fg font-medium">{s}</span>
             <span className="ml-2 text-accent">{p.liveWord}</span>
@@ -110,7 +110,7 @@ function Fallback({ kind }: { kind: WidgetKind }) {
       <div className="text-sm font-semibold text-fg">{p.liveBdx}</div>
       <p className="text-xs text-subtle max-w-xs">{p.chartFallback}</p>
       <a
-        href="https://www.tradingview.com/symbols/BDXUSD/"
+        href="https://www.tradingview.com/symbols/BDXUSDT/"
         target="_blank"
         rel="noopener noreferrer"
         className="text-xs text-accent hover:underline"

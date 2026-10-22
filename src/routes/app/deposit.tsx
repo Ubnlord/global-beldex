@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Check, Copy } from "lucide-react";
+import { Copy } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast, toastError } from "@/components/layout/toast";
 import { Button } from "@/components/ui/button";
@@ -22,7 +22,7 @@ function DepositPage() {
   const lang = usePlatform((s) => s.lang);
   const t = copy[lang];
   const [amount, setAmount] = useState("");
-  const [method, setMethod] = useState<keyof typeof DEPOSIT_METHODS>("BELDEX");
+  const method = "BELDEX" as const;
   const [step, setStep] = useState<"form" | "pay">(() => {
     if (typeof window === "undefined") return "form";
     return new URLSearchParams(window.location.search).get("step") === "pay" ? "pay" : "form";

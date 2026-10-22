@@ -129,7 +129,7 @@ function Dashboard() {
             <LayoutGrid size={16} className="text-accent" /> {t.page.liveMarketTv}
           </div>
           <a
-            href="https://www.tradingview.com/symbols/BDXUSD/"
+            href="https://www.tradingview.com/symbols/BDXUSDT/"
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-1 rounded-full border border-line-strong bg-surface px-2.5 py-1 text-[10px] text-accent"

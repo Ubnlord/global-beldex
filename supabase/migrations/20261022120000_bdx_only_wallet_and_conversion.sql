@@ -1066,4 +1066,9 @@ $function$;
 revoke all on function public.admin_financial_reconciliation_v3() from public, anon;
 grant execute on function public.admin_financial_reconciliation_v3() to authenticated;
 
+-- Retire older reconciliation endpoints that report archived USD history as
+-- active liabilities and do not enforce the current report permission.
+drop function if exists public.admin_financial_reconciliation_v2();
+drop function if exists public.admin_financial_reconciliation();
+
 commit;

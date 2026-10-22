@@ -566,6 +566,131 @@ $function$;
 revoke all on function public.admin_settle_transaction(uuid,text) from public, anon;
 grant execute on function public.admin_settle_transaction(uuid,text) to authenticated;
 
+-- Admin investment status changes must never mutate the legacy USD wallet.
+-- Until the guarded conversion is completed, legacy investments are read-only.
+create or replace function public.admin_manage_investment(
+  p_investment_id uuid,
+  p_daily_rate numeric,
+  p_status text,
+  p_reason text
+)
+returns public.user_investment
+language plpgsql
+security definer
+set search_path = pg_catalog, public, pg_temp
+as $function$
+declare
+  v_admin public.admin_user;
+  v_inv public.user_investment;
+  v_profile public.user_profile;
+  v_old_status text;
+  v_reason text := nullif(btrim(coalesce(p_reason,'')),'');
+begin
+  if not public.is_admin() or not public.admin_has_permission('manage_users') then
+    raise exception 'Permission denied';
+  end if;
+  if p_investment_id is null then raise exception 'Investment is required'; end if;
+  if p_daily_rate is null or p_daily_rate < 0 then raise exception 'Invalid daily rate'; end if;
+  if p_status not in ('active','completed','cancelled') then raise exception 'Invalid investment status'; end if;
+  if v_reason is null then raise exception 'Reason is required'; end if;
+
+  select * into v_admin from public.admin_user where user_id=auth.uid();
+  if v_admin.id is null then raise exception 'Admin access required'; end if;
+  select * into v_inv from public.user_investment where id=p_investment_id for update;
+  if v_inv.id is null then raise exception 'Investment not found'; end if;
+  if v_inv.currency <> 'BDX' then
+    raise exception 'Legacy investment is read-only until the audited BDX conversion is completed';
+  end if;
+  v_old_status := v_inv.status;
+
+  select * into v_profile from public.user_profile where user_id=v_inv.user_id for update;
+  if v_profile.user_id is null then raise exception 'User profile not found'; end if;
+  if v_profile.blocked then raise exception 'Blocked user investment cannot be managed'; end if;
+
+  if v_old_status='active' and p_status in ('completed','cancelled') then
+    if v_profile.locked_bdx_balance < v_inv.principal then
+      raise exception 'Locked BDX balance does not cover investment principal';
+    end if;
+    update public.user_profile
+      set locked_bdx_balance=locked_bdx_balance-v_inv.principal,
+          bdx_balance=bdx_balance+v_inv.principal,
+          updated_at=now()
+      where user_id=v_inv.user_id;
+    insert into public.transaction(
+      user_id,type,amount,currency,status,approval_status,method,note,
+      approved_by,approval_reason,approved_at,settled_at
+    ) values (
+      v_inv.user_id,'bonus',v_inv.principal,'BDX','completed','approved',
+      'Admin investment principal release',
+      'Investment principal returned by admin: '||v_reason,
+      v_admin.id,v_reason,now(),now()
+    );
+  elsif v_old_status in ('completed','cancelled') and p_status='active' then
+    raise exception 'Completed or cancelled investments cannot be reactivated';
+  end if;
+
+  update public.user_investment
+    set daily_rate=p_daily_rate,
+        status=p_status,
+        completed_at=case when p_status in ('completed','cancelled') then coalesce(completed_at,now()) else null end,
+        updated_at=now()
+    where id=p_investment_id returning * into v_inv;
+
+  insert into public.admin_action_audit(admin_id,user_id,action,target_id,old_values,new_values,reason)
+  values(v_admin.id,v_inv.user_id,'investment_managed',v_inv.id,
+    jsonb_build_object('status',v_old_status,'principal',v_inv.principal,'currency','BDX'),
+    jsonb_build_object('status',v_inv.status,'daily_rate',v_inv.daily_rate,'currency','BDX'),
+    v_reason);
+  return v_inv;
+end;
+$function$;
+revoke all on function public.admin_manage_investment(uuid,numeric,text,text) from public, anon;
+grant execute on function public.admin_manage_investment(uuid,numeric,text,text) to authenticated;
+
+create or replace function public.admin_update_investment(
+  p_investment_id uuid,
+  p_daily_rate numeric default null,
+  p_daily_accrual_enabled boolean default null
+)
+returns public.user_investment
+language plpgsql
+security definer
+set search_path = pg_catalog, public, pg_temp
+as $function$
+declare
+  v_admin public.admin_user;
+  v_old public.user_investment;
+  v_new public.user_investment;
+begin
+  if not public.is_admin() or not public.admin_has_permission('manage_users') then
+    raise exception 'Permission denied';
+  end if;
+  select * into v_admin from public.admin_user where user_id=auth.uid();
+  if v_admin.id is null then raise exception 'Admin access required'; end if;
+  select * into v_old from public.user_investment where id=p_investment_id for update;
+  if v_old.id is null then raise exception 'Investment not found'; end if;
+  if v_old.currency <> 'BDX' then
+    raise exception 'Legacy investment is read-only until the audited BDX conversion is completed';
+  end if;
+  if p_daily_rate is not null and p_daily_rate < 0 then raise exception 'Daily rate cannot be negative'; end if;
+
+  update public.user_investment
+  set daily_rate=coalesce(p_daily_rate,daily_rate),
+      daily_accrual_enabled=coalesce(p_daily_accrual_enabled,daily_accrual_enabled),
+      updated_at=now()
+  where id=p_investment_id returning * into v_new;
+
+  insert into public.admin_action_audit(admin_id,user_id,action,target_id,old_values,new_values,reason)
+  values(v_admin.id,v_old.user_id,'investment_updated',p_investment_id,
+    jsonb_build_object('daily_rate',v_old.daily_rate,'daily_accrual_enabled',v_old.daily_accrual_enabled,'currency','BDX'),
+    jsonb_build_object('daily_rate',v_new.daily_rate,'daily_accrual_enabled',v_new.daily_accrual_enabled,'currency','BDX'),
+    'Administrator updated BDX investment accrual settings');
+  return v_new;
+end;
+$function$;
+revoke all on function public.admin_update_investment(uuid,numeric,boolean) from public, anon;
+grant execute on function public.admin_update_investment(uuid,numeric,boolean) to authenticated;
+
 -- Replace legacy USD admin funding with the same audited BDX wallet denomination.
 create or replace function public.admin_fund_user(
   p_user_id uuid,

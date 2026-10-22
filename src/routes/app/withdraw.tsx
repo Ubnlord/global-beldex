@@ -118,15 +118,7 @@ function WithdrawPage() {
         <Input
           value={address}
           onChange={(e) => setAddress(e.target.value)}
-          placeholder={
-            method === "Bitcoin"
-              ? "bc1..."
-              : method === "Ethereum"
-                ? "0x..."
-                : method === "Beldex"
-                  ? "bxd..."
-                  : t.destPlaceholder
-          }
+          placeholder="Paste your Beldex wallet address"
         />
         <Button className="mt-6 w-full" onClick={submit}>
           {t.withdrawNow}

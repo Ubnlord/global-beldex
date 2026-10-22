@@ -339,7 +339,7 @@ export const FAQ = [
   },
   {
     q: "Where does market data come from?",
-    a: "Ticker, overview and candlestick widgets are official TradingView embeds for KUCOIN:BDX/USDTT and major pairs.",
+    a: "Ticker, overview and candlestick widgets are official TradingView embeds for KUCOIN:BDXUSDT and major pairs.",
   },
   {
     q: "Can I refer friends?",

@@ -107,6 +107,8 @@ assert.match(bdxOnlyCutover, /Only BDX Beldex requests can be approved/);
 assert.match(bdxOnlyCutover, /Only BDX Beldex requests can be rejected/);
 assert.match(bdxOnlyCutover, /Legacy balance adjustments are disabled/);
 assert.match(bdxOnlyCutover, /drop function if exists public\.swap_assets/);
+assert.match(bdxOnlyCutover, /drop function if exists public\.admin_manage_investment\(uuid,numeric,boolean,text,text\)/);
+assert.match(bdxOnlyCutover, /create or replace function public\.admin_financial_reconciliation_v3\(\)/);
 assert.match(bdxOnlyCutover, /Legacy investment is read-only until the audited BDX conversion is completed/);
 assert.match(bdxOnlyCutover, /historical transaction rows are intentionally preserved unchanged for audit/i);
 assert.doesNotMatch(bdxOnlyCutover, /update public\.transaction\s+set\s+currency\s*=\s*'BDX'/i);

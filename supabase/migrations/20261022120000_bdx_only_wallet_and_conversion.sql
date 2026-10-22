@@ -12,6 +12,28 @@ begin
   ) then
     raise exception 'BDX cutover blocked: unresolved legacy USD deposit/withdrawal exists';
   end if;
+
+  -- Active legacy principal must be covered by legacy locked funds before conversion.
+  if exists (
+    select 1
+    from public.user_profile p
+    join (
+      select user_id, sum(principal) as active_principal
+      from public.user_investment
+      where currency='USD' and status='active'
+      group by user_id
+    ) i on i.user_id=p.user_id
+    where p.locked_balance + 0.00000001 < i.active_principal
+  ) then
+    raise exception 'BDX cutover blocked: active legacy investment principal exceeds locked legacy balance';
+  end if;
+
+  if exists (
+    select 1 from public.user_profile
+    where available_balance < 0 or locked_balance < 0 or bdx_balance < 0 or locked_bdx_balance < 0
+  ) then
+    raise exception 'BDX cutover blocked: negative wallet balance requires manual reconciliation';
+  end if;
 end;
 $preflight$;
 
@@ -19,6 +41,9 @@ $preflight$;
 -- does NOT execute it automatically. The conversion RPC requires two fresh,
 -- independently sourced BDX/USD quotes and is callable only with service_role.
 -- Historical transaction rows are intentionally preserved unchanged for audit.
+-- Defaults affect future rows only; archived legacy records retain their currency.
+alter table public.transaction alter column currency set default 'BDX';
+alter table public.user_investment alter column currency set default 'BDX';
 
 create table if not exists public.financial_currency_conversion_run (
   id uuid primary key default gen_random_uuid(),
@@ -76,6 +101,9 @@ create table if not exists public.welcome_bonus_migration_exclusions (
   user_id uuid primary key,
   created_at timestamptz not null default now()
 );
+insert into public.welcome_bonus_migration_exclusions(user_id)
+select id from auth.users
+on conflict (user_id) do nothing;
 insert into public.welcome_bonus_migration_exclusions(user_id)
 select user_id from public.user_profile
 on conflict (user_id) do nothing;
@@ -237,7 +265,9 @@ begin
      or p.total_deposits<>0 or p.total_withdrawals<>0 or p.referral_earnings<>0
      or exists (select 1 from public.transaction t where t.user_id=p.user_id
        and t.status='completed' and coalesce(t.currency,'USD')='USD'
-       and t.type in ('deposit','withdraw','referral'));
+       and t.type in ('deposit','withdraw','referral'))
+     or exists (select 1 from public.user_investment ui
+       where ui.user_id=p.user_id and ui.currency='USD');
 
   insert into public.financial_currency_conversion_investment_audit (
     run_id,investment_id,user_id,old_currency,old_principal,old_credited_profit,
@@ -281,7 +311,9 @@ begin
      or p.total_deposits<>0 or p.total_withdrawals<>0 or p.referral_earnings<>0
      or exists (select 1 from public.transaction t where t.user_id=p.user_id
        and t.status='completed' and coalesce(t.currency,'USD')='USD'
-       and t.type in ('deposit','withdraw','referral'));
+       and t.type in ('deposit','withdraw','referral'))
+     or exists (select 1 from public.user_investment ui
+       where ui.user_id=p.user_id and ui.currency='USD');
 
   update public.user_investment ui
   set principal=round(ui.principal/v_rate,18),
@@ -537,7 +569,7 @@ begin
   select * into v_tx from public.transaction where id=p_transaction_id for update;
   if not found then raise exception 'Transaction not found'; end if;
   if v_tx.type not in ('deposit','withdraw') then raise exception 'Only deposit and withdrawal can be settled'; end if;
-  if v_tx.status='completed' then raise exception 'Transaction already completed'; end if;
+  if v_tx.status<>'pending' then raise exception 'Only pending transactions can be settled'; end if;
   if v_tx.approval_status<>'approved' then raise exception 'Transaction must be approved first'; end if;
   if v_tx.currency<>'BDX' or upper(coalesce(v_tx.method,''))<>'BELDEX' then
     raise exception 'Only BDX Beldex transactions can be settled';
@@ -598,7 +630,9 @@ begin
   if v_tx.currency<>'BDX' or upper(coalesce(v_tx.method,''))<>'BELDEX' then
     raise exception 'Only BDX Beldex requests can be approved';
   end if;
-  if v_tx.approval_status<>'awaiting' then raise exception 'Transaction is not awaiting approval'; end if;
+  if v_tx.status<>'pending' or v_tx.approval_status<>'awaiting' then
+    raise exception 'Only pending transactions awaiting approval can be approved';
+  end if;
 
   update public.transaction
   set approval_status='approved',
@@ -646,7 +680,9 @@ begin
   if v_tx.currency<>'BDX' or upper(coalesce(v_tx.method,''))<>'BELDEX' then
     raise exception 'Only BDX Beldex requests can be rejected';
   end if;
-  if v_tx.approval_status<>'awaiting' then raise exception 'Transaction is not awaiting approval'; end if;
+  if v_tx.status<>'pending' or v_tx.approval_status<>'awaiting' then
+    raise exception 'Only pending transactions awaiting approval can be rejected';
+  end if;
 
   if v_tx.type='withdraw' then
     update public.user_profile set bdx_balance=bdx_balance+v_tx.amount,updated_at=now()

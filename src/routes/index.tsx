@@ -90,7 +90,7 @@ function Landing() {
           <div className="mb-3 flex items-center justify-between">
             <div className="text-xs text-muted">{t.page.liveMarketTv}</div>
             <a
-              href="https://www.tradingview.com/symbols/BDXUSD/"
+              href="https://www.tradingview.com/symbols/BDX/USDTT/"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1 rounded-full border border-line-strong bg-elevated px-2 py-1 text-[10px] text-accent"
@@ -106,7 +106,7 @@ function Landing() {
           <div className="mt-3 rounded-md border border-line bg-elevated p-3">
             <div className="mb-1 text-[11px] text-muted">{t.page.featured}</div>
             <a
-              href="https://www.tradingview.com/symbols/BDXUSD/"
+              href="https://www.tradingview.com/symbols/BDX/USDTT/"
               target="_blank"
               rel="noopener noreferrer"
               className="text-[13px] font-semibold text-fg transition-colors hover:text-accent"

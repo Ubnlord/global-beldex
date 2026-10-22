@@ -36,7 +36,8 @@ assert.match(books, /amount: num\(p\.principal\)/);
 assert.doesNotMatch(books, /usdToBdx\(num\(p\.principal\)\)/);
 assert.match(books, /creditedProfit: num\(p\.credited_profit\)/);
 assert.match(books, /currency: p\.currency === "BDX" \? "BDX" : "USD"/);
-assert.match(admin, /investment\.currency === "BDX" \? "BDX" : "USD"/);
+assert.match(admin, /investment\.currency === "BDX" \? "BDX" : "Legacy \(conversion pending\)"/);
+assert.match(admin, /tx\.currency === "BDX" \? "BDX" : "Legacy \(archived\)"/);
 
 
 assert.match(admin, /admin_search_users_bdx/);

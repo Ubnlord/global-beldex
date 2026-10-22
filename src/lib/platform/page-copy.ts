@@ -669,3 +669,36 @@ export const pageNl: typeof pageEn = {
     { q: "Kan ik vrienden verwijzen?", a: "Ja. Elk account krijgt een verwijzingslink. Bonussen worden automatisch bijgeschreven wanneer je netwerk geld stort." },
   ],
 };
+
+
+// Keep public-facing financial claims consistent across all supported locales.
+// Until each translation is reviewed, never advertise USD balances or obsolete
+// USD minimums/reward percentages.
+function enforceBdxOnlyPageCopy(page: typeof pageEn) {
+  page.minFunding = "Minimum funding in BDX";
+  page.step1d = "Register with email — a one-time 40 BDX welcome bonus is available to eligible new accounts after verification.";
+  page.step2d = "Deposit starting from 4,000 BDX. Deposit requests are reviewed before balances are credited.";
+  page.amountPh = "Enter amount... Min 4,000 BDX";
+  page.liveMarketTv = "Live BDX/USDT Market";
+  page.trackBdx = "Track BDX/USDT";
+  page.tvChartTitle = "Beldex Price Chart — BDX/USDT";
+  page.liveFromTv = "Live market data · BDX/USDT";
+  page.liveOverview = "Live BDX/USDT Overview";
+  page.poweredBy = "Powered by TradingView · BDX/USDT";
+  page.symbolLine = "Market pair: BDX/USDT";
+  page.overviewStats = "BDX/USDT Overview & Stats";
+  page.liveBdx = "Live BDX/USDT";
+  page.trackOnTv = "Track BDX/USDT on TradingView";
+  page.liveBadge = "Live BDX/USDT · TradingView";
+  page.legalTerms[0] = "Active account balances, deposits, and investments are denominated in BDX. Currency swaps are retired.";
+  page.faqs = page.faqs.map((faq, index) => {
+    if (index === 1) return { ...faq, a: "Minimum deposit is 4,000 BDX." };
+    if (index === 3) return { ...faq, a: "Market charts display the BDX/USDT trading pair. Market prices are references, not account balances." };
+    if (index === 4) return { ...faq, a: "Referral rewards equal 5% in BDX of the referred user's first completed deposit." };
+    return faq;
+  });
+}
+
+for (const page of [pageEn, pageEs, pageFr, pageIt, pagePt, pageNl]) {
+  enforceBdxOnlyPageCopy(page);
+}

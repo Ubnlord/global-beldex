@@ -67,7 +67,9 @@ assert.match(adminAccountingMigration, /recorded_referrals_bdx/);
 
 
 assert.match(bdxOnlyCutover, /BDX cutover blocked: unresolved legacy USD deposit\/withdrawal exists/);
-assert.match(bdxOnlyCutover, /Two distinct approved quote sources are required/);
+assert.match(bdxOnlyCutover, /CoinGecko and CoinMarketCap USD quotes are both required/);
+assert.match(bdxOnlyCutover, /Market quote timestamps must be within 2 minutes of each other/);
+assert.doesNotMatch(bdxOnlyCutover, /not in \('kucoin','coingecko','coinmarketcap'\)/);
 assert.match(bdxOnlyCutover, /Market quotes differ by more than 2 percent/);
 assert.match(bdxOnlyCutover, /Both market quotes must be no more than 10 minutes old/);
 assert.match(bdxOnlyCutover, /financial_currency_conversion_profile_audit/);

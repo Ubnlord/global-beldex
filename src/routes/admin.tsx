@@ -30,7 +30,7 @@ type Tx = {
   user_id: string;
   type: string;
   amount: string | number;
-  currency?: "BDX" | "LEGACY";
+  currency?: "BDX" | "USD";
   status: string;
   approval_status: string;
   method: string | null;

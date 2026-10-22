@@ -166,10 +166,13 @@ begin
     raise exception 'Service role required';
   end if;
 
-  if lower(coalesce(p_quote_source_a,'')) not in ('kucoin','coingecko','coinmarketcap')
-     or lower(coalesce(p_quote_source_b,'')) not in ('kucoin','coingecko','coinmarketcap')
+  -- Both sources must quote BDX directly against USD. Do not mix a USDT
+  -- exchange quote into a USD conversion unless a separately verified USDT/USD
+  -- rate is available; this migration deliberately blocks that shortcut.
+  if lower(coalesce(p_quote_source_a,'')) not in ('coingecko','coinmarketcap')
+     or lower(coalesce(p_quote_source_b,'')) not in ('coingecko','coinmarketcap')
      or lower(p_quote_source_a)=lower(p_quote_source_b) then
-    raise exception 'Two distinct approved quote sources are required';
+    raise exception 'CoinGecko and CoinMarketCap USD quotes are both required';
   end if;
   if p_quote_reference_a is null or btrim(p_quote_reference_a)=''
      or p_quote_reference_b is null or btrim(p_quote_reference_b)='' then
@@ -181,6 +184,9 @@ begin
      or p_quote_at_a < now() - interval '10 minutes'
      or p_quote_at_b < now() - interval '10 minutes' then
     raise exception 'Both market quotes must be no more than 10 minutes old';
+  end if;
+  if abs(extract(epoch from (p_quote_at_a-p_quote_at_b))) > 120 then
+    raise exception 'Market quote timestamps must be within 2 minutes of each other';
   end if;
   if p_bdx_usd_rate_a is null or p_bdx_usd_rate_b is null
      or p_bdx_usd_rate_a < 0.02 or p_bdx_usd_rate_a > 0.20

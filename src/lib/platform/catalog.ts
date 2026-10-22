@@ -339,10 +339,10 @@ export const FAQ = [
   },
   {
     q: "Where does market data come from?",
-    a: "Ticker, overview and candlestick widgets are official TradingView embeds for KUCOIN:BDXUSDT and major pairs.",
+    a: "Market charts use the BDX/USDT trading pair. Market prices are references and are not account balances.",
   },
   {
     q: "Can I refer friends?",
-    a: "Yes — every account gets a referral link. referral bonuses are credited when you copy and share your link.",
+    a: "Every account gets a referral link. Eligible referrals earn 5% in BDX of the referred user’s first completed BDX deposit after the policy cutover.",
   },
 ];

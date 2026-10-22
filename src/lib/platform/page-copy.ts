@@ -56,7 +56,7 @@ export const pageEn = {
   awardTitle: "Award Winning",
   awardBody: "Best Investment Platform 2024 — FinTech Awards.",
   step1t: "Open an account",
-  step1d: "Register with email — a $3 welcome bonus is credited instantly upon verification.",
+  step1d: "Register with email — a 40 BDX welcome bonus is credited instantly upon verification.",
   step2t: "Fund the wallet",
   step2d: "Deposit starting from $300. Network credits complete in under two seconds.",
   step3t: "Activate a plan",

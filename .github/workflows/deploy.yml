@@ -3,9 +3,17 @@ name: Deploy Global Beldex to GitHub Pages
 # Production Pages deployment: every main-branch push rebuilds and publishes the current app.
 
 on:
+  # Main pushes run validation/build only. Production publishing is a separate,
+  # explicit workflow dispatch after financial/security gates have passed.
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      authorize_production_deploy:
+        description: "Authorize publishing the verified build to production"
+        required: true
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -214,6 +222,7 @@ jobs:
 
   deploy:
     needs: build
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.authorize_production_deploy == true }}
     runs-on: ubuntu-latest
     environment:
       name: github-pages

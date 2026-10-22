@@ -29,6 +29,9 @@ jobs:
     name: Reproducible local Supabase security regression
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    permissions:
+      contents: read
+      packages: read
     steps:
       - uses: actions/checkout@v4
 
@@ -42,6 +45,13 @@ jobs:
           # Pin the CLI to avoid a GitHub API lookup for `latest`, which can
           # fail under unauthenticated release API rate limits.
           version: 2.53.6
+
+      - name: Authenticate container pulls to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - run: npm ci
 

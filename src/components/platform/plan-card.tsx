@@ -137,7 +137,7 @@ export function TvCredit({ className }: { className?: string }) {
     <p className={cn("text-[10px] text-subtle", className)}>
       {p.liveFromTv.split("·")[0]}·{" "}
       <a
-        href="https://www.tradingview.com/symbols/BDX/USDTT/"
+        href="https://www.tradingview.com/symbols/BDXUSDT/"
         target="_blank"
         rel="noopener noreferrer"
         className="text-accent hover:underline"

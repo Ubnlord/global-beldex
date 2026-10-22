@@ -1,5 +1,20 @@
 begin;
 
+-- Abort rather than strand any legacy request if the live ledger changed after
+-- the read-only cutover audit. Completed/failed history is left untouched.
+do $preflight$
+begin
+  if exists (
+    select 1 from public.transaction
+    where coalesce(currency,'USD')='USD'
+      and type in ('deposit','withdraw')
+      and status not in ('completed','failed')
+  ) then
+    raise exception 'BDX cutover blocked: unresolved legacy USD deposit/withdrawal exists';
+  end if;
+end;
+$preflight$;
+
 -- BDX-only accounting cutover. This migration defines the guarded conversion but
 -- does NOT execute it automatically. The conversion RPC requires two fresh,
 -- independently sourced BDX/USD quotes and is callable only with service_role.
@@ -414,20 +429,21 @@ begin
   from public.user_profile where user_id=v_tx.user_id;
   if v_ref is null or v_ref=v_tx.user_id then return 0; end if;
 
+  -- Idempotency across both the current transaction marker and legacy
+  -- markers. The old "Referral deposit <transaction-id>" form is resolved by
+  -- joining back to the deposit ledger without casting untrusted text to UUID.
   if exists (
     select 1 from public.transaction r
     where r.user_id=v_ref and r.type='referral'
-      and (r.method='Referral deposit '||v_tx.id::text
-        or r.method='Referral user '||v_tx.user_id::text)
-  ) then return 0; end if;
-
-  -- Any existing referral reward for this referred account means its one-time
-  -- reward was already paid under the legacy rule; do not pay it again.
-  if exists (
-    select 1 from public.transaction r
-    where r.user_id=v_ref and r.type='referral'
-      and (r.method='Referral user '||v_tx.user_id::text
-        or r.method in ('Referral deposit '||v_tx.id::text))
+      and (
+        r.method='Referral user '||v_tx.user_id::text
+        or exists (
+          select 1 from public.transaction prior_deposit
+          where prior_deposit.user_id=v_tx.user_id
+            and prior_deposit.type='deposit'
+            and prior_deposit.id::text=substring(r.method from length('Referral deposit ')+1)
+        )
+      )
   ) then return 0; end if;
 
   v_reward := round(v_tx.amount*0.05,18);

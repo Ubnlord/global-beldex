@@ -309,24 +309,12 @@ export const DEPOSIT_METHODS = {
       "bxdRzpW3nTXY3w76CQHHbMCg8TE9rrNdT1maW2PJYmuqS6YLCf16hDaZFcZ226m3SoLaFoSwEgsTA8ET85EdqFfj2nThkg4y3",
     qr: "/deposits/beldex.jpg",
   },
-  BTC: {
-    id: "BTC" as const,
-    title: "Bitcoin",
-    address: "bc1qzlq3r8e39pwl8mv3vthdxr7nnxlrq92gvs3p0m",
-    qr: "/deposits/bitcoin.jpg",
-  },
-  ETH: {
-    id: "ETH" as const,
-    title: "Ethereum",
-    address: "0x38f34475671efC1f8084428448803C6f3aeF8dA7",
-    qr: "/deposits/ethereum.jpg",
-  },
 };
 
 export const DEPOSIT_ADDRESS = DEPOSIT_METHODS.BELDEX.address;
 
 export const TRENDING = [
-  { name: "Beldex", sym: "BDXUSD", icon: "B", live: true },
+  { name: "Beldex", sym: "BDX", icon: "B", live: true },
   { name: "Bitcoin", sym: "BTC", icon: "₿", live: false },
   { name: "Ethereum", sym: "ETH", icon: "Ξ", live: false },
   { name: "Solana", sym: "SOL", icon: "◎", live: false },
@@ -343,7 +331,7 @@ export const FAQ = [
   },
   {
     q: "What is the minimum deposit?",
-    a: "$300 minimum.",
+    a: "Minimum deposit is 4,000 BDX."
   },
   {
     q: "How do investment plans work?",

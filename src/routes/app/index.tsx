@@ -209,6 +209,16 @@ function Dashboard() {
         <div className="mt-6 space-y-3">
           <div className="text-[13px] font-semibold text-fg">{t.activePlans}</div>
           {active.map((p) => {
+            if (p.currency !== "BDX") {
+              return (
+                <div key={p.id} className="rounded-lg border border-amber-500/40 bg-amber-500/5 p-4">
+                  <div className="text-xs font-bold tracking-widest">{p.name}</div>
+                  <p className="mt-2 text-[11px] text-subtle">
+                    Legacy investment record — audited BDX conversion pending. Its amount and profit are not displayed as BDX until conversion is completed.
+                  </p>
+                </div>
+              );
+            }
             const elapsed = Math.min(
               1,
               (Date.now() - p.startedAt) / (p.durationDays * 86_400_000),

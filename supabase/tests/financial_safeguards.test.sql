@@ -2,12 +2,14 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(76);
+select plan(80);
 
 -- Schema and RLS baseline.
 select has_table('public', 'user_profile', 'user_profile exists');
 select has_table('public', 'transaction', 'transaction exists');
 select has_table('public', 'user_investment', 'user_investment exists');
+select ok((select column_default like '%BDX%' from information_schema.columns where table_schema='public' and table_name='transaction' and column_name='currency'), 'new transaction rows default to BDX');
+select ok((select column_default like '%BDX%' from information_schema.columns where table_schema='public' and table_name='user_investment' and column_name='currency'), 'new investment rows default to BDX');
 select has_table('public', 'investment_plan_catalog', 'investment_plan_catalog exists');
 select has_table('public', 'admin_action_audit', 'admin_action_audit exists');
 select ok((select not attnotnull from pg_attribute where attrelid='public.admin_action_audit'::regclass and attname='admin_id'), 'admin audit actor can be null for deleted admins');
@@ -155,6 +157,15 @@ select ok(
 select ok(to_regprocedure('public.create_financial_transaction(text,numeric,text,text,uuid)') is null, 'legacy currency-optional financial request RPC is retired');
 select has_function('public', 'admin_adjust_bdx_balance', array['uuid','numeric','text','text'], 'BDX admin adjustment RPC exists');
 select has_function('public', 'admin_financial_reconciliation_v3', array[]::text[], 'currency-separated reconciliation v3 exists');
+select ok(
+  to_regprocedure('public.admin_manage_investment(uuid,numeric,boolean,text,text)') is null,
+  'legacy five-argument investment management overload is absent after cutover'
+);
+select ok(
+  position('financial_currency_conversion_profile_audit' in pg_get_functiondef('public.admin_financial_reconciliation_v3()'::regprocedure)) > 0
+  and position('financial_currency_conversion_investment_audit' in pg_get_functiondef('public.admin_financial_reconciliation_v3()'::regprocedure)) > 0,
+  'post-conversion reconciliation includes both conversion audit ledgers'
+);
 select ok(
   to_regprocedure('public.admin_manage_investment(uuid,numeric,boolean,text,text)') is null,
   'legacy five-argument investment-management overload is retired'

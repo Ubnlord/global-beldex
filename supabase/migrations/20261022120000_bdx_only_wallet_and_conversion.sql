@@ -993,7 +993,8 @@ begin
       and coalesce(t.currency,'USD')='USD' group by t.user_id
   ), ip_bdx as (
     select t.user_id,coalesce(sum(t.amount),0) amount from public.transaction t
-    where t.type='bonus' and t.status='completed' and t.note='Server-side investment profit'
+    where t.type='bonus' and t.status='completed'
+      and (t.note='Server-side investment profit' or t.method='Admin daily investment profit')
       and t.currency='BDX' group by t.user_id
   ), inv as (
     select ui.user_id,

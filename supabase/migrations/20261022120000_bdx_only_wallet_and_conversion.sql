@@ -206,8 +206,15 @@ begin
   select v_run_id,p.user_id,p.available_balance,p.locked_balance,p.bdx_balance,
     p.locked_bdx_balance,p.total_deposits,p.total_withdrawals,p.referral_earnings,
     round(p.available_balance/v_rate,18),round(p.locked_balance/v_rate,18),
-    round(p.total_deposits/v_rate,18),round(p.total_withdrawals/v_rate,18),
-    round(p.referral_earnings/v_rate,18)
+    coalesce((select round(sum(t.amount)/v_rate,18) from public.transaction t
+      where t.user_id=p.user_id and t.type='deposit' and t.status='completed'
+        and coalesce(t.currency,'USD')='USD'),0),
+    coalesce((select round(sum(t.amount)/v_rate,18) from public.transaction t
+      where t.user_id=p.user_id and t.type='withdraw' and t.status='completed'
+        and coalesce(t.currency,'USD')='USD'),0),
+    coalesce((select round(sum(t.amount)/v_rate,18) from public.transaction t
+      where t.user_id=p.user_id and t.type='referral' and t.status='completed'
+        and coalesce(t.currency,'USD')='USD'),0)
   from public.user_profile p
   where p.available_balance<>0 or p.locked_balance<>0
      or p.total_deposits<>0 or p.total_withdrawals<>0 or p.referral_earnings<>0;
@@ -226,12 +233,24 @@ begin
   select count(*) into v_investment_count
   from public.financial_currency_conversion_investment_audit where run_id=v_run_id;
 
+  -- Shared profile aggregate counters can contain more than one currency.
+  -- Rebuild the BDX-specific counters from the transaction ledger, converting
+  -- only completed legacy USD rows. Never divide mixed-currency profile totals.
   update public.user_profile p
   set bdx_balance = p.bdx_balance + round(p.available_balance/v_rate,18),
       locked_bdx_balance = p.locked_bdx_balance + round(p.locked_balance/v_rate,18),
-      total_deposits_bdx = p.total_deposits_bdx + round(p.total_deposits/v_rate,18),
-      total_withdrawals_bdx = p.total_withdrawals_bdx + round(p.total_withdrawals/v_rate,18),
-      referral_earnings_bdx = p.referral_earnings_bdx + round(p.referral_earnings/v_rate,18),
+      total_deposits_bdx = p.total_deposits_bdx + coalesce((
+        select round(sum(t.amount)/v_rate,18) from public.transaction t
+        where t.user_id=p.user_id and t.type='deposit' and t.status='completed'
+          and coalesce(t.currency,'USD')='USD'),0),
+      total_withdrawals_bdx = p.total_withdrawals_bdx + coalesce((
+        select round(sum(t.amount)/v_rate,18) from public.transaction t
+        where t.user_id=p.user_id and t.type='withdraw' and t.status='completed'
+          and coalesce(t.currency,'USD')='USD'),0),
+      referral_earnings_bdx = p.referral_earnings_bdx + coalesce((
+        select round(sum(t.amount)/v_rate,18) from public.transaction t
+        where t.user_id=p.user_id and t.type='referral' and t.status='completed'
+          and coalesce(t.currency,'USD')='USD'),0),
       available_balance=0,
       locked_balance=0,
       total_deposits=0,

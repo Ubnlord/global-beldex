@@ -29,15 +29,17 @@ const useQuote = create<Quote & { load: () => Promise<void> }>((set, get) => ({
         set({ status: "error" });
         return;
       }
+      const nextBook = { ...get().book, ...book };
+      if (!book.beldex) delete nextBook.beldex;
       set({
-        usd: book.beldex?.usd ?? get().usd,
-        change24h: book.beldex?.change ?? get().change24h,
-        book: { ...get().book, ...book },
+        usd: book.beldex?.usd ?? null,
+        change24h: book.beldex?.change ?? null,
+        book: nextBook,
         updatedAt: Date.now(),
         status: "ready",
       });
     } catch {
-      set({ status: get().usd ? "ready" : "error" });
+      set({ usd: null, change24h: null, book: { ...get().book, beldex: undefined }, status: "error" });
     }
   },
 }));

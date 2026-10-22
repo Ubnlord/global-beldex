@@ -43,6 +43,18 @@ begin
   end if;
 
   if exists (
+    select 1 from public.transaction t
+    left join public.user_profile p on p.user_id=t.user_id
+    where coalesce(t.currency,'USD')='USD' and p.user_id is null
+  ) or exists (
+    select 1 from public.user_investment i
+    left join public.user_profile p on p.user_id=i.user_id
+    where i.currency='USD' and p.user_id is null
+  ) then
+    raise exception 'BDX cutover blocked: legacy financial records have no matching profile';
+  end if;
+
+  if exists (
     select 1 from public.user_profile
     where available_balance < 0 or locked_balance < 0 or bdx_balance < 0 or locked_bdx_balance < 0
   ) then

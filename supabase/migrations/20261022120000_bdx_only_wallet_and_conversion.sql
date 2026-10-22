@@ -23,9 +23,23 @@ begin
       where currency='USD' and status='active'
       group by user_id
     ) i on i.user_id=p.user_id
-    where p.locked_balance + 0.00000001 < i.active_principal
+    where abs(p.locked_balance - i.active_principal) > 0.00000001
   ) then
-    raise exception 'BDX cutover blocked: active legacy investment principal exceeds locked legacy balance';
+    raise exception 'BDX cutover blocked: active legacy principal and locked balance do not reconcile per account';
+  end if;
+
+  if exists (
+    select 1
+    from public.user_profile p
+    left join (
+      select user_id, sum(principal) as active_principal
+      from public.user_investment
+      where currency='USD' and status='active'
+      group by user_id
+    ) i on i.user_id=p.user_id
+    where p.locked_balance > 0.00000001 and coalesce(i.active_principal,0)=0
+  ) then
+    raise exception 'BDX cutover blocked: locked legacy balance has no matching active legacy investment';
   end if;
 
   if exists (
@@ -400,7 +414,8 @@ exception when unique_violation then
   select * into v_tx from public.transaction
   where user_id=v_uid and request_id=p_request_id limit 1;
   if found and v_tx.type=p_type and v_tx.amount=p_amount
-     and v_tx.currency='BDX' and upper(coalesce(v_tx.method,''))='BELDEX' then
+     and v_tx.currency='BDX' and upper(coalesce(v_tx.method,''))='BELDEX'
+     and coalesce(v_tx.note,'')=case when p_type='withdraw' then v_address else '' end then
     return v_tx;
   end if;
   raise;

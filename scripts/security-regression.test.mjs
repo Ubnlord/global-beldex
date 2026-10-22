@@ -43,6 +43,7 @@ test("financial authorization and currency controls hold", { skip: !url || !serv
         blocked: label === "blocked",
         available_balance: 50000,
         locked_balance: 0,
+        bdx_balance: label === "blocked" ? 5000 : 0,
       }, { onConflict: "user_id" });
       assert.ifError(error);
     }
@@ -202,11 +203,11 @@ test("financial authorization and currency controls hold", { skip: !url || !serv
       const client = await clientFor(users.blocked);
       const { error } = await client.rpc("create_financial_transaction", {
         p_type: "deposit",
-        p_amount: 300,
-        p_method: "Bitcoin",
+        p_amount: 4000,
+        p_method: "Beldex",
         p_note: null,
         p_request_id: randomUUID(),
-        p_currency: "USD",
+        p_currency: "BDX",
       });
       assert.ok(error, "blocked user unexpectedly created a financial transaction");
     });
@@ -220,15 +221,15 @@ test("financial authorization and currency controls hold", { skip: !url || !serv
       assert.ok(error, "blocked user unexpectedly purchased an investment");
     });
 
-    await step("blocked user cannot create a withdrawal", async () => {
+    await step("blocked user cannot create a withdrawal even with sufficient BDX", async () => {
       const client = await clientFor(users.blocked);
       const { error } = await client.rpc("create_financial_transaction", {
         p_type: "withdraw",
         p_amount: 300,
-        p_method: "Bitcoin",
-        p_note: "bc1qaaaaaaaaaaa",
+        p_method: "Beldex",
+        p_note: "A".repeat(95),
         p_request_id: randomUUID(),
-        p_currency: "USD",
+        p_currency: "BDX",
       });
       assert.ok(error, "blocked user unexpectedly created a withdrawal");
     });
@@ -238,7 +239,7 @@ test("financial authorization and currency controls hold", { skip: !url || !serv
       const { error } = await client.rpc("create_financial_transaction", {
         p_type: "deposit",
         p_amount: 3999,
-        p_method: "BELDEX",
+        p_method: "Beldex",
         p_note: null,
         p_request_id: randomUUID(),
         p_currency: "BDX",
@@ -246,30 +247,30 @@ test("financial authorization and currency controls hold", { skip: !url || !serv
       assert.ok(error, "Beldex deposit below 4000 BDX unexpectedly succeeded");
     });
 
-    await step("USD payment-method deposits below the 300 USD minimum are rejected", async () => {
-      const client = await clientFor(users.normal);
-      const { error } = await client.rpc("create_financial_transaction", {
-        p_type: "deposit",
-        p_amount: 299,
-        p_method: "Bitcoin",
-        p_note: null,
-        p_request_id: randomUUID(),
-        p_currency: "USD",
-      });
-      assert.ok(error, "USD deposit below 300 unexpectedly succeeded");
-    });
-
-    await step("Beldex requests cannot be recorded in USD", async () => {
+    await step("USD denomination is rejected for new financial requests", async () => {
       const client = await clientFor(users.normal);
       const { error } = await client.rpc("create_financial_transaction", {
         p_type: "deposit",
         p_amount: 4000,
-        p_method: "BELDEX",
+        p_method: "Beldex",
         p_note: null,
         p_request_id: randomUUID(),
         p_currency: "USD",
       });
-      assert.ok(error, "Beldex deposit unexpectedly accepted USD denomination");
+      assert.ok(error, "new financial request unexpectedly accepted USD denomination");
+    });
+
+    await step("non-Beldex payment methods are rejected", async () => {
+      const client = await clientFor(users.normal);
+      const { error } = await client.rpc("create_financial_transaction", {
+        p_type: "deposit",
+        p_amount: 4000,
+        p_method: "Bitcoin",
+        p_note: null,
+        p_request_id: randomUUID(),
+        p_currency: "BDX",
+      });
+      assert.ok(error, "Bitcoin payment method unexpectedly remained enabled");
     });
 
     await step("financial requests reject a missing idempotency key", async () => {
@@ -316,24 +317,28 @@ test("financial authorization and currency controls hold", { skip: !url || !serv
       assert.ok(profileUpdateError, "ordinary client unexpectedly updated a balance");
     });
 
-    await step("withdrawal lifecycle is atomic and one-way", async () => {
+    await step("BDX withdrawal lifecycle is atomic and one-way", async () => {
+      const seeded = await admin.from("user_profile")
+        .update({ bdx_balance: 50000, available_balance: 0 })
+        .eq("user_id", users.normal.id);
+      assert.ifError(seeded.error);
       const client = await clientFor(users.normal);
       const initial = await admin.from("user_profile")
-        .select("available_balance,total_withdrawals")
+        .select("bdx_balance,total_withdrawals_bdx")
         .eq("user_id", users.normal.id)
         .single();
       assert.ifError(initial.error);
-      const initialBalance = Number(initial.data.available_balance);
-      const initialWithdrawals = Number(initial.data.total_withdrawals || 0);
+      const initialBalance = Number(initial.data.bdx_balance);
+      const initialWithdrawals = Number(initial.data.total_withdrawals_bdx || 0);
+      const address = "A".repeat(95);
 
-      const approveRequestId = randomUUID();
       const created = await client.rpc("create_financial_transaction", {
         p_type: "withdraw",
         p_amount: 300,
-        p_method: "Ethereum",
-        p_note: "0x1111111111111111111111111111111111111111",
-        p_request_id: approveRequestId,
-        p_currency: "USD",
+        p_method: "Beldex",
+        p_note: address,
+        p_request_id: randomUUID(),
+        p_currency: "BDX",
       });
       assert.ifError(created.error);
       assert.ok(created.data?.id);
@@ -341,11 +346,11 @@ test("financial authorization and currency controls hold", { skip: !url || !serv
       assert.equal(created.data?.approval_status, "awaiting");
 
       const afterCreate = await admin.from("user_profile")
-        .select("available_balance")
+        .select("bdx_balance")
         .eq("user_id", users.normal.id)
         .single();
       assert.ifError(afterCreate.error);
-      assert.equal(Number(afterCreate.data.available_balance), initialBalance - 300);
+      assert.equal(Number(afterCreate.data.bdx_balance), initialBalance - 300);
 
       const normalApprove = await client.rpc("admin_approve_transaction", {
         p_transaction_id: created.data.id,
@@ -398,31 +403,30 @@ test("financial authorization and currency controls hold", { skip: !url || !serv
       assert.ok(doubleSettle.error, "withdrawal was settled twice");
 
       const afterSettlement = await admin.from("user_profile")
-        .select("available_balance,total_withdrawals")
+        .select("bdx_balance,total_withdrawals_bdx")
         .eq("user_id", users.normal.id)
         .single();
       assert.ifError(afterSettlement.error);
-      assert.equal(Number(afterSettlement.data.available_balance), initialBalance - 300);
-      assert.equal(Number(afterSettlement.data.total_withdrawals), initialWithdrawals + 300);
+      assert.equal(Number(afterSettlement.data.bdx_balance), initialBalance - 300);
+      assert.equal(Number(afterSettlement.data.total_withdrawals_bdx), initialWithdrawals + 300);
 
-      const rejectRequestId = randomUUID();
       const rejectCreated = await client.rpc("create_financial_transaction", {
         p_type: "withdraw",
         p_amount: 300,
-        p_method: "Bitcoin",
-        p_note: "bc1qaaaaaaaaaaa",
-        p_request_id: rejectRequestId,
-        p_currency: "USD",
+        p_method: "Beldex",
+        p_note: address,
+        p_request_id: randomUUID(),
+        p_currency: "BDX",
       });
       assert.ifError(rejectCreated.error);
       assert.ok(rejectCreated.data?.id);
 
       const afterSecondCreate = await admin.from("user_profile")
-        .select("available_balance")
+        .select("bdx_balance")
         .eq("user_id", users.normal.id)
         .single();
       assert.ifError(afterSecondCreate.error);
-      assert.equal(Number(afterSecondCreate.data.available_balance), initialBalance - 600);
+      assert.equal(Number(afterSecondCreate.data.bdx_balance), initialBalance - 600);
 
       const rejected = await adminClient.rpc("admin_reject_transaction", {
         p_transaction_id: rejectCreated.data.id,
@@ -439,17 +443,21 @@ test("financial authorization and currency controls hold", { skip: !url || !serv
       assert.ok(doubleReject.error, "withdrawal was rejected twice");
 
       const afterRejection = await admin.from("user_profile")
-        .select("available_balance,total_withdrawals")
+        .select("bdx_balance,total_withdrawals_bdx")
         .eq("user_id", users.normal.id)
         .single();
       assert.ifError(afterRejection.error);
-      assert.equal(Number(afterRejection.data.available_balance), initialBalance - 300);
-      assert.equal(Number(afterRejection.data.total_withdrawals), initialWithdrawals + 300);
+      assert.equal(Number(afterRejection.data.bdx_balance), initialBalance - 300);
+      assert.equal(Number(afterRejection.data.total_withdrawals_bdx), initialWithdrawals + 300);
     });
 
-    await step("concurrent withdrawals reserve a balance only once", async () => {
+    await step("concurrent BDX withdrawals reserve a balance only once", async () => {
+      const seeded = await admin.from("user_profile")
+        .update({ bdx_balance: 50000, available_balance: 0 })
+        .eq("user_id", users.normal.id);
+      assert.ifError(seeded.error);
       const before = await admin.from("user_profile")
-        .select("available_balance")
+        .select("bdx_balance")
         .eq("user_id", users.normal.id)
         .single();
       assert.ifError(before.error);
@@ -459,20 +467,20 @@ test("financial authorization and currency controls hold", { skip: !url || !serv
         (index === 0 ? clientA : clientB).rpc("create_financial_transaction", {
           p_type: "withdraw",
           p_amount: 30000,
-          p_method: "Bitcoin",
-          p_note: "bc1qaaaaaaaaaaa",
+          p_method: "Beldex",
+          p_note: "A".repeat(95),
           p_request_id: requestId,
-          p_currency: "USD",
+          p_currency: "BDX",
         })
       ));
       assert.equal(results.filter((result) => !result.error).length, 1);
       assert.equal(results.filter((result) => result.error).length, 1);
       const after = await admin.from("user_profile")
-        .select("available_balance")
+        .select("bdx_balance")
         .eq("user_id", users.normal.id)
         .single();
       assert.ifError(after.error);
-      assert.equal(Number(before.data.available_balance) - Number(after.data.available_balance), 30000);
+      assert.equal(Number(before.data.bdx_balance) - Number(after.data.bdx_balance), 30000);
       const { data, error } = await admin.from("transaction")
         .select("id")
         .eq("user_id", users.normal.id)
@@ -481,16 +489,20 @@ test("financial authorization and currency controls hold", { skip: !url || !serv
       assert.equal(data?.length, 1);
     });
 
-    await step("concurrent settlement credits totals and audit once", async () => {
+    await step("concurrent BDX settlement credits totals and audit once", async () => {
+      const seeded = await admin.from("user_profile")
+        .update({ bdx_balance: 50000, available_balance: 0 })
+        .eq("user_id", users.normal.id);
+      assert.ifError(seeded.error);
       const client = await clientFor(users.normal);
       const requestId = randomUUID();
       const created = await client.rpc("create_financial_transaction", {
         p_type: "withdraw",
         p_amount: 300,
-        p_method: "Bitcoin",
-        p_note: "bc1qaaaaaaaaaaa",
+        p_method: "Beldex",
+        p_note: "A".repeat(95),
         p_request_id: requestId,
-        p_currency: "USD",
+        p_currency: "BDX",
       });
       assert.ifError(created.error);
       const adminClientA = await clientFor(users.admin);
@@ -501,7 +513,7 @@ test("financial authorization and currency controls hold", { skip: !url || !serv
       });
       assert.ifError(approved.error);
       const before = await admin.from("user_profile")
-        .select("total_withdrawals")
+        .select("total_withdrawals_bdx")
         .eq("user_id", users.normal.id)
         .single();
       assert.ifError(before.error);
@@ -512,11 +524,11 @@ test("financial authorization and currency controls hold", { skip: !url || !serv
       assert.equal(results.filter((result) => !result.error).length, 1);
       assert.equal(results.filter((result) => result.error).length, 1);
       const after = await admin.from("user_profile")
-        .select("total_withdrawals")
+        .select("total_withdrawals_bdx")
         .eq("user_id", users.normal.id)
         .single();
       assert.ifError(after.error);
-      assert.equal(Number(after.data.total_withdrawals) - Number(before.data.total_withdrawals), 300);
+      assert.equal(Number(after.data.total_withdrawals_bdx) - Number(before.data.total_withdrawals_bdx), 300);
       const { data: auditRows, error: auditError } = await admin.from("transaction_audit")
         .select("id")
         .eq("transaction_id", created.data.id)
@@ -683,22 +695,22 @@ test("financial authorization and currency controls hold", { skip: !url || !serv
       const requestId = randomUUID();
       const first = await client.rpc("create_financial_transaction", {
         p_type: "deposit",
-        p_amount: 300,
-        p_method: "Bitcoin",
+        p_amount: 4000,
+        p_method: "Beldex",
         p_note: null,
         p_request_id: requestId,
-        p_currency: "USD",
+        p_currency: "BDX",
       });
       assert.ifError(first.error);
       assert.ok(first.data?.id);
 
       const second = await client.rpc("create_financial_transaction", {
         p_type: "deposit",
-        p_amount: 300,
-        p_method: "Bitcoin",
+        p_amount: 4000,
+        p_method: "Beldex",
         p_note: null,
         p_request_id: requestId,
-        p_currency: "USD",
+        p_currency: "BDX",
       });
       assert.ifError(second.error);
       assert.equal(second.data?.id, first.data?.id);

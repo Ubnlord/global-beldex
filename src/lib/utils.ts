@@ -5,14 +5,6 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function formatUsd(n: number, digits = 2) {
-  return n.toLocaleString("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: digits,
-    maximumFractionDigits: digits,
-  });
-}
 
 export function formatDate(d: Date | number | string = new Date()) {
   const date = typeof d === "object" ? d : new Date(d);

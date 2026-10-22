@@ -9,7 +9,7 @@ import type { Plan } from "@/lib/platform/catalog";
 import { projectedReturn } from "@/lib/platform/catalog";
 import { copy, fill } from "@/lib/platform/i18n";
 import { usePlatform } from "@/lib/platform/store";
-import { formatBdx, formatUsd } from "@/lib/utils";
+import { formatBdx } from "@/lib/utils";
 
 export const Route = createFileRoute("/app/plans")({ component: PlansPage });
 
@@ -152,8 +152,7 @@ function InvestmentMetrics({ plan }: { plan: import("@/lib/platform/store").Acti
     ? "Completed"
     : nextRun.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
 
-  const isUsd = plan.currency === "USD";
-  const formatNative = (value: number) => isUsd ? formatUsd(value) : formatBdx(value);
+  const formatNative = (value: number) => formatBdx(value);
 
   const metrics = [
     { label: "Today's Interest", value: `+${formatNative(dailyInterest)}` },

@@ -80,6 +80,17 @@ insert into public.welcome_bonus_migration_exclusions(user_id)
 select user_id from public.user_profile
 on conflict (user_id) do nothing;
 
+-- The 5% referral policy applies to the first completed BDX deposit after
+-- cutover. Historical deposits are immutable audit history, not new eligibility.
+create table if not exists public.bdx_referral_policy_cutover (
+  singleton boolean primary key default true check (singleton),
+  effective_at timestamptz not null default now()
+);
+insert into public.bdx_referral_policy_cutover(singleton)
+values (true) on conflict (singleton) do nothing;
+revoke all on public.bdx_referral_policy_cutover from public, anon, authenticated;
+grant select on public.bdx_referral_policy_cutover to service_role;
+
 revoke all on public.financial_currency_conversion_run from public, anon, authenticated;
 revoke all on public.financial_currency_conversion_profile_audit from public, anon, authenticated;
 revoke all on public.financial_currency_conversion_investment_audit from public, anon, authenticated;
@@ -217,7 +228,10 @@ begin
         and coalesce(t.currency,'USD')='USD'),0)
   from public.user_profile p
   where p.available_balance<>0 or p.locked_balance<>0
-     or p.total_deposits<>0 or p.total_withdrawals<>0 or p.referral_earnings<>0;
+     or p.total_deposits<>0 or p.total_withdrawals<>0 or p.referral_earnings<>0
+     or exists (select 1 from public.transaction t where t.user_id=p.user_id
+       and t.status='completed' and coalesce(t.currency,'USD')='USD'
+       and t.type in ('deposit','withdraw','referral'));
 
   insert into public.financial_currency_conversion_investment_audit (
     run_id,investment_id,user_id,old_currency,old_principal,old_credited_profit,
@@ -258,7 +272,10 @@ begin
       referral_earnings=0,
       updated_at=now()
   where p.available_balance<>0 or p.locked_balance<>0
-     or p.total_deposits<>0 or p.total_withdrawals<>0 or p.referral_earnings<>0;
+     or p.total_deposits<>0 or p.total_withdrawals<>0 or p.referral_earnings<>0
+     or exists (select 1 from public.transaction t where t.user_id=p.user_id
+       and t.status='completed' and coalesce(t.currency,'USD')='USD'
+       and t.type in ('deposit','withdraw','referral'));
 
   update public.user_investment ui
   set principal=round(ui.principal/v_rate,18),
@@ -439,7 +456,11 @@ begin
 
   select t.id into v_first_deposit_id
   from public.transaction t
-  where t.user_id=v_tx.user_id and t.type='deposit' and t.status='completed'
+  cross join public.bdx_referral_policy_cutover c
+  where c.singleton
+    and t.user_id=v_tx.user_id and t.type='deposit'
+    and t.status='completed' and t.currency='BDX'
+    and coalesce(t.settled_at,t.created_at) >= c.effective_at
   order by coalesce(t.settled_at,t.created_at),t.created_at,t.id
   limit 1;
   if v_first_deposit_id is distinct from v_tx.id then return 0; end if;

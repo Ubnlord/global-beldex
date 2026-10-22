@@ -865,6 +865,10 @@ $function$;
 revoke all on function public.admin_update_investment(uuid,numeric,boolean) from public, anon;
 grant execute on function public.admin_update_investment(uuid,numeric,boolean) to authenticated;
 
+-- Remove the older five-argument overload: it still allowed USD investment
+-- management and would bypass the BDX-only guard in the replacement functions.
+drop function if exists public.admin_manage_investment(uuid,numeric,boolean,text,text);
+
 -- Replace legacy USD admin funding with the same audited BDX wallet denomination.
 create or replace function public.admin_fund_user(
   p_user_id uuid,

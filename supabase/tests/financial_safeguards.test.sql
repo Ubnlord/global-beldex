@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(80);
+select plan(81);
 
 -- Schema and RLS baseline.
 select has_table('public', 'user_profile', 'user_profile exists');
@@ -165,6 +165,10 @@ select ok(
   position('financial_currency_conversion_profile_audit' in pg_get_functiondef('public.admin_financial_reconciliation_v3()'::regprocedure)) > 0
   and position('financial_currency_conversion_investment_audit' in pg_get_functiondef('public.admin_financial_reconciliation_v3()'::regprocedure)) > 0,
   'post-conversion reconciliation includes both conversion audit ledgers'
+);
+select ok(
+  position('Admin daily investment profit' in pg_get_functiondef('public.admin_financial_reconciliation_v3()'::regprocedure)) > 0,
+  'BDX profit reconciliation includes authorized manual daily profit credits'
 );
 select ok(
   to_regprocedure('public.admin_manage_investment(uuid,numeric,boolean,text,text)') is null,

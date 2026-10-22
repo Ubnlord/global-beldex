@@ -58,6 +58,9 @@ function mergeBdxFinancialCopy(base: Dict, over: Dict): Dict {
     "withdrawDoneBody",
     "welcomeBody",
     "referralBody",
+    "planBody",
+    "matureBody",
+    "dailyBody",
   ]) {
     if (key in baseNote) outNote[key] = baseNote[key];
   }

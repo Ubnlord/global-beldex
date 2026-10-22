@@ -152,6 +152,17 @@ function InvestmentMetrics({ plan }: { plan: import("@/lib/platform/store").Acti
     ? "Completed"
     : nextRun.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
 
+  if (plan.currency !== "BDX") {
+    return (
+      <div className="rounded-lg border border-amber-500/40 bg-amber-500/5 p-4">
+        <div className="text-xs font-bold tracking-widest">{plan.name}</div>
+        <p className="mt-2 text-[11px] text-subtle">
+          Legacy investment record — audited BDX conversion pending. Amount and profit are withheld here to avoid mislabeling them as BDX.
+        </p>
+      </div>
+    );
+  }
+
   const formatNative = (value: number) => formatBdx(value);
 
   const metrics = [

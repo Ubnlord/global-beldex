@@ -14,7 +14,7 @@ const CONFIG: Record<
     height: 46,
     payload: {
       symbols: [
-        { proName: "KUCOIN:BDX/USDTT", title: "Beldex" },
+        { proName: "KUCOIN:BDXUSDT", title: "Beldex" },
         { proName: "BINANCE:SOLUSDT", title: "Solana" },
         { proName: "BINANCE:XRPUSDT", title: "Ripple" },
       ],
@@ -30,7 +30,7 @@ const CONFIG: Record<
     height: 280,
     payload: {
       autosize: true,
-      symbol: "KUCOIN:BDX/USDTT",
+      symbol: "KUCOIN:BDXUSDT",
       interval: "60",
       timezone: "Etc/UTC",
       theme: "dark",
@@ -46,7 +46,7 @@ const CONFIG: Record<
     height: 400,
     payload: {
       autosize: true,
-      symbol: "KUCOIN:BDX/USDTT",
+      symbol: "KUCOIN:BDXUSDT",
       interval: "D",
       timezone: "Etc/UTC",
       theme: "dark",
@@ -61,7 +61,7 @@ const CONFIG: Record<
     src: "https://s3.tradingview.com/external-embedding/embed-widget-symbol-overview.js",
     height: 360,
     payload: {
-      symbols: [["Beldex", "KUCOIN:BDX/USDTT|1D"]],
+      symbols: [["Beldex", "KUCOIN:BDXUSDT|1D"]],
       chartOnly: false,
       width: "100%",
       height: "100%",

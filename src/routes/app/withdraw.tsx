@@ -13,7 +13,7 @@ import { usePlatform } from "@/lib/platform/store";
 import { formatBdx, formatUsd } from "@/lib/utils";
 import { validateWithdrawalDestination } from "@/lib/financial/withdrawal-address";
 
-const MIN_WITHDRAWAL = 300;
+const MIN_WITHDRAWAL = 76;
 
 export const Route = createFileRoute("/app/withdraw")({ component: WithdrawPage });
 
@@ -41,10 +41,10 @@ function WithdrawPage() {
       toastError("Amount must be greater than zero");
       return;
     }
-    const minimum = isBeldex ? 4000 : MIN_WITHDRAWAL;
+    const minimum = isBeldex ? 76 : MIN_WITHDRAWAL;
     if (n < minimum) {
       toastError(isBeldex
-        ? `Minimum withdrawal is ${formatBdx(4000)} BDX`
+        ? `Minimum withdrawal is ${formatBdx(76)} BDX`
         : `Minimum withdrawal is ${MIN_WITHDRAWAL} USD`);
       return;
     }
@@ -119,14 +119,14 @@ function WithdrawPage() {
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             type="number"
-            min={isBeldex ? 4000 : MIN_WITHDRAWAL}
+            min={MIN_WITHDRAWAL}
             step="0.001"
-            placeholder={isBeldex ? "Minimum 4,000 BDX" : "Minimum $300"}
+            placeholder="Minimum 76 BDX"
             className="mt-0 h-14 border-2 border-line-strong bg-surface px-4 text-base font-medium placeholder:text-muted focus:border-accent focus:ring-2 focus:ring-accent/20"
           />
         </div>
         <div className="mt-2 flex justify-between text-[11px]">
-          <span className="text-subtle">{t.available}: {isBeldex ? `${formatBdx(bdxAvailable)} BDX` : formatUsd(available)} · Min: {isBeldex ? `${formatBdx(4000)} BDX` : formatUsd(MIN_WITHDRAWAL)}</span>
+          <span className="text-subtle">{t.available}: {isBeldex ? `${formatBdx(bdxAvailable)} BDX` : formatUsd(available)} · Min: {isBeldex ? `${formatBdx(76)} BDX` : formatUsd(MIN_WITHDRAWAL)}</span>
           <button type="button" onClick={() => setAmount((isBeldex ? bdxAvailable : available).toFixed(3))} className="text-accent">
             {t.max}
           </button>

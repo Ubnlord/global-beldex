@@ -1,6 +1,6 @@
 name: Deploy Global Beldex to GitHub Pages
 
-# Production Pages deployment: every main-branch push rebuilds and publishes the current app.
+# Main-branch pushes validate only. Production publishing requires an explicit authorized dispatch.
 
 on:
   # Main pushes run validation/build only. Production publishing is a separate,
@@ -46,6 +46,9 @@ jobs:
 
       - name: Test
         run: npm test
+
+      - name: Financial and security regression tests
+        run: npm run test:security
 
       - name: Validate public frontend configuration
         env:

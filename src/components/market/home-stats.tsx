@@ -98,12 +98,23 @@ async function fetchBeldexDetail(): Promise<Detail> {
         }
       }
 
+      // Display prices and volume only from the BDX/USDT exchange market.
+      // CoinGecko is used here only for rank and percentage-change statistics,
+      // never as a dollar-denominated price display.
+      const quote = await getJson<{
+        data?: { last?: string; high?: string; low?: string; volValue?: string };
+      }>("https://api.kucoin.com/api/v1/market/stats?symbol=BDX-USDT").catch(() => null);
+      const row = quote?.data;
+      const price = Number(row?.last);
+      const high = Number(row?.high);
+      const low = Number(row?.low);
+      const volume = Number(row?.volValue);
       return {
-        usd: md?.current_price?.usd ?? null,
-        high: md?.high_24h?.usd ?? null,
-        low: md?.low_24h?.usd ?? null,
-        marketCap: md?.market_cap?.usd ?? null,
-        volume: md?.total_volume?.usd ?? null,
+        usd: Number.isFinite(price) && price > 0 ? price : null,
+        high: Number.isFinite(high) && high > 0 ? high : null,
+        low: Number.isFinite(low) && low > 0 ? low : null,
+        marketCap: null,
+        volume: Number.isFinite(volume) && volume > 0 ? volume : null,
         rank: coinRes.value.market_cap_rank ?? null,
         changes,
       };
@@ -143,12 +154,10 @@ async function fetchBeldexDetail(): Promise<Detail> {
 
 function money(n: number | null, digits = 5) {
   if (n == null || !Number.isFinite(n)) return "—";
-  return n.toLocaleString("en-US", {
-    style: "currency",
-    currency: "USD",
+  return `${n.toLocaleString("en-US", {
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,
-  });
+  })} USDT`;
 }
 
 function compact(n: number | null) {
@@ -197,7 +206,7 @@ export function HomeBeldexStats() {
           <CoinLogo coin="beldex" size={40} />
           <div>
             <div className="text-sm font-semibold">Beldex</div>
-            <div className="text-[11px] text-subtle">BDX/USD</div>
+            <div className="text-[11px] text-subtle">BDX/USDT</div>
           </div>
           <div className="ml-auto text-right">
             <div className="text-lg font-bold tabular">{money(livePrice)}</div>
@@ -209,8 +218,8 @@ export function HomeBeldexStats() {
 
         <div className="mt-4 grid grid-cols-2 gap-3 text-[12px]">
           <Stat label="Market Cap Rank" value={detail.rank ? `#${detail.rank}` : "—"} />
-          <Stat label="Market Cap" value={detail.marketCap ? `$${compact(detail.marketCap)}` : "—"} />
-          <Stat label="24h Volume" value={detail.volume ? `$${compact(detail.volume)}` : "—"} />
+          <Stat label="Trading Pair" value="BDX/USDT" />
+          <Stat label="24h Volume (USDT)" value={detail.volume ? compact(detail.volume) : "—"} />
           <Stat label="24h High/Low" value={`${money(detail.high)} / ${money(detail.low)}`} />
         </div>
 

@@ -57,9 +57,22 @@ jobs:
       - name: Start isolated Supabase
         working-directory: .security-test
         # The regression suite needs Postgres, Auth, and PostgREST. Skip
-        # optional UI/observability containers to reduce
-        # image pulls and avoid transient public ECR throttling on hosted CI.
-        run: supabase start --exclude studio,logflare,vector,analytics,mailpit,imgproxy
+        # optional UI/observability containers. Container registries can
+        # temporarily throttle image pulls, so retry startup with backoff.
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3; do
+            if supabase start --exclude studio,logflare,vector,analytics,mailpit,imgproxy; then
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              echo "Supabase container startup failed (attempt $attempt/3); cleaning up and retrying after backoff."
+              supabase stop || true
+              sleep $((attempt * 30))
+            fi
+          done
+          echo "Supabase could not start after 3 attempts; database migration and regression checks did not run."
+          exit 1
 
       - name: Apply repository migrations
         working-directory: .security-test

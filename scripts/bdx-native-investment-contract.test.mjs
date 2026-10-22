@@ -68,6 +68,13 @@ assert.match(adminAccountingMigration, /recorded_referrals_bdx/);
 
 
 assert.match(bdxOnlyCutover, /BDX cutover blocked: unresolved legacy USD deposit\/withdrawal exists/);
+assert.match(bdxOnlyCutover, /alter table public\.transaction alter column currency set default 'BDX'/);
+assert.match(bdxOnlyCutover, /alter table public\.user_investment alter column currency set default 'BDX'/);
+assert.match(bdxOnlyCutover, /select id from auth\.users/);
+assert.match(bdxOnlyCutover, /active legacy principal and locked balance do not reconcile per account/);
+assert.match(bdxOnlyCutover, /locked legacy balance has no matching active legacy investment/);
+assert.match(bdxOnlyCutover, /coalesce\(v_tx\.note,''\)=case when p_type='withdraw' then v_address else '' end/);
+assert.match(bdxOnlyCutover, /Only pending transactions can be settled/);
 assert.match(bdxOnlyCutover, /CoinGecko and CoinMarketCap USD quotes are both required/);
 assert.match(bdxOnlyCutover, /Market quote timestamps must be within 2 minutes of each other/);
 assert.doesNotMatch(bdxOnlyCutover, /not in \('kucoin','coingecko','coinmarketcap'\)/);

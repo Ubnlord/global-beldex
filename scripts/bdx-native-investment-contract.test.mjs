@@ -89,6 +89,11 @@ assert.match(bdxOnlyCutover, /total_deposits_bdx = p\.total_deposits_bdx \+ coal
 assert.match(bdxOnlyCutover, /total_withdrawals_bdx = p\.total_withdrawals_bdx \+ coalesce/);
 assert.match(bdxOnlyCutover, /grant execute on function public.execute_usd_to_bdx_conversion\(text,numeric,timestamptz,text,text,numeric,timestamptz,text\) to service_role/);
 assert.match(bdxOnlyCutover, /grant execute on function public.create_financial_transaction\(text,numeric,text,text,uuid,text\) to authenticated/);
+assert.match(bdxOnlyCutover, /Only BDX Beldex requests can be approved/);
+assert.match(bdxOnlyCutover, /Only BDX Beldex requests can be rejected/);
+assert.match(bdxOnlyCutover, /Legacy balance adjustments are disabled/);
+assert.match(bdxOnlyCutover, /drop function if exists public\.swap_assets/);
+assert.match(bdxOnlyCutover, /Legacy investment is read-only until the audited BDX conversion is completed/);
 assert.match(bdxOnlyCutover, /historical transaction rows are intentionally preserved unchanged for audit/i);
 assert.doesNotMatch(bdxOnlyCutover, /update public\.transaction\s+set\s+currency\s*=\s*'BDX'/i);
 

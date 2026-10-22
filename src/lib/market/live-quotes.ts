@@ -171,32 +171,6 @@ async function kucoinBeldex(): Promise<QuoteBook> {
   return quote ? { beldex: quote } : {};
 }
 
-async function dexScreenerBeldex(): Promise<QuoteBook> {
-  const data = await getJson<{
-    pairs?: Array<{
-      baseToken?: { symbol?: string };
-      quoteToken?: { symbol?: string };
-      priceUsd?: string | null;
-      priceChange?: { h24?: number };
-      liquidity?: { usd?: number | null };
-    }>;
-  }>("https://api.dexscreener.com/latest/dex/search?q=BDX");
-
-  const candidates = (data.pairs ?? [])
-    .filter((pair) => pair.baseToken?.symbol?.toUpperCase() === "BDX")
-    .map((pair) => ({
-      quote: validQuote(pair.priceUsd, pair.priceChange?.h24),
-      liquidity: Number(pair.liquidity?.usd) || 0,
-    }))
-    .filter(
-      (row): row is { quote: { usd: number; change: number }; liquidity: number } =>
-        Boolean(row.quote),
-    )
-    .sort((a, b) => b.liquidity - a.liquidity);
-
-  return candidates[0] ? { beldex: candidates[0].quote } : {};
-}
-
 async function krakenMajors(): Promise<QuoteBook> {
   const data = await getJson<{
     result?: Record<string, { c?: string[]; o?: string }>;
@@ -223,7 +197,6 @@ export async function fetchQuotes(): Promise<QuoteBook> {
   const results = await Promise.allSettled([
     coinGecko(),
     kucoinBeldex(),
-    dexScreenerBeldex(),
     krakenMajors(),
   ]);
 

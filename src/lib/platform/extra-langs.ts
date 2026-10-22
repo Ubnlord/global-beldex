@@ -17,6 +17,54 @@ function merge(base: Dict, over: Dict): Dict {
   return out;
 }
 
+/**
+ * Financial copy is temporarily pinned to the reviewed BDX-only wording so
+ * older translations cannot advertise USD balances, $300 deposits, or 10% rewards.
+ * Other non-financial interface text remains localized.
+ */
+function mergeBdxFinancialCopy(base: Dict, over: Dict): Dict {
+  const out = merge(base, over);
+  for (const key of [
+    "welcomeBody",
+    "readyBody",
+    "depositLead",
+    "amountUsd",
+    "minHint",
+    "beldexDetail",
+    "withdrawLead",
+    "referralLead",
+    "referralFine",
+    "created",
+    "lockAmount",
+    "swapLead",
+    "usdAvail",
+    "referralCardLead",
+  ]) {
+    if (key in base) out[key] = base[key];
+  }
+  const baseErr = (base.err ?? {}) as Dict;
+  const outErr = (out.err ?? {}) as Dict;
+  for (const key of ["MIN_DEPOSIT", "INSUFFICIENT_USD"]) {
+    if (key in baseErr) outErr[key] = baseErr[key];
+  }
+  out.err = outErr;
+
+  const baseNote = (base.note ?? {}) as Dict;
+  const outNote = (out.note ?? {}) as Dict;
+  for (const key of [
+    "depositInitBody",
+    "depositDoneBody",
+    "withdrawReqBody",
+    "withdrawDoneBody",
+    "welcomeBody",
+    "referralBody",
+  ]) {
+    if (key in baseNote) outNote[key] = baseNote[key];
+  }
+  out.note = outNote;
+  return out;
+}
+
 const fr = {
   tag: "Plateforme d’investissement avancée",
   signIn: "Connexion",
@@ -1308,13 +1356,13 @@ const ta = {
 
 export function extraLangs(en: Dict): Record<Exclude<Lang, "en" | "es">, Dict> {
   return {
-    fr: merge(en, fr),
-    it: merge(en, it),
-    pt: merge(en, pt),
-    nl: merge(en, nl),
-    yue: merge(en, yue),
-    zh: merge(en, zh),
-    hi: merge(en, hi),
-    ta: merge(en, ta),
+    fr: mergeBdxFinancialCopy(en, fr),
+    it: mergeBdxFinancialCopy(en, it),
+    pt: mergeBdxFinancialCopy(en, pt),
+    nl: mergeBdxFinancialCopy(en, nl),
+    yue: mergeBdxFinancialCopy(en, yue),
+    zh: mergeBdxFinancialCopy(en, zh),
+    hi: mergeBdxFinancialCopy(en, hi),
+    ta: mergeBdxFinancialCopy(en, ta),
   };
 }

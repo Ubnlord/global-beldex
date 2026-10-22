@@ -566,6 +566,123 @@ $function$;
 revoke all on function public.admin_settle_transaction(uuid,text) from public, anon;
 grant execute on function public.admin_settle_transaction(uuid,text) to authenticated;
 
+-- Close legacy admin RPC paths that could approve, reject, or adjust a
+-- non-BDX transaction after cutover. Deposit/withdraw wrappers delegate here.
+create or replace function public.admin_approve_transaction(
+  p_transaction_id uuid,
+  p_reason text default null
+)
+returns public.transaction
+language plpgsql
+security definer
+set search_path = pg_catalog, public, pg_temp
+as $function$
+declare
+  v_admin public.admin_user;
+  v_tx public.transaction;
+begin
+  if not public.is_admin() or not public.admin_has_permission('approve_transactions') then
+    raise exception 'Permission denied';
+  end if;
+  select * into v_admin from public.admin_user where user_id=auth.uid();
+  if v_admin.id is null then raise exception 'Admin access required'; end if;
+  select * into v_tx from public.transaction where id=p_transaction_id for update;
+  if v_tx.id is null then raise exception 'Transaction not found'; end if;
+  if v_tx.type not in ('deposit','withdraw') then raise exception 'Only deposit and withdrawal requests can be approved'; end if;
+  if v_tx.currency<>'BDX' or upper(coalesce(v_tx.method,''))<>'BELDEX' then
+    raise exception 'Only BDX Beldex requests can be approved';
+  end if;
+  if v_tx.approval_status<>'awaiting' then raise exception 'Transaction is not awaiting approval'; end if;
+
+  update public.transaction
+  set approval_status='approved',
+      status='pending',
+      approved_by=v_admin.id,
+      approval_reason=p_reason,
+      approved_at=now(),
+      updated_at=now()
+  where id=p_transaction_id returning * into v_tx;
+
+  insert into public.transaction_audit(transaction_id,admin_id,action,old_values,new_values,reason)
+  values(v_tx.id,v_admin.id,'approved',
+    jsonb_build_object('approval_status','awaiting'),
+    jsonb_build_object('approval_status','approved','status','pending','currency','BDX'),
+    p_reason);
+  return v_tx;
+end;
+$function$;
+revoke all on function public.admin_approve_transaction(uuid,text) from public, anon;
+grant execute on function public.admin_approve_transaction(uuid,text) to authenticated;
+
+create or replace function public.admin_reject_transaction(
+  p_transaction_id uuid,
+  p_reason text
+)
+returns public.transaction
+language plpgsql
+security definer
+set search_path = pg_catalog, public, pg_temp
+as $function$
+declare
+  v_admin public.admin_user;
+  v_tx public.transaction;
+  v_reason text := nullif(btrim(coalesce(p_reason,'')),'');
+begin
+  if not public.is_admin() or not public.admin_has_permission('reject_transactions') then
+    raise exception 'Permission denied';
+  end if;
+  select * into v_admin from public.admin_user where user_id=auth.uid();
+  if v_admin.id is null then raise exception 'Admin access required'; end if;
+  if v_reason is null then raise exception 'Rejection reason is required'; end if;
+  select * into v_tx from public.transaction where id=p_transaction_id for update;
+  if v_tx.id is null then raise exception 'Transaction not found'; end if;
+  if v_tx.type not in ('deposit','withdraw') then raise exception 'Only deposit and withdrawal requests can be rejected'; end if;
+  if v_tx.currency<>'BDX' or upper(coalesce(v_tx.method,''))<>'BELDEX' then
+    raise exception 'Only BDX Beldex requests can be rejected';
+  end if;
+  if v_tx.approval_status<>'awaiting' then raise exception 'Transaction is not awaiting approval'; end if;
+
+  if v_tx.type='withdraw' then
+    update public.user_profile set bdx_balance=bdx_balance+v_tx.amount,updated_at=now()
+    where user_id=v_tx.user_id;
+    if not found then raise exception 'User profile not found while restoring rejected withdrawal'; end if;
+  end if;
+
+  update public.transaction
+  set approval_status='rejected',status='failed',approved_by=v_admin.id,
+      approval_reason=v_reason,approved_at=now(),updated_at=now()
+  where id=p_transaction_id returning * into v_tx;
+
+  insert into public.transaction_audit(transaction_id,admin_id,action,old_values,new_values,reason)
+  values(v_tx.id,v_admin.id,'rejected',
+    jsonb_build_object('approval_status','awaiting'),
+    jsonb_build_object('approval_status','rejected','status','failed','currency','BDX'),
+    v_reason);
+  return v_tx;
+end;
+$function$;
+revoke all on function public.admin_reject_transaction(uuid,text) from public, anon;
+grant execute on function public.admin_reject_transaction(uuid,text) to authenticated;
+
+-- Legacy balance adjustments are retired; use the dedicated BDX adjustment RPC.
+create or replace function public.admin_adjust_balance(
+  p_user_id uuid,
+  p_delta numeric,
+  p_reason text
+)
+returns public.user_profile
+language plpgsql
+security definer
+set search_path = pg_catalog, public, pg_temp
+as $function$
+begin
+  raise exception 'Legacy balance adjustments are disabled; use the audited BDX adjustment operation';
+end;
+$function$;
+revoke all on function public.admin_adjust_balance(uuid,numeric,text) from public, anon, authenticated;
+
+drop function if exists public.swap_assets(uuid,text,text,numeric,numeric);
+
 -- Admin investment status changes must never mutate the legacy USD wallet.
 -- Until the guarded conversion is completed, legacy investments are read-only.
 create or replace function public.admin_manage_investment(

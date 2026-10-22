@@ -68,6 +68,7 @@ assert.match(adminAccountingMigration, /recorded_referrals_bdx/);
 
 
 assert.match(bdxOnlyCutover, /BDX cutover blocked: unresolved legacy USD deposit\/withdrawal exists/);
+assert.match(bdxOnlyCutover, /legacy financial records have no matching profile/);
 assert.match(bdxOnlyCutover, /alter table public\.transaction alter column currency set default 'BDX'/);
 assert.match(bdxOnlyCutover, /alter table public\.user_investment alter column currency set default 'BDX'/);
 assert.match(bdxOnlyCutover, /select id from auth\.users/);

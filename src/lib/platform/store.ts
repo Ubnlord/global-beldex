@@ -270,7 +270,7 @@ export const usePlatform = create<PlatformState>()(
           const isBeldex = method.toUpperCase() === "BELDEX";
           const ledgerCurrency = isBeldex ? "BDX" : "USD";
           if (currency && currency !== ledgerCurrency) return "PAYMENT_METHOD_CURRENCY_MISMATCH";
-          const minimum = isBeldex ? 4000 : 300;
+          const minimum = isBeldex ? 76 : 300;
           if (amount < minimum) return "MIN_WITHDRAWAL";
           const balance = ledgerCurrency === "BDX" ? get().bdx : get().available;
           if (amount > balance) return "INSUFFICIENT";

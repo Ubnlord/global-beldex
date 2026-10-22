@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(81);
+select plan(82);
 
 -- Schema and RLS baseline.
 select has_table('public', 'user_profile', 'user_profile exists');
@@ -169,6 +169,11 @@ select ok(
 select ok(
   position('Admin daily investment profit' in pg_get_functiondef('public.admin_financial_reconciliation_v3()'::regprocedure)) > 0,
   'BDX profit reconciliation includes authorized manual daily profit credits'
+);
+select ok(
+  position('and currency=''BDX''' in pg_get_functiondef('public.accrue_user_investments(uuid)'::regprocedure)) > 0
+  and position('available_balance' in pg_get_functiondef('public.accrue_user_investments(uuid)'::regprocedure)) = 0,
+  'automatic accrual cannot mutate archived legacy wallet balances'
 );
 select ok(
   to_regprocedure('public.admin_manage_investment(uuid,numeric,boolean,text,text)') is null,

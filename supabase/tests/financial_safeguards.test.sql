@@ -148,58 +148,26 @@ select ok(
 );
 
 select ok(
-  to_regprocedure('public.swap_assets(uuid,text,text,numeric,numeric)') is not null
-  and position('Currency swaps are retired; use the BDX-native wallet flow' in pg_get_functiondef('public.swap_assets(uuid,text,text,numeric,numeric)'::regprocedure)) > 0
-  and not has_function_privilege('public', 'public.swap_assets(uuid,text,text,numeric,numeric)', 'EXECUTE')
-  and not has_function_privilege('anon', 'public.swap_assets(uuid,text,text,numeric,numeric)', 'EXECUTE')
-  and not has_function_privilege('authenticated', 'public.swap_assets(uuid,text,text,numeric,numeric)', 'EXECUTE')
-  and has_function_privilege('service_role', 'public.swap_assets(uuid,text,text,numeric,numeric)', 'EXECUTE'),
-  'currency swap RPC is a fail-closed compatibility stub for service_role only'
-);
-select ok(to_regprocedure('public.swap_assets(text,text,numeric,numeric)') is null, 'legacy currency swap RPC overload is retired');
-
--- Runtime proof that the service-role compatibility entrypoint rejects swaps
--- without changing balances, transaction rows, or audit rows.
-create temporary table swap_stub_before as
-select
-  coalesce((select sum(available_balance) from public.user_profile),0) as usd_available,
-  coalesce((select sum(locked_balance) from public.user_profile),0) as usd_locked,
-  coalesce((select sum(bdx_balance) from public.user_profile),0) as bdx_available,
-  coalesce((select sum(locked_bdx_balance) from public.user_profile),0) as bdx_locked,
-  (select count(*) from public.transaction) as transaction_count,
-  (select count(*) from public.admin_action_audit) as admin_audit_count,
-  (select count(*) from public.transaction_audit) as transaction_audit_count;
-
-select throws_ok(
-  $$select public.swap_assets('00000000-0000-0000-0000-000000000001'::uuid,'USD','BDX',1,1)$$,
-  'P0001',
-  'Currency swaps are retired; use the BDX-native wallet flow',
-  'retired swap RPC returns the explicit fail-closed error'
-);
-
-select ok(
-  (select b.usd_available = coalesce((select sum(available_balance) from public.user_profile),0)
-    and b.usd_locked = coalesce((select sum(locked_balance) from public.user_profile),0)
-    and b.bdx_available = coalesce((select sum(bdx_balance) from public.user_profile),0)
-    and b.bdx_locked = coalesce((select sum(locked_bdx_balance) from public.user_profile),0)
-    and b.transaction_count = (select count(*) from public.transaction)
-    and b.admin_audit_count = (select count(*) from public.admin_action_audit)
-    and b.transaction_audit_count = (select count(*) from public.transaction_audit)
-   from swap_stub_before b),
-  'rejected swap leaves USD/BDX balances, transactions, and audit logs unchanged'
+  to_regprocedure('public.swap_assets(uuid,text,text,numeric,numeric)') is null,
+  'currency swap RPC is removed from the exposed database API'
 );
 
 select ok(to_regprocedure('public.create_financial_transaction(text,numeric,text,text,uuid)') is null, 'legacy currency-optional financial request RPC is retired');
 select has_function('public', 'admin_adjust_bdx_balance', array['uuid','numeric','text','text'], 'BDX admin adjustment RPC exists');
 select has_function('public', 'admin_financial_reconciliation_v3', array[]::text[], 'currency-separated reconciliation v3 exists');
 select ok(
-  position('locked_bdx_balance=locked_bdx_balance-v_old.principal' in pg_get_functiondef('public.admin_manage_investment(uuid,numeric,boolean,text,text)'::regprocedure)) > 0
-  and position('Completed or cancelled investments cannot be reactivated' in pg_get_functiondef('public.admin_manage_investment(uuid,numeric,boolean,text,text)'::regprocedure)) > 0,
-  'admin investment management preserves BDX principal and prevents unsafe reactivation'
+  to_regprocedure('public.admin_manage_investment(uuid,numeric,boolean,text,text)') is null,
+  'legacy five-argument investment-management overload is retired'
 );
 select ok(
-  position('null::boolean' in pg_get_functiondef('public.admin_manage_investment(uuid,numeric,text,text)'::regprocedure)) > 0,
-  'legacy admin investment RPC delegates to currency-aware implementation'
+  position('Legacy investment is read-only until the audited BDX conversion is completed' in
+    pg_get_functiondef('public.admin_manage_investment(uuid,numeric,text,text)'::regprocedure)) > 0,
+  'legacy four-argument admin RPC cannot mutate unconverted investment records'
+);
+select ok(
+  position('Legacy investment is read-only until the audited BDX conversion is completed' in
+    pg_get_functiondef('public.admin_update_investment(uuid,numeric,boolean)'::regprocedure)) > 0,
+  'BDX accrual settings cannot mutate unconverted investment records'
 );
 select ok(
   position('admin_has_permission(''view_transactions'')' in pg_get_functiondef('public.admin_financial_reconciliation_v3()'::regprocedure)) > 0
@@ -232,16 +200,18 @@ select ok(not has_table_privilege('authenticated', 'public.transaction_audit', '
 select policies_are('public', 'admin_action_audit', array['admin_action_audit_select'], 'admin action audit has only its admin-read policy');
 select policies_are('public', 'transaction_audit', array['transaction_audit_select'], 'transaction audit has only its admin-read policy');
 
--- Legacy USD admin contracts remain available for already-deployed callers.
--- BDX changes use the separate reference-idempotent BDX adjustment RPC.
+-- Compatibility signatures remain only where their behavior is safe after cutover.
 select ok(
-  to_regprocedure('public.admin_fund_user(uuid,numeric,text)') is not null,
-  'legacy three-argument USD funding RPC remains available'
+  to_regprocedure('public.admin_fund_user(uuid,numeric,text)') is not null
+  and position('BDX' in pg_get_functiondef('public.admin_fund_user(uuid,numeric,text)'::regprocedure)) > 0,
+  'admin funding compatibility RPC is BDX-only'
 );
 
 select ok(
-  to_regprocedure('public.admin_adjust_balance(uuid,numeric,text)') is not null,
-  'legacy three-argument USD adjustment RPC remains available'
+  to_regprocedure('public.admin_adjust_balance(uuid,numeric,text)') is not null
+  and position('Legacy balance adjustments are disabled' in pg_get_functiondef('public.admin_adjust_balance(uuid,numeric,text)'::regprocedure)) > 0
+  and not has_function_privilege('authenticated', 'public.admin_adjust_balance(uuid,numeric,text)', 'EXECUTE'),
+  'legacy balance adjustment compatibility RPC fails closed and is not executable by authenticated clients'
 );
 
 select ok(

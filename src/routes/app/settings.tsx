@@ -113,7 +113,7 @@ function SettingsPage() {
             <span className="text-xs text-subtle">{t.sessionBody}</span>
           </Row>
           <Row label={t.marketData}>
-            <span className="text-xs text-muted">TradingView · KUCOIN:BDX/USDTT</span>
+            <span className="text-xs text-muted">TradingView · KUCOIN:BDXUSDT</span>
           </Row>
         </div>
       </section>

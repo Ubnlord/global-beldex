@@ -61,10 +61,10 @@ export function useBeldexQuote() {
 
 export function formatCoinUsd(usd: number) {
   if (usd >= 1000) {
-    return `$${usd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    return `${usd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDT`;
   }
-  if (usd >= 1) return `$${usd.toFixed(2)}`;
-  return `$${usd.toFixed(5)}`;
+  if (usd >= 1) return `${usd.toFixed(2)} USDT`;
+  return `${usd.toFixed(5)} USDT`;
 }
 
 export function coinQty(usdAmount: number, price: number) {
@@ -164,7 +164,7 @@ export function BeldexLivePrice({ className }: { className?: string }) {
           <CoinLogo coin="beldex" size={36} />
           <div>
             <div className="text-[11px] font-semibold tracking-wide text-subtle">{p.liveBeldex}</div>
-            <div className="mt-0.5 text-[10px] text-subtle">BDX · BDXUSD</div>
+            <div className="mt-0.5 text-[10px] text-subtle">BDX · BDX/USDT</div>
           </div>
         </div>
         <div className="inline-flex items-center gap-1.5 text-[10px] text-accent">
@@ -227,7 +227,7 @@ export function PriceChip() {
   return (
     <div className="flex items-baseline gap-2">
       <span className="text-lg font-bold tabular">
-        {usd == null ? "—" : <LiveFigure value={`$${usd.toFixed(5)}`} />}
+        {usd == null ? "—" : <LiveFigure value={`${usd.toFixed(5)} USDT`} />}
       </span>
       {change24h != null && (
         <span

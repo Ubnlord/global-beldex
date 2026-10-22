@@ -39,7 +39,9 @@ const useQuote = create<Quote & { load: () => Promise<void> }>((set, get) => ({
         status: "ready",
       });
     } catch {
-      set({ usd: null, change24h: null, book: { ...get().book, beldex: undefined }, status: "error" });
+      const nextBook = { ...get().book };
+      delete nextBook.beldex;
+      set({ usd: null, change24h: null, book: nextBook, status: "error" });
     }
   },
 }));

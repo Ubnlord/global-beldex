@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 const migration = readFileSync(new URL("../supabase/migrations/20261011054325_20261011010000_bdx_native_investments.sql", import.meta.url), "utf8");
 const accountingMigration = readFileSync(new URL("../supabase/migrations/20261016090000_bdx_native_accounting_enforcement.sql", import.meta.url), "utf8");
 const adminAccountingMigration = readFileSync(new URL("../supabase/migrations/20261016091000_bdx_admin_controls_and_reconciliation.sql", import.meta.url), "utf8");
+const bdxOnlyCutover = readFileSync(new URL("../supabase/migrations/20261022120000_bdx_only_wallet_and_conversion.sql", import.meta.url), "utf8");
 const catalog = readFileSync(new URL("../src/lib/platform/catalog.ts", import.meta.url), "utf8");
 const utils = readFileSync(new URL("../src/lib/utils.ts", import.meta.url), "utf8");
 const store = readFileSync(new URL("../src/lib/platform/store.ts", import.meta.url), "utf8");
@@ -63,5 +64,26 @@ assert.match(adminAccountingMigration, /locked_bdx_balance=locked_bdx_balance-v_
 assert.match(adminAccountingMigration, /Reference was already used for a different BDX adjustment/);
 assert.match(adminAccountingMigration, /admin_financial_reconciliation_v3/);
 assert.match(adminAccountingMigration, /recorded_referrals_bdx/);
+
+
+assert.match(bdxOnlyCutover, /BDX cutover blocked: unresolved legacy USD deposit\/withdrawal exists/);
+assert.match(bdxOnlyCutover, /Two distinct approved quote sources are required/);
+assert.match(bdxOnlyCutover, /Market quotes differ by more than 2 percent/);
+assert.match(bdxOnlyCutover, /Both market quotes must be no more than 10 minutes old/);
+assert.match(bdxOnlyCutover, /financial_currency_conversion_profile_audit/);
+assert.match(bdxOnlyCutover, /financial_currency_conversion_investment_audit/);
+assert.match(bdxOnlyCutover, /available_balance=0/);
+assert.match(bdxOnlyCutover, /locked_balance=0/);
+assert.match(bdxOnlyCutover, /currency='BDX'/);
+assert.match(bdxOnlyCutover, /Only BDX accounting is supported/);
+assert.match(bdxOnlyCutover, /Minimum withdrawal is 76 BDX/);
+assert.match(bdxOnlyCutover, /bdx_balance=bdx_balance\+40/);
+assert.match(bdxOnlyCutover, /'bonus',40,'BDX','completed','approved','Welcome Bonus'/);
+assert.match(bdxOnlyCutover, /round\(v_tx.amount\*0\.05,18\)/);
+assert.match(bdxOnlyCutover, /'5% BDX referral reward for the first completed deposit'/);
+assert.match(bdxOnlyCutover, /grant execute on function public.execute_usd_to_bdx_conversion\(text,numeric,timestamptz,text,text,numeric,timestamptz,text\) to service_role/);
+assert.match(bdxOnlyCutover, /grant execute on function public.create_financial_transaction\(text,numeric,text,text,uuid,text\) to authenticated/);
+assert.match(bdxOnlyCutover, /historical transaction rows are intentionally preserved unchanged for audit/i);
+assert.doesNotMatch(bdxOnlyCutover, /update public\.transaction\s+set\s+currency\s*=\s*'BDX'/i);
 
 console.log("BDX investment accounting contract checks passed.");

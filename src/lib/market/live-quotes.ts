@@ -50,8 +50,7 @@ function validQuote(usd: unknown, change: unknown) {
  */
 const BDX_MIN_REASONABLE_USD = 0.02;
 const BDX_MAX_REASONABLE_USD = 0.2;
-const BDX_LAST_VALID_STORAGE_KEY = "global-beldex:last-valid-bdx-usd";
-const BDX_EMERGENCY_FALLBACK_USD = 0.07384;
+const BDX_LAST_VALID_STORAGE_KEY = "global-beldex:last-valid-bdx-usdt";
 
 function isReasonableBdxQuote(quote: { usd: number; change: number }) {
   return (
@@ -243,37 +242,20 @@ export async function fetchQuotes(): Promise<QuoteBook> {
     if (preferred.ethereum) book.ethereum = preferred.ethereum;
   }
 
+  // The displayed BDX price is specifically the BDX/USDT market.
+  // Do not blend USD-denominated aggregators into a USDT-denominated quote.
+  delete book.beldex;
+  const kucoin = results[1];
   const bdxCandidates: Array<{
     source: string;
     quote: { usd: number; change: number };
   }> = [];
-
-  if (gecko.status === "fulfilled" && gecko.value.beldex) {
-    bdxCandidates.push({ source: "CoinGecko", quote: gecko.value.beldex });
+  if (kucoin.status === "fulfilled" && kucoin.value.beldex) {
+    bdxCandidates.push({ source: "KuCoin BDX/USDT", quote: kucoin.value.beldex });
   }
 
-  if (results[1].status === "fulfilled" && results[1].value.beldex) {
-    bdxCandidates.push({ source: "KuCoin", quote: results[1].value.beldex });
-  }
+  const bdx = selectReliableBdxQuote(bdxCandidates);
 
-  if (results[2].status === "fulfilled" && results[2].value.beldex) {
-    bdxCandidates.push({ source: "DexScreener", quote: results[2].value.beldex });
-  }
-
-  let bdx = selectReliableBdxQuote(bdxCandidates);
-
-  // If every live feed is unavailable or invalid, never display a corrupt
-  // value such as $0.00012. Keep the last valid value when possible; the
-  // emergency value is only used for a first-load outage and is not treated
-  // as a market source.
-  if (!bdx) {
-    bdx = {
-      usd: BDX_EMERGENCY_FALLBACK_USD,
-      change: 0,
-    };
-    rememberBdxQuote(bdx);
-  }
-
-  book.beldex = bdx;
+  if (bdx) book.beldex = bdx;
   return book;
 }

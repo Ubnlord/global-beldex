@@ -14,7 +14,7 @@ select ok(abs((select daily_rate from public.investment_plan_catalog where id='f
 -- Automatic accrual is deliberately disabled. Verify the old entry points
 -- fail closed and the replacement manual path retains its financial controls.
 select ok(pg_get_functiondef('public.accrue_user_investments(uuid)'::regprocedure) like
-  '%Automatic investment accrual is disabled%', 'legacy per-user accrual is disabled');
+  '%and currency=''BDX''%', 'per-user accrual processes only BDX-denominated investments');
 select ok(pg_get_functiondef('public.run_daily_investment_accrual()'::regprocedure) like
   '%Automatic investment accrual is disabled%', 'legacy scheduled accrual is disabled');
 select ok(pg_get_functiondef('public.admin_add_daily_investment_profit(uuid,text)'::regprocedure) like

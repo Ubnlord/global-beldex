@@ -517,6 +517,8 @@ declare
   v_code text;
 begin
   if v_uid is null then raise exception 'Unauthorized'; end if;
+  -- Serialize profile initialization so concurrent signup/profile retries cannot double-credit the welcome bonus.
+  perform pg_advisory_xact_lock(hashtextextended('welcome-bonus:'||v_uid::text, 0));
   if coalesce(trim(p_username),'')='' then raise exception 'Username is required'; end if;
 
   if p_ref is not null and trim(p_ref)<>'' then

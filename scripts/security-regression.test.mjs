@@ -34,6 +34,8 @@ test("financial authorization and currency controls hold", { skip: !url || !serv
     users.blocked = await makeUser("blocked");
     users.adminNoPermission = await makeUser("admin-no-permission");
     users.admin = await makeUser("admin");
+    users.referrer = await makeUser("referrer");
+    users.referred = await makeUser("referred");
 
     for (const [label, user] of Object.entries(users)) {
       const { error } = await admin.from("user_profile").upsert({
@@ -47,6 +49,15 @@ test("financial authorization and currency controls hold", { skip: !url || !serv
       }, { onConflict: "user_id" });
       assert.ifError(error);
     }
+
+    const referralFixture = await admin.from("user_profile")
+      .update({ referred_by_user_id: users.referrer.id, bdx_balance: 0, available_balance: 0 })
+      .eq("user_id", users.referred.id);
+    assert.ifError(referralFixture.error);
+    const referrerFixture = await admin.from("user_profile")
+      .update({ bdx_balance: 0, available_balance: 0, locked_balance: 0 })
+      .eq("user_id", users.referrer.id);
+    assert.ifError(referrerFixture.error);
 
     for (const [user, permissions] of [
       [users.adminNoPermission, []],
@@ -602,6 +613,104 @@ test("financial authorization and currency controls hold", { skip: !url || !serv
       assert.equal(auditRows[0].new_values?.currency, "BDX");
       assert.equal(auditRows[0].new_values?.reference, reference);
       assert.equal(Number(auditRows[0].new_values?.delta), 25);
+    });
+
+    await step("concurrent first-deposit settlements award referral once", async () => {
+      const referredClient = await clientFor(users.referred);
+      const depositRequestIds = [randomUUID(), randomUUID()];
+      const deposits = await Promise.all(depositRequestIds.map((requestId) =>
+        referredClient.rpc("create_financial_transaction", {
+          p_type: "deposit",
+          p_amount: 4000,
+          p_method: "Beldex",
+          p_note: null,
+          p_request_id: requestId,
+          p_currency: "BDX",
+        })
+      ));
+      for (const result of deposits) {
+        assert.ifError(result.error);
+        assert.ok(result.data?.id);
+      }
+
+      const adminClientA = await clientFor(users.admin);
+      const adminClientB = await clientFor(users.admin);
+      for (const result of deposits) {
+        const approval = await adminClientA.rpc("admin_approve_transaction", {
+          p_transaction_id: result.data.id,
+          p_reason: "concurrent referral test approval",
+        });
+        assert.ifError(approval.error);
+      }
+
+      const settlements = await Promise.all([
+        adminClientA.rpc("admin_settle_transaction", {
+          p_transaction_id: deposits[0].data.id,
+          p_reason: "concurrent first deposit A",
+        }),
+        adminClientB.rpc("admin_settle_transaction", {
+          p_transaction_id: deposits[1].data.id,
+          p_reason: "concurrent first deposit B",
+        }),
+      ]);
+      assert.equal(settlements.filter((result) => !result.error).length, 2,
+        "both independent deposits should settle");
+      const [referrerProfile, referralRows] = await Promise.all([
+        admin.from("user_profile").select("bdx_balance,referral_earnings_bdx")
+          .eq("user_id", users.referrer.id).single(),
+        admin.from("transaction").select("id,amount,currency")
+          .eq("user_id", users.referrer.id).eq("type", "referral")
+          .eq("method", `Referral deposit ${deposits[0].data.id}`),
+      ]);
+      assert.ifError(referrerProfile.error);
+      assert.ifError(referralRows.error);
+      const allReferralRows = await admin.from("transaction")
+        .select("id,amount,currency,method")
+        .eq("user_id", users.referrer.id).eq("type", "referral");
+      assert.ifError(allReferralRows.error);
+      assert.equal(allReferralRows.data?.length, 1, "only one referral ledger row is allowed");
+      assert.equal(Number(referrerProfile.data.bdx_balance), 200,
+        "only 5% of the first 4000 BDX deposit is rewarded");
+      assert.equal(Number(referrerProfile.data.referral_earnings_bdx), 200);
+      assert.equal(allReferralRows.data[0].currency, "BDX");
+      assert.equal(Number(allReferralRows.data[0].amount), 200);
+    });
+
+    await step("concurrent one-time conversion requests cannot convert twice", async () => {
+      // The isolated database is disposable. Zero legacy fixture balances so this
+      // test validates the serialization guard without inventing customer funds.
+      const resetLegacy = await admin.from("user_profile").update({
+        available_balance: 0,
+        locked_balance: 0,
+        total_deposits: 0,
+        total_withdrawals: 0,
+        referral_earnings: 0,
+      }).in("user_id", Object.values(users).map((user) => user.id));
+      assert.ifError(resetLegacy.error);
+
+      const quoteAt = new Date().toISOString();
+      const args = {
+        p_quote_source_a: "CoinGecko",
+        p_bdx_usd_rate_a: 0.05,
+        p_quote_at_a: quoteAt,
+        p_quote_reference_a: `isolated-test-coingecko-${suffix}`,
+        p_quote_source_b: "CoinMarketCap",
+        p_bdx_usd_rate_b: 0.0501,
+        p_quote_at_b: quoteAt,
+        p_quote_reference_b: `isolated-test-coinmarketcap-${suffix}`,
+      };
+      const results = await Promise.all([
+        admin.rpc("execute_usd_to_bdx_conversion", args),
+        admin.rpc("execute_usd_to_bdx_conversion", args),
+      ]);
+      assert.equal(results.filter((result) => !result.error).length, 1,
+        "exactly one concurrent conversion request should succeed");
+      assert.equal(results.filter((result) => result.error).length, 1,
+        "the second conversion request must be rejected");
+      const runs = await admin.from("financial_currency_conversion_run")
+        .select("id", { count: "exact", head: true });
+      assert.ifError(runs.error);
+      assert.equal(runs.count, 1, "one conversion audit run must exist");
     });
 
     await step("duplicate request_id is idempotent", async () => {

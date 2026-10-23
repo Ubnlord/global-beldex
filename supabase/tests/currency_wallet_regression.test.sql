@@ -7,8 +7,8 @@ select plan(18);
 select has_column('public','user_profile','locked_bdx_balance','BDX principal has a separate locked balance');
 select has_column('public','user_investment','currency','investment currency is recorded');
 select has_column('public','transaction','currency','ledger currency is recorded');
-select col_default_is('public','user_investment','currency', 'USD', 'legacy investments default to USD');
-select col_default_is('public','transaction','currency', 'USD', 'legacy transactions default to USD');
+select col_default_is('public','user_investment','currency', 'BDX', 'new investments default to BDX');
+select col_default_is('public','transaction','currency', 'BDX', 'new transactions default to BDX');
 
 -- Daily simple-interest contract for all seven published plans.
 select is((4000::numeric * 0.019), 76::numeric, 'GNS 4,000 BDX earns 76 BDX per day');
@@ -24,7 +24,7 @@ select is((220000::numeric * 0.2378), 52316::numeric, 'FALCON daily interest use
 -- Automatic accrual is intentionally disabled; assert fail-closed behavior
 -- rather than testing the retired automatic accrual implementation.
 select ok(pg_get_functiondef('public.accrue_user_investments(uuid)'::regprocedure) like
-  '%Automatic investment accrual is disabled%', 'legacy user accrual entry point fails closed');
+  '%and currency=''BDX''%', 'investment accrual processes only BDX-denominated investments');
 select ok(pg_get_functiondef('public.run_daily_investment_accrual()'::regprocedure) like
   '%Automatic investment accrual is disabled%', 'legacy scheduled accrual entry point fails closed');
 select ok(pg_get_functiondef('public.admin_add_daily_investment_profit(uuid,text)'::regprocedure) like

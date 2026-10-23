@@ -42,6 +42,60 @@ begin
     raise exception 'BDX cutover blocked: locked legacy balance has no matching active legacy investment';
   end if;
 
+  -- Do not erase legacy aggregate counters unless they reconcile exactly to the
+  -- completed USD ledger. Shared profile totals are not a safe conversion source.
+  if exists (
+    select 1
+    from public.user_profile p
+    where abs(p.total_deposits - coalesce((
+      select sum(t.amount) from public.transaction t
+      where t.user_id=p.user_id and t.type='deposit' and t.status='completed'
+        and coalesce(t.currency,'USD')='USD'
+    ),0)) > 0.00000001
+    or abs(p.total_withdrawals - coalesce((
+      select sum(t.amount) from public.transaction t
+      where t.user_id=p.user_id and t.type='withdraw' and t.status='completed'
+        and coalesce(t.currency,'USD')='USD'
+        and lower(coalesce(t.method,'')) not in ('admin','admin adjustment')
+    ),0)) > 0.00000001
+    or abs(p.referral_earnings - coalesce((
+      select sum(t.amount) from public.transaction t
+      where t.user_id=p.user_id and t.type='referral' and t.status='completed'
+        and coalesce(t.currency,'USD')='USD'
+    ),0)) > 0.00000001
+  ) then
+    raise exception 'BDX cutover blocked: legacy USD profile totals do not reconcile to completed ledger rows';
+  end if;
+
+  if exists (
+    select 1
+    from public.user_profile p
+    where abs(
+      coalesce((select sum(ui.credited_profit) from public.user_investment ui
+        where ui.user_id=p.user_id and coalesce(ui.currency,'USD')='USD'),0)
+      - coalesce((select sum(t.amount) from public.transaction t
+        where t.user_id=p.user_id and t.type='bonus' and t.status='completed'
+          and (t.note='Server-side investment profit' or t.method='Admin daily investment profit')
+          and coalesce(t.currency,'USD')='USD'),0)
+    ) > 0.00000001
+  ) then
+    raise exception 'BDX cutover blocked: legacy USD investment profit does not reconcile to the transaction ledger';
+  end if;
+
+  if exists (
+    select 1
+    from public.user_profile p
+    left join (
+      select user_id, sum(principal) as active_principal
+      from public.user_investment
+      where currency='BDX' and status='active'
+      group by user_id
+    ) i on i.user_id=p.user_id
+    where abs(p.locked_bdx_balance - coalesce(i.active_principal,0)) > 0.00000001
+  ) then
+    raise exception 'BDX cutover blocked: existing BDX locked balance and active BDX principal do not reconcile';
+  end if;
+
   if exists (
     select 1 from public.transaction t
     left join public.user_profile p on p.user_id=t.user_id

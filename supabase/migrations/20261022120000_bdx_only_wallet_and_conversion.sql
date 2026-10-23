@@ -251,6 +251,10 @@ begin
      / ((p_bdx_usd_rate_a + p_bdx_usd_rate_b) / 2) > 0.02 then
     raise exception 'Market quotes differ by more than 2 percent';
   end if;
+  -- Serialize the global cutover guard so concurrent service-role calls cannot
+  -- both pass the empty-run check and convert balances twice.
+  perform pg_advisory_xact_lock(hashtextextended('financial-currency-conversion-global-bdx', 0));
+
   if exists (select 1 from public.financial_currency_conversion_run) then
     raise exception 'A currency conversion run already exists; refusing to repeat it';
   end if;

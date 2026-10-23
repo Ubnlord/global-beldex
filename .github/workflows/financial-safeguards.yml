@@ -10,6 +10,12 @@ on:
 permissions:
   contents: read
 
+# Only the newest safeguard run for a ref should consume a local database
+# stack; overlapping Supabase containers were triggering registry throttling.
+concurrency:
+  group: financial-safeguards-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   static:
     name: Static financial safeguard contracts

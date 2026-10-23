@@ -253,6 +253,7 @@ export const usePlatform = create<PlatformState>()(
             p_method: "Beldex",
             p_note: null,
             p_request_id: requestId ?? uid(),
+            p_currency: "BDX",
           });
           if (error) return error.message;
           await get().refreshTransactions();
@@ -273,6 +274,7 @@ export const usePlatform = create<PlatformState>()(
             p_method: "Beldex",
             p_note: address.trim(),
             p_request_id: requestId ?? uid(),
+            p_currency: "BDX",
           });
           if (error) return error.message;
           await get().refreshTransactions();

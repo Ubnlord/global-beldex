@@ -398,7 +398,7 @@ begin
     if v_tx.type<>p_type or v_tx.amount<>p_amount
        or coalesce(v_tx.currency,'')<>v_currency
        or upper(coalesce(v_tx.method,''))<>v_method
-       or coalesce(v_tx.note,'')<>case when p_type='withdraw' then v_address else '' end then
+       or coalesce(v_tx.note,'')<>(case when p_type='withdraw' then v_address else '' end) then
       raise exception 'Request ID was already used for a different transaction';
     end if;
     return v_tx;
@@ -427,7 +427,7 @@ exception when unique_violation then
   where user_id=v_uid and request_id=p_request_id limit 1;
   if found and v_tx.type=p_type and v_tx.amount=p_amount
      and v_tx.currency='BDX' and upper(coalesce(v_tx.method,''))='BELDEX'
-     and coalesce(v_tx.note,'')=case when p_type='withdraw' then v_address else '' end then
+     and coalesce(v_tx.note,'')=(case when p_type='withdraw' then v_address else '' end) then
     return v_tx;
   end if;
   raise;

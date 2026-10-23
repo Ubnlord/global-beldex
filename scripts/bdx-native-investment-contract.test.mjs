@@ -74,6 +74,9 @@ assert.match(bdxOnlyCutover, /alter table public\.user_investment alter column c
 assert.match(bdxOnlyCutover, /select id from auth\.users/);
 assert.match(bdxOnlyCutover, /active legacy principal and locked balance do not reconcile per account/);
 assert.match(bdxOnlyCutover, /locked legacy balance has no matching active legacy investment/);
+assert.match(bdxOnlyCutover, /legacy USD profile totals do not reconcile to completed ledger rows/);
+assert.match(bdxOnlyCutover, /legacy USD investment profit does not reconcile to the transaction ledger/);
+assert.match(bdxOnlyCutover, /existing BDX locked balance and active BDX principal do not reconcile/);
 assert.match(bdxOnlyCutover, /create or replace function public\.admin_financial_reconciliation_v3\(\)/);
 assert.match(bdxOnlyCutover, /create or replace function public\.accrue_user_investments\(/);
 assert.match(bdxOnlyCutover, /and currency='BDX'/);

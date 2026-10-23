@@ -135,13 +135,13 @@ select ok(to_regprocedure('public.create_financial_transaction(text,numeric,text
 );
 
 select ok(
-  position('Invalid Ethereum destination address' in pg_get_functiondef('public.create_financial_transaction(text,numeric,text,text,uuid,text)'::regprocedure)) > 0,
-  'withdrawal RPC validates Ethereum destinations'
+  position('Only Beldex transactions are supported' in pg_get_functiondef('public.create_financial_transaction(text,numeric,text,text,uuid,text)'::regprocedure)) > 0,
+  'withdrawal RPC rejects non-Beldex payment methods'
 );
 
 select ok(
-  position('Invalid Bitcoin destination address' in pg_get_functiondef('public.create_financial_transaction(text,numeric,text,text,uuid,text)'::regprocedure)) > 0,
-  'withdrawal RPC validates Bitcoin destinations'
+  position('Only BDX accounting is supported' in pg_get_functiondef('public.create_financial_transaction(text,numeric,text,text,uuid,text)'::regprocedure)) > 0,
+  'withdrawal RPC rejects legacy USD denomination'
 );
 
 select ok(

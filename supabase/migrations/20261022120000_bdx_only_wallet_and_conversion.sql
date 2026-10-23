@@ -519,6 +519,10 @@ begin
   if not found then raise exception 'Transaction not found'; end if;
   if v_tx.type<>'deposit' or v_tx.status<>'completed' or v_tx.currency<>'BDX' then return 0; end if;
 
+  -- Serialize referral eligibility per referred account. Two distinct deposits
+  -- settling concurrently must not both observe themselves as the first deposit.
+  perform pg_advisory_xact_lock(hashtextextended(v_tx.user_id::text, 0));
+
   select t.id into v_first_deposit_id
   from public.transaction t
   cross join public.bdx_referral_policy_cutover c

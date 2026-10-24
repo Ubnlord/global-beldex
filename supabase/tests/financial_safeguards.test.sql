@@ -154,7 +154,13 @@ select ok(
   'currency swap RPC is removed from the exposed database API'
 );
 
-select ok(to_regprocedure('public.create_financial_transaction(text,numeric,text,text,uuid)') is null, 'legacy currency-optional financial request RPC is retired');
+select ok(
+  to_regprocedure('public.create_financial_transaction(text,numeric,text,text,uuid)') is not null
+  and position('p_request_id' in pg_get_functiondef('public.create_financial_transaction(text,numeric,text,text,uuid)'::regprocedure)) > 0
+  and position("'BDX'" in pg_get_functiondef('public.create_financial_transaction(text,numeric,text,text,uuid)'::regprocedure)) > 0
+  and not has_function_privilege('anon', 'public.create_financial_transaction(text,numeric,text,text,uuid)', 'EXECUTE'),
+  'legacy currency-optional RPC remains only as an authenticated wrapper routing to guarded BDX accounting'
+);
 select has_function('public', 'admin_adjust_bdx_balance', array['uuid','numeric','text','text'], 'BDX admin adjustment RPC exists');
 select has_function('public', 'admin_financial_reconciliation_v3', array[]::text[], 'currency-separated reconciliation v3 exists');
 select ok(

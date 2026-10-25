@@ -123,7 +123,7 @@ Deno.serve(async (req: Request) => {
     })));
     const payloadHashHex = Array.from(new Uint8Array(payloadHash), b => b.toString(16).padStart(2, "0")).join("");
 
-    const { error: observationError } = await admin.from("bitcoin_chain_observation").upsert({
+    const { error: observationError } = await admin.from("bitcoin_chain_observation").insert({
       txid: match.tx.txid,
       intent_id: intent.id,
       output_index: match.vout,
@@ -135,7 +135,7 @@ Deno.serve(async (req: Request) => {
       verification_provider: "mempool.space",
       provider_payload_hash: payloadHashHex,
       updated_at: new Date().toISOString(),
-    }, { onConflict: "txid", ignoreDuplicates: false });
+    });
 
     if (observationError) {
       // A globally reused transaction ID may indicate ambiguous attribution.

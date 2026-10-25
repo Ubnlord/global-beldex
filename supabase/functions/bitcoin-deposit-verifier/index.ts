@@ -123,7 +123,7 @@ Deno.serve(async (req: Request) => {
     })));
     const payloadHashHex = Array.from(new Uint8Array(payloadHash), b => b.toString(16).padStart(2, "0")).join("");
 
-    const { error: observationError } = await admin.from("bitcoin_chain_observation").insert({
+    const observation = {
       txid: match.tx.txid,
       intent_id: intent.id,
       output_index: match.vout,
@@ -135,10 +135,24 @@ Deno.serve(async (req: Request) => {
       verification_provider: "mempool.space",
       provider_payload_hash: payloadHashHex,
       updated_at: new Date().toISOString(),
-    });
+    };
+    const { data: existingObservation, error: existingError } = await admin
+      .from("bitcoin_chain_observation")
+      .select("intent_id,output_index")
+      .eq("txid", match.tx.txid)
+      .maybeSingle();
+
+    if (existingError) return response(503, { error: "Could not safely check transaction uniqueness" });
+    if (existingObservation && (existingObservation.intent_id !== intent.id || existingObservation.output_index !== match.vout)) {
+      await admin.from("bitcoin_deposit_intent").update({ status: "review", updated_at: new Date().toISOString() }).eq("id", intent.id).neq("status", "credited");
+      return response(409, { status: "review", message: "Transaction already associated with another deposit; manual review required" });
+    }
+
+    const { error: observationError } = existingObservation
+      ? await admin.from("bitcoin_chain_observation").update(observation).eq("txid", match.tx.txid).eq("intent_id", intent.id)
+      : await admin.from("bitcoin_chain_observation").insert(observation);
 
     if (observationError) {
-      // A globally reused transaction ID may indicate ambiguous attribution.
       await admin.from("bitcoin_deposit_intent").update({ status: "review", updated_at: new Date().toISOString() }).eq("id", intent.id).neq("status", "credited");
       return response(409, { status: "review", message: "Could not safely associate this output; manual review required" });
     }

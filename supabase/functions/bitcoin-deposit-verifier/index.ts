@@ -91,9 +91,14 @@ Deno.serve(async (req: Request) => {
     const tip = await fetchJson<number>(`${MEMPOOL_API}/blocks/tip/height`);
     if (!Number.isSafeInteger(tip) || tip < 0) throw new Error("Invalid chain tip response");
     const confirmations = Math.max(0, tip - status.block_height! + 1);
-    if (status.block_time! * 1000 < new Date(intent.created_at).getTime()) {
+    const paymentTimeMs = status.block_time! * 1000;
+    if (paymentTimeMs < new Date(intent.created_at).getTime()) {
       await admin.from("bitcoin_deposit_intent").update({ status: "review", updated_at: new Date().toISOString() }).eq("id", intent.id).neq("status", "credited");
       return response(409, { status: "review", message: "Transaction predates this deposit request; manual review required" });
+    }
+    if (paymentTimeMs > new Date(intent.quote_expires_at).getTime()) {
+      await admin.from("bitcoin_deposit_intent").update({ status: "review", updated_at: new Date().toISOString() }).eq("id", intent.id).neq("status", "credited");
+      return response(409, { status: "review", message: "Payment was confirmed after the quote expired; manual review required" });
     }
 
     const matches: Array<{ tx: ChainTx; vout: number; sats: number; confirmations: number; height: number; hash: string }> = [];

@@ -22,7 +22,8 @@ function DepositPage() {
   const lang = usePlatform((s) => s.lang);
   const t = copy[lang];
   const [amount, setAmount] = useState("");
-  const method = "BELDEX" as const;
+  const [method, setMethod] = useState<"BELDEX" | "BITCOIN">("BELDEX");
+  const [bitcoinTxid, setBitcoinTxid] = useState("");
   const [step, setStep] = useState<"form" | "pay">(() => {
     if (typeof window === "undefined") return "form";
     return new URLSearchParams(window.location.search).get("step") === "pay" ? "pay" : "form";
@@ -55,7 +56,11 @@ function DepositPage() {
 
   const confirm = async () => {
     const n = parseFloat(amount);
-    const err = await deposit(n, DEPOSIT_METHODS[method].title, requestId ?? crypto.randomUUID(), "BDX");
+    if (method === "BITCOIN" && !/^[0-9a-fA-F]{64}$/.test(bitcoinTxid.trim())) {
+      toastError("Enter the 64-character Bitcoin transaction ID");
+      return;
+    }
+    const err = await deposit(n, method === "BITCOIN" ? "Bitcoin" : DEPOSIT_METHODS.BELDEX.title, requestId ?? crypto.randomUUID(), "BDX", method === "BITCOIN" ? bitcoinTxid.trim() : undefined);
     if (err) {
       toastError(err);
       return;
@@ -71,7 +76,12 @@ function DepositPage() {
 
       {step === "form" ? (
         <div className="mt-6 rounded-lg border border-line bg-elevated p-5">
-          <FieldLabel><span className="mt-4 block">Amount (BDX)</span></FieldLabel>
+          <FieldLabel>Deposit method</FieldLabel>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <Button type="button" variant={method === "BELDEX" ? "default" : "secondary"} onClick={() => setMethod("BELDEX")}>Beldex (BDX)</Button>
+            <Button type="button" variant={method === "BITCOIN" ? "default" : "secondary"} onClick={() => setMethod("BITCOIN")}>Bitcoin (BTC)</Button>
+          </div>
+          <FieldLabel><span className="mt-4 block">Amount to credit (BDX)</span></FieldLabel>
           <div className="relative mt-2">
             <Input
               value={amount}
@@ -95,8 +105,8 @@ function DepositPage() {
             {`${formatBdx(parseFloat(amount || "0"))} BDX`}
           </div>
           <div className="mt-1 text-[11px] text-subtle">
-            via {DEPOSIT_METHODS[method].title}
-            {" · BDX amount only"}
+            via {method === "BITCOIN" ? "Bitcoin (BTC)" : DEPOSIT_METHODS.BELDEX.title}
+            {" · BDX wallet credit after admin approval"}
           </div>
           <div className="mt-5">
             <FieldLabel>{t.depositAddress}</FieldLabel>
@@ -118,13 +128,10 @@ function DepositPage() {
               </Button>
             </div>
           </div>
-          <img
-            src={DEPOSIT_METHODS[method].qr}
-            alt={`${DEPOSIT_METHODS[method].title} deposit QR`}
-            className="mx-auto mt-5 size-56 rounded-xl bg-white p-2"
-          />
+          {method === "BELDEX" ? <img src={DEPOSIT_METHODS.BELDEX.qr} alt="Beldex deposit QR" className="mx-auto mt-5 size-56 rounded-xl bg-white p-2" /> : <div className="mt-4 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-subtle">Send Bitcoin on the Bitcoin network only. Your deposit is not credited automatically. An administrator must verify the payment and approve the BDX credit.</div>}
+          {method === "BITCOIN" && <div className="mt-4"><FieldLabel>Bitcoin transaction ID (TXID)</FieldLabel><Input value={bitcoinTxid} onChange={(e) => setBitcoinTxid(e.target.value)} placeholder="Paste the 64-character transaction ID" className="mt-2" /></div>}
           <p className="mt-3 text-[11px] text-subtle">
-            {t.simAddress}
+            {method === "BITCOIN" ? "BTC deposits are reviewed by an administrator before BDX is credited. Keep your transaction ID." : t.simAddress}
           </p>
           <div className="mt-6 flex gap-2">
             <Button

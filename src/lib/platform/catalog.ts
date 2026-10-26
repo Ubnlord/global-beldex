@@ -309,6 +309,12 @@ export const DEPOSIT_METHODS = {
       "bxdRzpW3nTXY3w76CQHHbMCg8TE9rrNdT1maW2PJYmuqS6YLCf16hDaZFcZ226m3SoLaFoSwEgsTA8ET85EdqFfj2nThkg4y3",
     qr: "/deposits/beldex.jpg",
   },
+  BITCOIN: {
+    id: "BITCOIN" as const,
+    title: "Bitcoin (BTC)",
+    address: "bc1qzlq3r8e39pwl8mv3vthdxr7nnxlrq92gvs3p0m",
+    qr: "",
+  },
 };
 
 export const DEPOSIT_ADDRESS = DEPOSIT_METHODS.BELDEX.address;
@@ -322,6 +328,7 @@ export const TRENDING = [
 
 export const WITHDRAW_METHODS = [
   { id: "BELDEX", label: "Beldex" },
+  { id: "BITCOIN", label: "Bitcoin (BTC)" },
 ] as const;
 
 export const FAQ = [

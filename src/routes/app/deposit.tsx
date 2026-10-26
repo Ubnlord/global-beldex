@@ -78,8 +78,8 @@ function DepositPage() {
         <div className="mt-6 rounded-lg border border-line bg-elevated p-5">
           <FieldLabel>Deposit method</FieldLabel>
           <div className="mt-2 grid grid-cols-2 gap-2">
-            <Button type="button" variant={method === "BELDEX" ? "default" : "secondary"} onClick={() => setMethod("BELDEX")}>Beldex (BDX)</Button>
-            <Button type="button" variant={method === "BITCOIN" ? "default" : "secondary"} onClick={() => setMethod("BITCOIN")}>Bitcoin (BTC)</Button>
+            <Button type="button" variant={method === "BELDEX" ? "primary" : "secondary"} onClick={() => setMethod("BELDEX")}>Beldex (BDX)</Button>
+            <Button type="button" variant={method === "BITCOIN" ? "primary" : "secondary"} onClick={() => setMethod("BITCOIN")}>Bitcoin (BTC)</Button>
           </div>
           <FieldLabel><span className="mt-4 block">Amount to credit (BDX)</span></FieldLabel>
           <div className="relative mt-2">

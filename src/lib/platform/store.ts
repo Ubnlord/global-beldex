@@ -119,7 +119,7 @@ type PlatformState = {
   setUserProfile: (user: User | CloudProfile) => void;
   logout: () => void;
   updateProfile: (patch: Partial<User>) => void;
-  deposit: (amount: number, method: string, requestId?: string, currency?: "BDX" | "USD") => Promise<string | null>;
+  deposit: (amount: number, method: string, requestId?: string, currency?: "BDX" | "USD", note?: string) => Promise<string | null>;
   withdraw: (amount: number, method: string, address: string, requestId?: string, currency?: "BDX" | "USD") => Promise<string | null>;
   buyPlan: (plan: Plan, amount: number) => Promise<string | null>;
   settlePlans: () => Promise<void>;
@@ -243,15 +243,17 @@ export const usePlatform = create<PlatformState>()(
         },
 
         deposit: async (amount, method, requestId, currency) => {
-          if (method.toUpperCase() !== "BELDEX") return "ONLY_BDX_SUPPORTED";
+          if (!["BELDEX", "BITCOIN", "BITCOIN (BTC)"].includes(method.toUpperCase())) return "UNSUPPORTED_DEPOSIT_METHOD";
           if (currency && currency !== "BDX") return "PAYMENT_METHOD_CURRENCY_MISMATCH";
           if (!Number.isFinite(amount) || amount < 4000) return "MIN_DEPOSIT";
+          const bitcoin = method.toUpperCase().startsWith("BITCOIN");
+          if (bitcoin && !note?.trim()) return "BITCOIN_TXID_REQUIRED";
           const { error } = await supabase.rpc("create_financial_transaction", {
             p_type: "deposit",
             p_amount: amount,
             p_currency: "BDX",
-            p_method: "Beldex",
-            p_note: null,
+            p_method: bitcoin ? "Bitcoin" : "Beldex",
+            p_note: bitcoin ? `BTC transaction ID: ${note!.trim().toLowerCase()}` : null,
             p_request_id: requestId ?? uid(),
           });
           if (error) return error.message;
@@ -260,9 +262,10 @@ export const usePlatform = create<PlatformState>()(
         },
 
         withdraw: async (amount, method, address, requestId, currency) => {
-          if (method.toUpperCase() !== "BELDEX") return "ONLY_BDX_SUPPORTED";
+          const bitcoin = method.toUpperCase().startsWith("BITCOIN");
+          if (!bitcoin && method.toUpperCase() !== "BELDEX") return "UNSUPPORTED_WITHDRAWAL_METHOD";
           if (currency && currency !== "BDX") return "PAYMENT_METHOD_CURRENCY_MISMATCH";
-          const addressError = validateWithdrawalDestination("Beldex", address);
+          const addressError = validateWithdrawalDestination(bitcoin ? "Bitcoin" : "Beldex", address);
           if (addressError) return addressError;
           if (!Number.isFinite(amount) || amount < 76) return "MIN_WITHDRAWAL";
           if (amount > get().bdx) return "INSUFFICIENT";
@@ -270,7 +273,7 @@ export const usePlatform = create<PlatformState>()(
             p_type: "withdraw",
             p_amount: amount,
             p_currency: "BDX",
-            p_method: "Beldex",
+            p_method: bitcoin ? "Bitcoin" : "Beldex",
             p_note: address.trim(),
             p_request_id: requestId ?? uid(),
           });

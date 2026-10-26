@@ -242,7 +242,7 @@ export const usePlatform = create<PlatformState>()(
           set({ txs });
         },
 
-        deposit: async (amount, method, requestId, currency) => {
+        deposit: async (amount, method, requestId, currency, note) => {
           if (!["BELDEX", "BITCOIN", "BITCOIN (BTC)"].includes(method.toUpperCase())) return "UNSUPPORTED_DEPOSIT_METHOD";
           if (currency && currency !== "BDX") return "PAYMENT_METHOD_CURRENCY_MISMATCH";
           if (!Number.isFinite(amount) || amount < 4000) return "MIN_DEPOSIT";

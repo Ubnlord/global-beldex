@@ -76,20 +76,32 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    // Page through recent confirmed transactions for the fixed receiving address.
-    // Any provider error fails closed: no observation is written and no credit occurs.
-    const transactions: ChainTx[] = [];
-    let nextUrl = `${MEMPOOL_API}/address/${BTC_ADDRESS}/txs`;
-    for (let page = 0; page < 4; page++) {
-      const batch = await fetchJson<ChainTx[]>(nextUrl);
-      if (!Array.isArray(batch)) throw new Error("Unexpected Bitcoin provider response");
-      transactions.push(...batch);
-      if (batch.length < 25 || !batch.length) break;
-      nextUrl = `${MEMPOOL_API}/address/${BTC_ADDRESS}/txs/chain/${batch[batch.length - 1].txid}`;
+    // Only verify the txid submitted by the authenticated user. Scanning a shared
+    // address for any matching historical amount could attribute an old payment.
+    const requestedTxid = (body.txid as string).toLowerCase();
+    const tx = await fetchJson<ChainTx>(`${MEMPOOL_API}/tx/${requestedTxid}`);
+    if (tx.txid?.toLowerCase() !== requestedTxid || !Array.isArray(tx.vout)) {
+      return response(409, { error: "Transaction response did not match requested txid" });
     }
-
+    const status = tx.status;
+    if (status?.confirmed !== true || !Number.isSafeInteger(status.block_height) ||
+        !status.block_hash || !Number.isSafeInteger(status.block_time)) {
+      return response(200, { status: "detected", confirmations: 0, required_confirmations: REQUIRED_CONFIRMATIONS, message: "Transaction is not confirmed yet; no BDX has been credited" });
+    }
     const tip = await fetchJson<number>(`${MEMPOOL_API}/blocks/tip/height`);
     if (!Number.isSafeInteger(tip) || tip < 0) throw new Error("Invalid chain tip response");
+    const confirmations = Math.max(0, tip - status.block_height! + 1);
+    if (status.block_time! * 1000 < new Date(intent.created_at).getTime()) {
+      await admin.from("bitcoin_deposit_intent").update({ status: "review", updated_at: new Date().toISOString() }).eq("id", intent.id).neq("status", "credited");
+      return response(409, { status: "review", message: "Transaction predates this deposit request; manual review required" });
+    }
+
+    const matches: Array<{ tx: ChainTx; vout: number; sats: number; confirmations: number; height: number; hash: string }> = [];
+    for (let i = 0; i < tx.vout.length; i++) {
+      const output = tx.vout[i];
+      if (output.scriptpubkey_address !== BTC_ADDRESS || !Number.isSafeInteger(output.value) || (output.value ?? 0) <= 0) continue;
+      matches.push({ tx, vout: i, sats: output.value!, confirmations, height: status.block_height!, hash: status.block_hash });
+    }
 
     const minimumSats = Math.ceil(Number(intent.quoted_btc) * SATS_PER_BTC);
     if (!Number.isSafeInteger(minimumSats) || minimumSats <= 0) {

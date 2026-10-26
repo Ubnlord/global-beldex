@@ -71,7 +71,7 @@ jobs:
           path = Path('/etc/docker/daemon.json')
           config = json.loads(path.read_text()) if path.exists() else {}
           config['max-concurrent-downloads'] = 2
-          path.write_text(json.dumps(config) + '\\n')
+          path.write_text(json.dumps(config) + '\n')
           PY
           sudo systemctl restart docker
           docker info --format '{{.RegistryConfig.IndexConfigs}}' >/dev/null

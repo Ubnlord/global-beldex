@@ -59,6 +59,23 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Limit concurrent Docker image downloads
+        # Supabase starts several services together. Limiting daemon-level
+        # downloads reduces bursts against GHCR without skipping any services
+        # required by the regression suite or disabling tests.
+        run: |
+          set -euo pipefail
+          sudo python3 - <<'PY'
+          import json
+          from pathlib import Path
+          path = Path('/etc/docker/daemon.json')
+          config = json.loads(path.read_text()) if path.exists() else {}
+          config['max-concurrent-downloads'] = 2
+          path.write_text(json.dumps(config) + '\\n')
+          PY
+          sudo systemctl restart docker
+          docker info --format '{{.RegistryConfig.IndexConfigs}}' >/dev/null
+
       - run: npm ci
 
       - name: Prepare database from repository migrations

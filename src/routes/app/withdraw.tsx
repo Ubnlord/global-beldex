@@ -40,14 +40,15 @@ function WithdrawPage() {
       toastError(`Minimum withdrawal is ${formatBdx(MIN_WITHDRAWAL)} BDX`);
       return;
     }
-    const addressError = validateWithdrawalDestination(method, address);
+    const isBitcoin = method.toLowerCase().startsWith("bitcoin");
+    const addressError = validateWithdrawalDestination(isBitcoin ? "Bitcoin" : "Beldex", address);
     if (addressError) {
       toastError(addressError);
       return;
     }
     const id = requestId ?? crypto.randomUUID();
     setRequestId(id);
-    const err = await withdraw(n, "Beldex", address, id, "BDX");
+    const err = await withdraw(n, isBitcoin ? "Bitcoin" : "Beldex", address, id, "BDX");
     if (err) {
       toastError(err);
       return;
@@ -118,8 +119,9 @@ function WithdrawPage() {
         <Input
           value={address}
           onChange={(e) => setAddress(e.target.value)}
-          placeholder="Paste your Beldex wallet address"
+          placeholder="Paste your wallet address"
         />
+        {method.toLowerCase().startsWith("bitcoin") && <div className="mt-4 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-subtle">Bitcoin withdrawals are requested against your BDX balance. An administrator must review the request, calculate the BTC payout, send it manually, and then mark it completed. Submitting this form does not send BTC.</div>}
         <Button className="mt-6 w-full" onClick={submit}>
           {t.withdrawNow}
         </Button>

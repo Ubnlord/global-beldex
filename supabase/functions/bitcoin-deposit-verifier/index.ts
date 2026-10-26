@@ -128,6 +128,20 @@ Deno.serve(async (req: Request) => {
       return response(200, { status: "confirming", confirmations: match.confirmations, required_confirmations: REQUIRED_CONFIRMATIONS, message: "Payment detected; waiting for confirmations" });
     }
 
+    // SAFETY HOLD: the configured receiving address is shared across intents.
+    // A submitted txid, amount and block timestamp cannot prove which customer
+    // owns a payment to a shared address. Never auto-credit from this evidence.
+    // Enable automated settlement only after per-intent addresses or an equally
+    // strong, independently verifiable attribution mechanism is implemented.
+    await admin.from("bitcoin_deposit_intent")
+      .update({ status: "review", updated_at: new Date().toISOString() })
+      .eq("id", intent.id)
+      .neq("status", "credited");
+    return response(409, {
+      status: "review",
+      message: "Bitcoin payment detected, but this shared-address setup cannot safely attribute it to this deposit. Manual review required; no BDX was credited.",
+    });
+
     const payloadHash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify({
       txid: match.tx.txid, vout: match.vout, address: BTC_ADDRESS, sats: match.sats,
       confirmations: match.confirmations, height: match.height, block_hash: match.hash,

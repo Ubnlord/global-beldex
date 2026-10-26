@@ -107,29 +107,22 @@ Deno.serve(async (req: Request) => {
     if (!Number.isSafeInteger(minimumSats) || minimumSats <= 0) {
       return response(409, { error: "Invalid quoted BTC amount; manual review required" });
     }
-
-    const matches: Array<{ tx: ChainTx; vout: number; sats: number; confirmations: number; height: number; hash: string }> = [];
-    for (const tx of transactions) {
-      if (!/^[0-9a-f]{64}$/i.test(tx.txid) || !Array.isArray(tx.vout)) continue;
-      for (let i = 0; i < tx.vout.length; i++) {
-        const output = tx.vout[i];
-        if (output.scriptpubkey_address !== BTC_ADDRESS || !Number.isSafeInteger(output.value) || (output.value ?? 0) < minimumSats) continue;
-        const confirmed = tx.status?.confirmed === true && Number.isSafeInteger(tx.status.block_height) && !!tx.status.block_hash;
-        const height = confirmed ? tx.status!.block_height! : 0;
-        const confirmations = confirmed ? Math.max(0, tip - height + 1) : 0;
-        matches.push({ tx, vout: i, sats: output.value!, confirmations, height, hash: tx.status?.block_hash ?? "" });
-      }
+    const qualifyingMatches = matches.filter((m) => m.sats >= minimumSats);
+    if (qualifyingMatches.length === 0) {
+      await admin.from("bitcoin_deposit_intent").update({ status: "underpaid", updated_at: new Date().toISOString() }).eq("id", intent.id).neq("status", "credited");
+      return response(409, { status: "underpaid", message: "Payment is below the quoted BTC amount; manual review required" });
     }
-
-    if (matches.length === 0) {
-      return response(200, { status: intent.status, message: "No matching payment found yet; no BDX has been credited" });
-    }
-    if (matches.length !== 1) {
+    if (qualifyingMatches.length !== 1) {
       await admin.from("bitcoin_deposit_intent").update({ status: "review", updated_at: new Date().toISOString() }).eq("id", intent.id).neq("status", "credited");
-      return response(409, { status: "review", message: "Multiple matching outputs found; manual review required" });
+      return response(409, { status: "review", message: "Multiple qualifying outputs found; manual review required" });
     }
 
-    const match = matches[0];
+    const match = qualifyingMatches[0];
+    if (match.confirmations < REQUIRED_CONFIRMATIONS) {
+      await admin.from("bitcoin_deposit_intent").update({ status: "confirming", updated_at: new Date().toISOString() }).eq("id", intent.id).neq("status", "credited");
+      return response(200, { status: "confirming", confirmations: match.confirmations, required_confirmations: REQUIRED_CONFIRMATIONS, message: "Payment detected; waiting for confirmations" });
+    }
+
     const payloadHash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify({
       txid: match.tx.txid, vout: match.vout, address: BTC_ADDRESS, sats: match.sats,
       confirmations: match.confirmations, height: match.height, block_hash: match.hash,

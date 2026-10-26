@@ -6,7 +6,7 @@ const REQUIRED_CONFIRMATIONS = 3;
 const SATS_PER_BTC = 100_000_000;
 const MEMPOOL_API = "https://mempool.space/api";
 
-type TxStatus = { confirmed: boolean; block_height?: number; block_hash?: string };
+type TxStatus = { confirmed: boolean; block_height?: number; block_hash?: string; block_time?: number };
 type TxOutput = { scriptpubkey_address?: string; value?: number };
 type ChainTx = { txid: string; status?: TxStatus; vout?: TxOutput[] };
 
@@ -38,11 +38,12 @@ Deno.serve(async (req: Request) => {
     return response(401, { error: "Authentication required" });
   }
 
-  let body: { intent_id?: unknown };
+  let body: { intent_id?: unknown; txid?: unknown };
   try { body = await req.json(); } catch { return response(400, { error: "Invalid JSON" }); }
   if (typeof body.intent_id !== "string" ||
-      !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(body.intent_id)) {
-    return response(400, { error: "Valid intent_id required" });
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(body.intent_id) ||
+      typeof body.txid !== "string" || !/^[0-9a-f]{64}$/i.test(body.txid)) {
+    return response(400, { error: "Valid intent_id and Bitcoin txid required" });
   }
 
   const userClient = createClient(supabaseUrl, anonKey, {
@@ -58,7 +59,7 @@ Deno.serve(async (req: Request) => {
 
   const { data: intent, error: intentError } = await admin
     .from("bitcoin_deposit_intent")
-    .select("id,user_id,receiving_address,target_bdx,quoted_btc,quote_expires_at,status")
+    .select("id,user_id,receiving_address,target_bdx,quoted_btc,quote_expires_at,status,created_at")
     .eq("id", body.intent_id)
     .maybeSingle();
 

@@ -142,57 +142,6 @@ Deno.serve(async (req: Request) => {
       message: "Bitcoin payment detected, but this shared-address setup cannot safely attribute it to this deposit. Manual review required; no BDX was credited.",
     });
 
-    const payloadHash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify({
-      txid: match.tx.txid, vout: match.vout, address: BTC_ADDRESS, sats: match.sats,
-      confirmations: match.confirmations, height: match.height, block_hash: match.hash,
-    })));
-    const payloadHashHex = Array.from(new Uint8Array(payloadHash), b => b.toString(16).padStart(2, "0")).join("");
-
-    const observation = {
-      txid: match.tx.txid,
-      intent_id: intent.id,
-      output_index: match.vout,
-      destination_address: BTC_ADDRESS,
-      received_sats: match.sats,
-      confirmations: match.confirmations,
-      block_height: match.height || null,
-      block_hash: match.hash || null,
-      verification_provider: "mempool.space",
-      provider_payload_hash: payloadHashHex,
-      updated_at: new Date().toISOString(),
-    };
-    const { data: existingObservation, error: existingError } = await admin
-      .from("bitcoin_chain_observation")
-      .select("intent_id,output_index")
-      .eq("txid", match.tx.txid)
-      .maybeSingle();
-
-    if (existingError) return response(503, { error: "Could not safely check transaction uniqueness" });
-    if (existingObservation && (existingObservation.intent_id !== intent.id || existingObservation.output_index !== match.vout)) {
-      await admin.from("bitcoin_deposit_intent").update({ status: "review", updated_at: new Date().toISOString() }).eq("id", intent.id).neq("status", "credited");
-      return response(409, { status: "review", message: "Transaction already associated with another deposit; manual review required" });
-    }
-
-    const { error: observationError } = existingObservation
-      ? await admin.from("bitcoin_chain_observation").update(observation).eq("txid", match.tx.txid).eq("intent_id", intent.id)
-      : await admin.from("bitcoin_chain_observation").insert(observation);
-
-    if (observationError) {
-      await admin.from("bitcoin_deposit_intent").update({ status: "review", updated_at: new Date().toISOString() }).eq("id", intent.id).neq("status", "credited");
-      return response(409, { status: "review", message: "Could not safely associate this output; manual review required" });
-    }
-
-    if (match.confirmations < REQUIRED_CONFIRMATIONS) {
-      await admin.from("bitcoin_deposit_intent").update({ status: "confirming", updated_at: new Date().toISOString() }).eq("id", intent.id).neq("status", "credited");
-      return response(200, { status: "confirming", confirmations: match.confirmations, required_confirmations: REQUIRED_CONFIRMATIONS, message: "Payment detected; waiting for confirmations" });
-    }
-
-    const { error: markError } = await admin.from("bitcoin_deposit_intent").update({ status: "verified", updated_at: new Date().toISOString() }).eq("id", intent.id).in("status", ["awaiting_payment", "detected", "confirming", "verified"]);
-    if (markError) return response(503, { error: "Could not persist verification; no credit attempted" });
-
-    const { data: credited, error: creditError } = await admin.rpc("credit_verified_bitcoin_deposit", { p_intent_id: intent.id });
-    if (creditError) return response(409, { status: "verified", message: "Payment verified but credit did not complete; retry or review required" });
-    return response(200, { status: "credited", transaction_id: credited?.id ?? null, message: "Verified Bitcoin deposit credited to BDX wallet" });
   } catch {
     return response(503, { error: "Bitcoin provider unavailable or response invalid; no credit was made" });
   }

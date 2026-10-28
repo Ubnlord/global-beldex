@@ -137,7 +137,6 @@ function DepositPage() {
             </div>
           </div>
           {method === "BELDEX" ? <img src={DEPOSIT_METHODS.BELDEX.qr} alt="Beldex deposit QR" className="mx-auto mt-5 size-56 rounded-xl bg-white p-2" /> : <div className="mt-4 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-subtle">Send Bitcoin on the Bitcoin network only. Your deposit is not credited automatically. An administrator must verify the payment and approve the BDX credit.</div>}
-          {method === "BITCOIN" && <div className="mt-4"><FieldLabel>Bitcoin transaction ID (TXID)</FieldLabel><Input value={bitcoinTxid} onChange={(e) => setBitcoinTxid(e.target.value)} placeholder="Paste the 64-character transaction ID" className="mt-2" /></div>}
           <p className="mt-3 text-[11px] text-subtle">
             {method === "BITCOIN" ? "BTC deposits are reviewed by an administrator before BDX is credited. Keep your transaction ID." : t.simAddress}
           </p>

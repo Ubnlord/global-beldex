@@ -529,7 +529,27 @@ export function AdminPage({ initialTab = "dashboard", transactionType }: { initi
                           </div>
                           <p className="mt-1 text-sm text-muted">{tx.method || "No method"} · {new Date(tx.created_at).toLocaleString()}</p>
                           <p className="mt-1 break-all text-xs text-subtle">User: {tx.user_id} · Transaction: {tx.id}</p>
-                          {tx.note && <p className="mt-2 text-xs text-muted">{tx.note}</p>}
+                          {tx.note && <p className="mt-2 break-all text-xs text-muted">{tx.note}</p>}
+                          {tx.method?.toLowerCase().includes("bitcoin") && tx.type === "deposit" && (() => {
+                            const txid = tx.note?.match(/(?:BTC transaction ID:\s*)?([0-9a-f]{64})/i)?.[1];
+                            return txid ? (
+                              <a href={`https://mempool.space/tx/${txid.toLowerCase()}`} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-1 rounded-lg border border-orange-500/30 bg-orange-500/10 px-3 py-2 text-xs font-semibold text-orange-200 hover:bg-orange-500/20">
+                                Verify BTC transaction on mempool.space ↗
+                              </a>
+                            ) : (
+                              <p className="mt-2 text-xs text-amber-200">BTC deposit: missing or invalid transaction ID. Do not approve until verified.</p>
+                            );
+                          })()}
+                          {tx.method?.toLowerCase().includes("bitcoin") && tx.type === "withdraw" && tx.note && (
+                            <a href={`https://mempool.space/address/${encodeURIComponent(tx.note.trim())}`} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-1 rounded-lg border border-orange-500/30 bg-orange-500/10 px-3 py-2 text-xs font-semibold text-orange-200 hover:bg-orange-500/20">
+                              Inspect BTC destination address ↗
+                            </a>
+                          )}
+                          {tx.method?.toLowerCase().includes("bitcoin") && tx.type === "deposit" && tx.approval_status === "awaiting" && (
+                            <p className="mt-2 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-xs leading-5 text-amber-100">
+                              Manual verification required: confirm the transaction is confirmed on the Bitcoin network, pays the configured receiving address, and meets the amount owed before approving. This link is a lookup aid, not automatic verification.
+                            </p>
+                          )}
                         </div>
                         <div className="flex shrink-0 flex-wrap gap-2">
                           {canApproveTransactions && tx.approval_status === "awaiting" && (

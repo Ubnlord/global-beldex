@@ -8,6 +8,7 @@ import { DEPOSIT_METHODS } from "@/lib/platform/catalog";
 import { copy } from "@/lib/platform/i18n";
 import { usePlatform } from "@/lib/platform/store";
 import { formatBdx, copyText } from "@/lib/utils";
+import { BdxBitcoinCalculator } from "@/components/financial/bdx-bitcoin-calculator";
 
 export const Route = createFileRoute("/app/deposit")({ component: DepositPage });
 
@@ -100,6 +101,7 @@ function DepositPage() {
           <div className="mt-2 text-[10px] text-subtle">
             {`Minimum: ${formatBdx(4000)} BDX`}
           </div>
+          {method === "BITCOIN" && <BdxBitcoinCalculator bdxAmount={amount} purpose="deposit" />}
           <Button className="mt-6 w-full" onClick={goPay}>
             {t.continuePay}
           </Button>

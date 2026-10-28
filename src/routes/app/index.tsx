@@ -100,6 +100,19 @@ function Dashboard() {
         </Button>
       </div>
 
+      <div className="mt-4 rounded-lg border border-line bg-elevated p-4">
+        <div className="text-[13px] font-semibold text-fg">Bitcoin (BTC)</div>
+        <p className="mt-1 text-[11px] text-subtle">BTC deposits are credited to your BDX wallet only after admin approval. BTC withdrawals require manual admin payout.</p>
+        <div className="mt-3 grid grid-cols-2 gap-3">
+          <Button className="w-full" onClick={() => navigate({ to: "/app/deposit" })}>
+            <ArrowDownToLine size={16} /> BTC Deposit
+          </Button>
+          <Button variant="secondary" className="w-full" onClick={() => navigate({ to: "/app/withdraw" })}>
+            <ArrowUpFromLine size={16} /> BTC Withdrawal
+          </Button>
+        </div>
+      </div>
+
       <div className="mt-4">
         <div className="text-[13px] font-semibold text-fg">{t.quick}</div>
         <div className="mt-3 grid grid-cols-4 gap-3">

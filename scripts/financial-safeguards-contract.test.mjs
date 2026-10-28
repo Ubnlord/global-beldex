@@ -14,6 +14,7 @@ const adminAuditIdentity = fs.readFileSync(path.join(root, "migrations/0022_admi
 const adminRoute = fs.readFileSync(path.join(root, "src/routes/admin.tsx"), "utf8");
 const bitcoinVerifier = fs.readFileSync(path.join(root, "supabase/functions/bitcoin-deposit-verifier/index.ts"), "utf8");
 const bitcoinSettlementGuard = fs.readFileSync(path.join(root, "supabase/migrations/20261028100000_block_unverified_bitcoin_withdrawal_settlement.sql"), "utf8");
+const bitcoinPayoutLedger = fs.readFileSync(path.join(root, "supabase/migrations/20261028120000_bitcoin_withdrawal_payout_ledger.sql"), "utf8");
 const adminShell = fs.readFileSync(path.join(root, "src/components/admin/admin-shell.tsx"), "utf8");
 const cloudBookGuard = fs.readFileSync(path.join(root, "src/lib/supabase/cloud-book-guard.ts"), "utf8");
 const cloudBookGuardTests = fs.readFileSync(path.join(root, "src/lib/supabase/cloud-book-guard.test.ts"), "utf8");
@@ -76,6 +77,14 @@ test("permanent financial safeguard suite is present and non-destructive", () =>
     "the shared-address safety hold must explicitly prevent automatic crediting");
   assert.match(bitcoinSettlementGuard, /Bitcoin withdrawal cannot be settled until a secure payout workflow records and verifies the on-chain transaction ID/,
     "the database settlement RPC must reject BTC withdrawals without verified payout evidence");
+  assert.match(bitcoinPayoutLedger, /transaction_id uuid not null unique/);
+  assert.match(bitcoinPayoutLedger, /idempotency_key uuid not null unique/);
+  assert.match(bitcoinPayoutLedger, /txid text unique/);
+  assert.match(bitcoinPayoutLedger, /alter table public\.bitcoin_withdrawal_payout enable row level security/);
+  assert.match(bitcoinPayoutLedger, /grant select, insert, update on public\.bitcoin_withdrawal_payout to service_role/);
+  assert.match(bitcoinPayoutLedger, /bitcoin_payout_confirmed_requires_block/);
+  assert.doesNotMatch(bitcoinPayoutLedger, /create or replace function public\.admin_settle_transaction/i,
+    "payout ledger must not bypass the protected admin settlement function");
 });
 
 

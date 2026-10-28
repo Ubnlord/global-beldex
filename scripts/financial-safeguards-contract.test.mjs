@@ -12,6 +12,7 @@ const withdrawalValidator = fs.readFileSync(path.join(root, "src/lib/financial/w
 const operationsHardening = fs.readFileSync(path.join(root, "migrations/0020_post_release_operations_hardening.sql"), "utf8");
 const adminAuditIdentity = fs.readFileSync(path.join(root, "migrations/0022_admin_audit_identity_hardening.sql"), "utf8");
 const adminRoute = fs.readFileSync(path.join(root, "src/routes/admin.tsx"), "utf8");
+const bitcoinVerifier = fs.readFileSync(path.join(root, "supabase/functions/bitcoin-deposit-verifier/index.ts"), "utf8");
 const adminShell = fs.readFileSync(path.join(root, "src/components/admin/admin-shell.tsx"), "utf8");
 const cloudBookGuard = fs.readFileSync(path.join(root, "src/lib/supabase/cloud-book-guard.ts"), "utf8");
 const cloudBookGuardTests = fs.readFileSync(path.join(root, "src/lib/supabase/cloud-book-guard.test.ts"), "utf8");
@@ -66,6 +67,12 @@ test("permanent financial safeguard suite is present and non-destructive", () =>
   assert.match(adminRoute, /admin_financial_reconciliation/);
   assert.match(adminRoute, /!deltaOk\(row\.referral_bdx_delta\)/, "BDX referral reconciliation deltas must trigger exception alerts");
   assert.match(adminRoute, /never writes balances, investments or transaction states directly/);
+  assert.match(adminRoute, /BTC payout is not recorded as sent/,
+    "Bitcoin withdrawals must not be marked settled without a recorded payout workflow");
+  assert.match(bitcoinVerifier, /SAFETY HOLD: the configured receiving address is shared across intents/,
+    "shared-address deposits must remain manual-review-only until attribution is reliable");
+  assert.match(bitcoinVerifier, /no BDX was credited/,
+    "the shared-address safety hold must explicitly prevent automatic crediting");
 });
 
 

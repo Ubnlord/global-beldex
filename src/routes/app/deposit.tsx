@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Copy } from "lucide-react";
+import { Bitcoin, Copy } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast, toastError } from "@/components/layout/toast";
 import { Button } from "@/components/ui/button";
@@ -78,8 +78,14 @@ function DepositPage() {
         <div className="mt-6 rounded-lg border border-line bg-elevated p-5">
           <FieldLabel>Deposit method</FieldLabel>
           <div className="mt-2 grid grid-cols-2 gap-2">
-            <Button type="button" variant={method === "BELDEX" ? "primary" : "secondary"} onClick={() => setMethod("BELDEX")}>Beldex (BDX)</Button>
-            <Button type="button" variant={method === "BITCOIN" ? "primary" : "secondary"} onClick={() => setMethod("BITCOIN")}>Bitcoin (BTC)</Button>
+            <Button type="button" variant={method === "BELDEX" ? "primary" : "secondary"} onClick={() => setMethod("BELDEX")} className="flex items-center justify-center gap-2">
+              <img src="/coins/beldex.png" alt="" aria-hidden="true" className="size-6 shrink-0 rounded-full object-contain" />
+              <span>Beldex (BDX)</span>
+            </Button>
+            <Button type="button" variant={method === "BITCOIN" ? "primary" : "secondary"} onClick={() => setMethod("BITCOIN")} className="flex items-center justify-center gap-2">
+              <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-orange-500 text-white"><Bitcoin size={17} strokeWidth={2.5} /></span>
+              <span>Bitcoin (BTC)</span>
+            </Button>
           </div>
           <FieldLabel><span className="mt-4 block">Amount to credit (BDX)</span></FieldLabel>
           <div className="relative mt-2">

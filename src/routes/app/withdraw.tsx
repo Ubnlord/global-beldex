@@ -10,6 +10,7 @@ import { copy } from "@/lib/platform/i18n";
 import { usePlatform } from "@/lib/platform/store";
 import { formatBdx } from "@/lib/utils";
 import { validateWithdrawalDestination } from "@/lib/financial/withdrawal-address";
+import { BdxBitcoinCalculator } from "@/components/financial/bdx-bitcoin-calculator";
 
 const MIN_WITHDRAWAL = 76;
 
@@ -121,7 +122,8 @@ function WithdrawPage() {
           onChange={(e) => setAddress(e.target.value)}
           placeholder="Paste your wallet address"
         />
-        {method.toLowerCase().startsWith("bitcoin") && <div className="mt-4 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-subtle">Bitcoin withdrawals are requested against your BDX balance. An administrator must review the request, calculate the BTC payout, send it manually, and then mark it completed. Submitting this form does not send BTC.</div>}
+{method.toLowerCase().startsWith("bitcoin") && <BdxBitcoinCalculator bdxAmount={amount} purpose="withdrawal" />}
+                {method.toLowerCase().startsWith("bitcoin") && <div className="mt-3 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-subtle">Bitcoin withdrawals are requested against your BDX balance. An administrator must review the request, calculate the BTC payout, send it manually, and then mark it completed. Submitting this form does not send BTC.</div>}
         <Button className="mt-6 w-full" onClick={submit}>
           {t.withdrawNow}
         </Button>

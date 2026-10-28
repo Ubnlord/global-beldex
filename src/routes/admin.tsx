@@ -559,7 +559,13 @@ export function AdminPage({ initialTab = "dashboard", transactionType }: { initi
                             </>
                           )}
                           {canApproveTransactions && tx.approval_status === "approved" && tx.status !== "completed" && (
-                            <button type="button" disabled={busy === tx.id} onClick={() => void act("settle", tx.id)} className="inline-flex items-center gap-2 rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"><CheckCircle size={16} /> Settle</button>
+                            tx.method?.toLowerCase().includes("bitcoin") && tx.type === "withdraw" ? (
+                              <div className="max-w-xs rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 text-xs leading-5 text-amber-100">
+                                BTC payout is not recorded as sent. Settlement is disabled until a secure payout workflow records and verifies the on-chain transaction ID.
+                              </div>
+                            ) : (
+                              <button type="button" disabled={busy === tx.id} onClick={() => void act("settle", tx.id)} className="inline-flex items-center gap-2 rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"><CheckCircle size={16} /> Settle</button>
+                            )
                           )}
                         </div>
                       </div>

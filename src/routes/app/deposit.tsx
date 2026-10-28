@@ -24,7 +24,6 @@ function DepositPage() {
   const t = copy[lang];
   const [amount, setAmount] = useState("");
   const [method, setMethod] = useState<"BELDEX" | "BITCOIN">("BELDEX");
-  const [bitcoinTxid, setBitcoinTxid] = useState("");
   const [step, setStep] = useState<"form" | "pay">(() => {
     if (typeof window === "undefined") return "form";
     return new URLSearchParams(window.location.search).get("step") === "pay" ? "pay" : "form";
@@ -57,11 +56,7 @@ function DepositPage() {
 
   const confirm = async () => {
     const n = parseFloat(amount);
-    if (method === "BITCOIN" && !/^[0-9a-fA-F]{64}$/.test(bitcoinTxid.trim())) {
-      toastError("Enter the 64-character Bitcoin transaction ID");
-      return;
-    }
-    const err = await deposit(n, method === "BITCOIN" ? "Bitcoin" : DEPOSIT_METHODS.BELDEX.title, requestId ?? crypto.randomUUID(), "BDX", method === "BITCOIN" ? bitcoinTxid.trim() : undefined);
+    const err = await deposit(n, method === "BITCOIN" ? "Bitcoin" : DEPOSIT_METHODS.BELDEX.title, requestId ?? crypto.randomUUID(), "BDX");
     if (err) {
       toastError(err);
       return;

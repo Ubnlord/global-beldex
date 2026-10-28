@@ -13,6 +13,7 @@ const operationsHardening = fs.readFileSync(path.join(root, "migrations/0020_pos
 const adminAuditIdentity = fs.readFileSync(path.join(root, "migrations/0022_admin_audit_identity_hardening.sql"), "utf8");
 const adminRoute = fs.readFileSync(path.join(root, "src/routes/admin.tsx"), "utf8");
 const bitcoinVerifier = fs.readFileSync(path.join(root, "supabase/functions/bitcoin-deposit-verifier/index.ts"), "utf8");
+const bitcoinSettlementGuard = fs.readFileSync(path.join(root, "supabase/migrations/20261028100000_block_unverified_bitcoin_withdrawal_settlement.sql"), "utf8");
 const adminShell = fs.readFileSync(path.join(root, "src/components/admin/admin-shell.tsx"), "utf8");
 const cloudBookGuard = fs.readFileSync(path.join(root, "src/lib/supabase/cloud-book-guard.ts"), "utf8");
 const cloudBookGuardTests = fs.readFileSync(path.join(root, "src/lib/supabase/cloud-book-guard.test.ts"), "utf8");
@@ -73,6 +74,8 @@ test("permanent financial safeguard suite is present and non-destructive", () =>
     "shared-address deposits must remain manual-review-only until attribution is reliable");
   assert.match(bitcoinVerifier, /no BDX was credited/,
     "the shared-address safety hold must explicitly prevent automatic crediting");
+  assert.match(bitcoinSettlementGuard, /Bitcoin withdrawal cannot be settled until a secure payout workflow records and verifies the on-chain transaction ID/,
+    "the database settlement RPC must reject BTC withdrawals without verified payout evidence");
 });
 
 

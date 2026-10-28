@@ -135,8 +135,9 @@ select ok(to_regprocedure('public.create_financial_transaction(text,numeric,text
 );
 
 select ok(
-  position('Only Beldex transactions are supported' in pg_get_functiondef('public.create_financial_transaction(text,numeric,text,text,uuid,text)'::regprocedure)) > 0,
-  'withdrawal RPC rejects non-Beldex payment methods'
+  position("v_method not in ('BELDEX','BITCOIN')" in pg_get_functiondef('public.create_financial_transaction(text,numeric,text,text,uuid,text)'::regprocedure)) > 0
+  and position("p_type='deposit' and v_method <> 'BELDEX'" in pg_get_functiondef('public.create_financial_transaction(text,numeric,text,text,uuid,text)'::regprocedure)) > 0,
+  'financial request RPC allows BTC withdrawals but keeps BTC deposits on the verified deposit-intent workflow and rejects unsupported methods'
 );
 
 select ok(

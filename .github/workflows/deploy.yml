@@ -64,6 +64,7 @@ jobs:
       - name: Build
         run: npm run build
         env:
+          GITHUB_PAGES: "true"
           VITE_SUPABASE_URL: https://jarzpkwdstahbzvbevrq.supabase.co
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
 

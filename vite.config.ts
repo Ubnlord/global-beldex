@@ -8,9 +8,10 @@ import { appEnvPlugin } from "./scripts/app-env-plugin.mjs";
 
 // `0.0.0.0:8080` is the live-preview contract — don't change host/port.
 export default defineConfig({
-  // GitHub project Pages is hosted under /global-beldex/; Vercel and
-  // custom-domain deployments are served from the origin root.
-  base: process.env.GITHUB_PAGES === "true" ? "/global-beldex/" : "/",
+  // The production GitHub Pages site uses the custom domain global-beldex.com,
+  // which is served from the origin root. Keep assets and TanStack routes rooted
+  // at "/" so the browser does not request /global-beldex/assets on the domain.
+  base: "/",
   server: {
     host: "0.0.0.0",
     port: 8080,

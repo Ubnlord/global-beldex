@@ -12,6 +12,8 @@ export default defineConfig({
   // which is served from the origin root. Keep assets and TanStack routes rooted
   // at "/" so the browser does not request /global-beldex/assets on the domain.
   base: "/",
+  // Never publish Vite source maps: the Pages artifact is publicly downloadable.
+  build: { sourcemap: false },
   server: {
     host: "0.0.0.0",
     port: 8080,

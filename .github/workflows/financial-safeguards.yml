@@ -46,7 +46,7 @@ jobs:
           node-version: 22
           cache: npm
 
-      - uses: supabase/setup-cli@v1
+      - uses: supabase/setup-cli@v3
         with:
           # Pin the CLI to avoid a GitHub API lookup for `latest`, which can
           # fail under unauthenticated release API rate limits.

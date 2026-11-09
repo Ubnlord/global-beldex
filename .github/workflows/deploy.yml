@@ -217,6 +217,9 @@ jobs:
               print(f"  {route}/index.html")
           print("  404.html")
 
+      - name: Audit public Pages artifact for leaked secrets and source maps
+        run: node scripts/audit-pages-output.mjs ./pages-site
+
       - uses: actions/configure-pages@v5
 
       - uses: actions/upload-pages-artifact@v4

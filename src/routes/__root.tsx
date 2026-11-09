@@ -92,6 +92,7 @@ export const Route = createRootRoute({
           "GLOBAL BELDEX advanced investment platform with live BDX/USDT market data from TradingView.",
       },
       { name: "theme-color", content: "#0A0A18" },
+      { name: "referrer", content: "strict-origin-when-cross-origin" },
     ],
     links: [
       { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
